@@ -45,5 +45,7 @@ def seir(t,x,A,B,K):
 t = np.linspace(0,10,100)
 sln = spi.solve_ivp(seir, [0,25], [0.999, 0.001, 0, 0], method='RK45', dense_output=False, max_step=0.1, args=(Af,Bf,K))
 plt.plot(sln.t, sln.y.T)
-plt.legend(['Susceptible', 'Exposed', 'Infectious', 'Recovered'])
+plt.plot(sln.t, np.sum(sln.y[[1,2],:], axis=0))
+plt.axhline(y=EI_ref, ls=':')
+plt.legend(['Susceptible', 'Exposed', 'Infectious', 'Recovered', 'E+I', 'E+I Reference'])
 plt.show()

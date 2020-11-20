@@ -14,7 +14,7 @@ C = np.matrix([ [1, 1] ])
 ctrb = np.hstack([B, np.dot(A,B)])
 
 # With all three poles at -1, characteristic polynomial coefficients are:
-_, alpha_1, alpha_2 = np.poly([-0.2,-0.2])
+_, alpha_1, alpha_2 = np.poly([-0.3,-0.3])
 alpha_c_F = mp(A, 2) + \
             alpha_1 * mp(A, 1) + \
             alpha_2 * np.eye(2)
@@ -38,5 +38,7 @@ def ei(t,x,A,B,K):
 t = np.linspace(0,10,100)
 sln = spi.solve_ivp(ei, [0,25], [0.001, 0], method='RK45', dense_output=False, max_step=0.1, args=(A,B,K))
 plt.plot(sln.t, sln.y.T)
-plt.legend(['Exposed', 'Infectious'])
+plt.plot(sln.t, np.sum(sln.y, axis=0))
+plt.axhline(y=EI_ref, color='r', ls='--')
+plt.legend(['Exposed', 'Infectious', 'E+I', 'Reference E+I'])
 plt.show()
