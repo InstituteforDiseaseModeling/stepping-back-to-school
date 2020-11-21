@@ -16,7 +16,7 @@ def coxian(p):
     np.put(M, n+(n+1)*np.arange(n-1), p[:-1])
     return M
 
-def plot_dur(data, M, ax):
+def plot_dur(data, M, ax, ax2=None):
     mu = np.nanmean(data)
     h,x = np.histogram(data, bins=range(int(max(data))))
     ax.bar(x[:-1], np.cumsum(h)/np.sum(h))
@@ -31,6 +31,14 @@ def plot_dur(data, M, ax):
     ax.plot( np.cumsum(ei) / np.sum(ei), marker='o', ms=5, color='r', lw=0.5, mew=4, alpha=0.7)
     ax.set_title(f'Mean {mu:.1f} days')
     ax.set_xlim([0,T])
+
+    if ax2 is None:
+        return
+
+    for i in range(M.shape[0]):
+        ei = np.squeeze(np.asarray(dur[i,:]))
+        ax2.plot(ei)
+    ax2.set_xlim([0,T])
 
     return
 
@@ -79,7 +87,7 @@ if __name__ == '__main__':
     print(fit_ir)
     IR = coxian(fit_ir['x'])
 
-    fig, axv = plt.subplots(1,2,figsize=(16,10))
-    plot_dur(e_to_i, EI, axv[0])
-    plot_dur(i_to_r, IR, axv[1])
+    fig, axv = plt.subplots(2,2,figsize=(16,10))
+    plot_dur(e_to_i, EI, axv[0,0], axv[0,1])
+    plot_dur(i_to_r, IR, axv[1,0], axv[1,1])
     plt.show()
