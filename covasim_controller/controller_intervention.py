@@ -12,11 +12,11 @@ import sciris as sc
 
 __all__ = ['controller']
 
-def coxian(p):
-    n = len(p)
+def full(p):
+    n = int((-1 + np.sqrt( (1 + 8*len(p)) ))/2)
     M = np.zeros((n,n))
-    np.fill_diagonal(M, 1-p)
-    np.put(M, n+(n+1)*np.arange(n-1), p[:-1])
+    np.put(M, np.ravel_multi_index(np.tril_indices(n), M.shape), p)
+
     return M
 
 class controller(cv.Intervention):
@@ -24,44 +24,115 @@ class controller(cv.Intervention):
     TODO
     '''
 
-    def __init__(self, targets, gain=None, betat=None, **kwargs):
-        assert(gain is not None or betat is not None)
-
+    def __init__(self, targets, **kwargs):
         super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args() # Store the input arguments so that intervention can be recreated
 
         # Store arguments
         self.targets = targets
-        self.gain = gain
-        self.betat = betat
+        self.betat = kwargs['betat'] if 'betat' in kwargs else None
         self.start_day = 15
         self.end_date = '2099-12-02'
 
-        self.EI = coxian(np.array([0.4950429 , 0.51759924, 0.5865702 ]))
-        self.nEI = self.EI.shape[0]
-        self.Bei = np.zeros((self.nEI,1))
-        self.Bei[0] = 1
-
-        self.IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
-        self.nIR = self.IR.shape[0]
-        self.Bir = np.zeros((self.nIR,1))
-        self.Bir[0] = 1
-
-        self.E = np.matrix(np.zeros( (self.nEI,1) ))
-        self.I = np.matrix(np.zeros( (self.nIR,1) ))
         self.integrated_err = 0
 
-        self.K = np.array([[0.07376376, 0.67313015, 1.3197574, 0.12207705, 1.89558587, -0.89605874, 2.73307806, 0.45082311, 0.34529195, 0.22522394, 0.10519977]])
+        self.EI = full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049, 0.40917672])
+        self.nEI = self.EI.shape[0]
+
+        self.IR = full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
+                9.65784905e-01,  1.12059492e-02,  4.37587969e-06, -1.21861188e-07,
+                9.62334305e-01,  9.75919056e-03, -6.23660031e-10,  1.64779825e-08,
+                1.01696020e-02,  9.77812849e-01,  5.15078739e-02,  4.48849543e-10,
+                1.53316944e-08,  1.62901373e-02,  1.24279573e-02,  9.48492111e-01,
+                3.71067650e-01,  4.71039087e-09,  7.12066962e-04,  3.37529797e-12,
+               -5.69699539e-10,  1.97380899e-08,  6.28932347e-01,  5.53031491e-01])
+        self.nIR = self.IR.shape[0]
+
+        # Filtered state estimate
+        self.nEIR = self.nEI + self.nIR
+        self.EIhat = np.matrix(np.zeros( (self.nEIR,1) )) # TODO: Informed guess
+        self.Sigma = 1 * np.eye(self.nEIR) # State estimate covariance # TODO: Better guess
+
+        self.Q = 10 * np.eye(self.nEIR) # Process noise - TODO: better guess
+        self.R = 1 * np.eye(2)  # Observation noise (E and I) # TODO
+
+        self.K = np.array([[0.04388146, 0.27750344, 0.96649746, -0.14699181, 0.92476425, -0.36230294, 0.3816167, 0.25341555, 0.21416596, 0.16789652, 0.0981611]])
+
+        self.build_SEIR()
 
         return
+
+    def build_SEIR(self):
+        belowEI = np.zeros((self.nIR, self.nEI))
+        belowEI[0,:] = 1-np.sum(self.EI, axis=0)
+        belowIR = 1-np.sum(self.IR, axis=0)
+        nEI = self.nEI
+        nIR = self.nIR
+
+        # Full SEIR Dynamics
+        self.A = np.block( [
+            [1,                 np.zeros(nEI),     np.zeros(nIR),       0                   ],
+            [np.zeros((nEI,1)), self.EI,           np.zeros((nEI,nIR)), np.zeros((nEI,1))   ],
+            [np.zeros((nIR,1)), belowEI,           self.IR,             np.zeros((nIR,1))   ],
+            [0,                 np.zeros((1,nEI)), belowIR,             1                   ] ])
+
+        self.B = np.matrix(np.zeros((2+nEI+nIR,1)))
+        self.B[0] = -1
+        self.B[1] = 1
+
+        self.C = np.matrix(np.zeros((1,2+nEI+nIR)))
+        self.C[:, 1:-1] = 1
+
+        # Check EI observability
+        A = self.A[1:-1,1:-1]
+        C = self.C[:,1:-1]
+        Omats = [C]
+        for i in range(1,self.nEIR):
+            Omats.append(Omats[-1]*A)
+        obs_mat = np.vstack(Omats)
+        assert(np.linalg.matrix_rank(obs_mat) == self.nEIR)
+
+        #K = design_controller(A,B,C,pole_loc)
+
+        return
+
 
     def initialize(self, sim):
         self.beta0 = sim.pars['beta']
         if self.betat is None:
             self.betat = sim.pars['beta'] * np.ones(sim.pars['n_days']+1)
 
+        self.EIhat[0,0] = np.sum(sim.people.exposed)
+
         self.tpi = sim.pars['interventions'][0]
         self.initialized = True
+
+    def Kalman(self, yE, yI, u):
+        # remove S and R states, leaving just E and E
+        A = self.A[1:-1,1:-1]
+        B = self.B[1:-1]
+        #C = self.C[:,1:-1]
+
+        Ce = np.hstack([np.ones(self.nEI), np.zeros(self.nIR)])
+        Ci = np.hstack([np.zeros(self.nEI), np.ones(self.nIR)])
+        C = np.matrix(np.vstack([Ce, Ci]))
+        y = np.vstack([yE, yI])
+
+        print('BEFORE:', self.EIhat.T)
+        #print(self.Sigma)
+
+        # Predict
+        self.EIhat = A * self.EIhat + B * u
+        self.Sigma = A * self.Sigma * A.T + self.Q
+
+        # Correct
+        L = self.Sigma * C.T * np.linalg.inv(C*self.Sigma*C.T + self.R)
+        self.EIhat += L * (y - C*self.EIhat)
+        self.Sigma = (np.eye(self.nEIR) - L*C)*self.Sigma
+
+        print('AFTER:', self.EIhat.T)
+        print('Corrected error:', (y-C*self.EIhat).T)
+        #print(self.Sigma)
 
     def apply(self, sim):
         print(sim.t, '-'*80)
@@ -69,140 +140,32 @@ class controller(cv.Intervention):
         #    import time
         #    r = np.random.rand(int(time.time_ns() % 1e4)) # Pull a random number to mess up the stream
 
-        #if self.gain is None:
-        #    # Playback
-        #    sim.pars['beta'] = self.betat[sim.t]
-        #    return
-
-        self.E = self.EI * self.E + self.Bei * sim.results['new_infections'][sim.t-1]
-        self.I = self.IR * self.I + self.Bir * sim.results['new_infectious'][sim.t-1]
-
-        if sim.t < self.start_day:
-            return
-
-        '''
-        if sim.t == sim.day(self.end_date):
-            self.betat[sim.t:] = self.betat[sim.t-1] + (self.betat[sim.t-1]-self.betat[sim.t-61])/60 * np.arange(sim.pars['n_days']-sim.t+1)
-        elif sim.t < sim.day(self.end_date):
-            # Cases
-            new_diagnoses = 14 * sim.results['new_diagnoses'][sim.t-1]/sim.scaled_pop_size * 100_000 # 14 day rate
-            target_new_diagnoses = self.targets['cases']
-            didt = 14*100_000/sim.scaled_pop_size * (sim.results['new_diagnoses'][sim.t-1] - sim.results['new_diagnoses'][sim.t-8])/7
-            adjustment = (self.gain*target_new_diagnoses + (1-self.gain)*new_diagnoses) / new_diagnoses - 0.25 * didt / target_new_diagnoses
-
-            adjustment *= sim.results['n_exposed'][sim.t-2] / sim.results['n_exposed'][sim.t-1]
-            #adjustment *= sim.results['n_infectious'][sim.t-2] / sim.results['n_infectious'][sim.t-1]
-            adjustment = np.median([adjustment, 0.33, 3])
-
-            self.betat[sim.t] = sim.pars['beta'] * adjustment
-            print(f'{sim.datevec[sim.t]}: New {new_diagnoses:.0f} -- Target {target_new_diagnoses:.0f} -- Adjustment {adjustment:.3f} -- Beta {self.betat[sim.t]:.5f} -- Exposed: {sim.results["n_exposed"][sim.t-1]} -- Infectious: {sim.results["n_infectious"][sim.t-1]}')
-
-            #print(sim.results.keys())
-            # Tests
-            new_tests = sim.results['new_tests'][sim.t-1]
-            target_new_tests = self.targets['tests']/100_000 * sim.scaled_pop_size
-
-            adjustment = (self.gain*target_new_tests + (1-self.gain)*new_tests) / new_tests
-            #self.tpi.asymp_prob = self.tpi.asymp_quar_prob = self.tpi.asymp_prob * adjustment
-
-            test_yield = sim.results['new_diagnoses'][sim.t-1]/sim.results['new_tests'][sim.t-1]
-            target_yield = self.targets['yield']
-            adjustment = (self.gain*target_yield + (1-self.gain)*test_yield) / test_yield
-
-            #self.tpi.symp_prob = self.tpi.symp_quar_prob = self.tpi.symp_prob * adjustment
-
-            print('TESTS:', new_tests, 'TARGET:', target_new_tests)
-            #print('SYMP_PROB:', self.tpi.symp_prob, self.tpi.symp_quar_prob)
-            #print('ASYMP_PROB:', self.tpi.asymp_prob, self.tpi.asymp_quar_prob)
-            print('YIELD:', test_yield, 'TARGET:', target_yield)
-
-        sim.pars['beta'] = self.betat[sim.t]
-        '''
-
         y = np.sum(sim.people.exposed)#sim.results['n_exposed'][sim.t-1]
         N = sim.scaled_pop_size # don't really care about N vs alive...
         S = N - np.count_nonzero(~np.isnan(sim.people.date_exposed)) #sim.results['cum_infections'][sim.t-1]
         I = np.sum(sim.people.infectious)#sim.results['n_infectious'][sim.t-1]
         E = y - I
 
-        Q = 50
-        e = np.zeros((self.nEI,Q))
-        e[0,0] = 1
-        for k in range(Q-1):
-            e[:,k+1] = np.dot(self.EI,e[:,k])
+        if sim.t < self.start_day:
+            u = sim.results['new_infections'][sim.t-1] # S*I/N # np.sum(sim.people.date_exposed == sim.t-1)
+            print('NEW EXPOSURES:', u, sim.results['new_infections'][sim.t-1], S*I/N)
+            self.Kalman(E, I, u)
+            return
 
-        norme = e/e.sum(axis=0)
-        evec = np.zeros((Q,1))
-        for k in range(Q):
-            evec[k,0] = np.sum(
-                np.logical_and(
-                    np.logical_and(
-                        np.logical_and(
-                            sim.people.date_exposed == sim.t-k, # Q-1-k
-                            np.logical_not(sim.people.infectious)
-                        ),
-                        np.logical_not(sim.people.recovered)
-                    ),
-                    ~sim.people.dead
-                )
-            )
-        csE = np.dot(norme,evec)
-
-        zzz = np.sum(np.logical_and(sim.people.exposed, np.logical_not(sim.people.infectious)))
-        #print('Echeck:', E, np.sum(csE), zzz)
-
-        #print(sim.people.date_exposed[np.logical_and(sim.people.exposed, ~sim.people.infectious)])
-        #for k in range(Q):
-        #    print(sim.t-k, np.sum( np.logical_and( np.logical_and( np.logical_and( sim.people.date_exposed == sim.t-k, np.logical_not(sim.people.infectious)), np.logical_not(sim.people.recovered)), ~sim.people.dead)))
-
-        i = np.zeros((self.nIR,Q))
-        i[0,0] = 1
-        for k in range(Q-1):
-            i[:,k+1] = np.dot(self.IR,i[:,k])
-
-
-        normi = i/i.sum(axis=0)
-        ivec = np.zeros((Q,1))
-        for k in range(Q):
-            ivec[k,0] = np.sum(np.logical_and(sim.people.date_infectious == sim.t-k, sim.people.infectious))
-        csI = np.dot(normi,ivec)
-        zzz = np.sum(sim.people.infectious)
-        #print('Icheck:', I, np.sum(csI), zzz)
-
-
-        print('\nE: ', np.hstack([csE, self.E]))
-        print('\nI: ', np.hstack([csI, self.I]))
-
-        Xu = np.vstack([self.integrated_err, csE, csI])
+        Xu = np.vstack([self.integrated_err, self.EIhat])
         u = np.asarray(-self.K * Xu)[0][0]
+        u = np.maximum(u,0)
 
-        Xu_orig = np.vstack([self.integrated_err, self.E, self.I])
-        u_orig = np.asarray(-self.K * Xu_orig)[0][0]
+        print('WARNING: reducing u')
+        u *= 0.1
 
-        print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.E):.0f}, I={np.sum(self.I):.0f} --> U={u:.1f}, Uorig={u_orig:.1f}, beta={sim.pars["beta"]}')
+        self.Kalman(E, I, u)
+
+        print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.EIhat[:self.nEI]):.0f}, I={np.sum(self.EIhat[self.nEI:]):.0f} --> U={u:.1f}, beta={sim.pars["beta"]}')
 
         if S*I > 0:
-            sim.pars['beta'] = np.maximum(0.1 * u_orig * N / (S*I), 0)
+            sim.pars['beta'] = np.maximum(u * N / (S*I), 0)
 
         self.integrated_err = self.integrated_err + y - self.targets['EI']
-
-        '''
-        if sim.t == 126:
-            inds = []
-            for k in range(Q):
-                inds += list(np.where(np.logical_and(np.logical_and(sim.people.date_exposed == sim.t-k, np.logical_not(sim.people.infectious)), np.logical_not(sim.people.recovered))))#.tolist()
-            inds = np.hstack(inds)
-            print(inds)
-            inds = np.unique(inds)
-            print(inds)
-            print('N:', len(inds))
-            print('Exposed:', np.sum(sim.people.exposed[inds]))
-            #print('Infected:', np.sum(sim.people.infected[inds]))
-            print('Infectious:', np.sum(sim.people.infectious[inds]))
-            print('Recovered:', np.sum(sim.people.recovered[inds]))
-            print('Died:', np.sum(sim.people.dead[inds]))
-            exit()
-        '''
-
 
         return

@@ -21,13 +21,6 @@ def full(p):
     M = np.zeros((n,n))
     np.put(M, np.ravel_multi_index(np.tril_indices(n), M.shape), p)
 
-    #M = np.array([
-    #    [1-p[0],                0,              0,      0],
-    #    [p[1]*p[0],             1-p[3],         0,      0],
-    #    [p[2]*p[0],             p[4]*p[3],      1-p[5], 0],
-    #    [(1-p[1]-p[2])*p[0],    (1-p[4])*p[3],  p[5],   1]
-    #])
-
     return M
 
 def add_cum(M):

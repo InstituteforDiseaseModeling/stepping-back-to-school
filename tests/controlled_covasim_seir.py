@@ -12,7 +12,7 @@ from numpy.linalg import matrix_power as mp
 do_plot = True
 
 cachefn = 'sim_controlled.obj'
-force_run = False
+force_run = True
 
 pop_size = 100_000 #500_000
 EI_ref = 0.03 * pop_size # prevalence target
@@ -88,8 +88,6 @@ def design_controller(A,B,C,pole_loc):
 def build_SEIR():
     belowEI = np.zeros((nIR, nEI))
     belowEI[0,:] = 1-np.sum(EI, axis=0)
-
-    #belowIR = np.zeros(nIR)
     belowIR = 1-np.sum(IR, axis=0)
 
     # Full SEIR Dynamics
@@ -115,7 +113,7 @@ A,B,C,K = build_SEIR()
 if force_run or not os.path.isfile(cachefn):
     sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
 
-    ctr = cvc.controller(targets, gain=0.05)
+    ctr = cvc.controller(targets)
     sim.pars['interventions'] = [ctr] # Remove interventions (hopefully not necessary!)
     #sim.pars['rand_seed'] = 0
     #sim.pars['end_day'] = '2020-09-05'
@@ -136,7 +134,6 @@ def step(t, X, A, B, C, K, beta):
     Xu = X[[0] + list(range(1+1, nEI+nIR+1+1)),:] # integrated error, E, I
     #u = beta * xs*xi / pop_size # np.power(xi, 1)
     u = -K*Xu
-    print(t, u)
     u = np.median([u,0,xs]) # !!!
     y = C*x
 
