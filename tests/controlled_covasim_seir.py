@@ -6,17 +6,17 @@ import covasim.utils as cvu
 import matplotlib.pyplot as plt
 from risk_evaluation import create_sim as cs
 import covasim_controller as cvc
-from fit_distrib import coxian, plot_dur
+from fit_distrib import coxian, full, plot_dur
 from numpy.linalg import matrix_power as mp
 
 do_plot = True
 
 cachefn = 'sim_controlled.obj'
-force_run = True
+force_run = False
 
 pop_size = 100_000 #500_000
-EI_ref = 0.04 * pop_size # prevalence target
-pole_loc = 0.3
+EI_ref = 0.03 * pop_size # prevalence target
+pole_loc = 0.3 # 0.3
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
@@ -34,8 +34,22 @@ targets = {
 }
 
 
-EI = coxian(np.array([0.4950429 , 0.51759924, 0.5865702 ]))
-IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
+#EI = coxian(np.array([0.4950429 , 0.51759924, 0.5865702 ]))
+#IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
+
+EI = full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049 ,
+       0.40917672])
+
+#IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
+IR = full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
+        9.65784905e-01,  1.12059492e-02,  4.37587969e-06, -1.21861188e-07,
+        9.62334305e-01,  9.75919056e-03, -6.23660031e-10,  1.64779825e-08,
+        1.01696020e-02,  9.77812849e-01,  5.15078739e-02,  4.48849543e-10,
+        1.53316944e-08,  1.62901373e-02,  1.24279573e-02,  9.48492111e-01,
+        3.71067650e-01,  4.71039087e-09,  7.12066962e-04,  3.37529797e-12,
+       -5.69699539e-10,  1.97380899e-08,  6.28932347e-01,  5.53031491e-01])
+
+
 nEI = EI.shape[0]
 nIR = IR.shape[0]
 
@@ -66,23 +80,23 @@ def design_controller(A,B,C,pole_loc):
     last_row[:,-1] = 1
 
     # Ackermann's formula for pole placement
-    K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F))
+    assert(ctrb.shape[0] == np.linalg.matrix_rank(ctrb))
+    K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
 
     return K
 
 def build_SEIR():
     belowEI = np.zeros((nIR, nEI))
-    belowEI[0,-1] = 1-EI[-1,-1]
+    belowEI[0,:] = 1-np.sum(EI, axis=0)
 
-    belowIR = np.zeros(nIR)
-    belowIR[-1] = 1-IR[-1,-1]
+    #belowIR = np.zeros(nIR)
+    belowIR = 1-np.sum(IR, axis=0)
 
     # Full SEIR Dynamics
     A = np.block([ [1,                 np.zeros(nEI),     np.zeros(nIR),       0],
                     [np.zeros((nEI,1)), EI,                np.zeros((nEI,nIR)), np.zeros((nEI,1))],
                     [np.zeros((nIR,1)), belowEI,           IR,                  np.zeros((nIR,1))],
                     [0,                 np.zeros((1,nEI)), belowIR,             1] ])
-
 
     B = np.matrix(np.zeros((2+nEI+nIR,1)))
     B[0] = -1
@@ -102,7 +116,9 @@ if force_run or not os.path.isfile(cachefn):
     sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
 
     ctr = cvc.controller(targets, gain=0.05)
-    sim.pars['interventions'] = [ctr] # Remove interventions
+    sim.pars['interventions'] = [ctr] # Remove interventions (hopefully not necessary!)
+    #sim.pars['rand_seed'] = 0
+    #sim.pars['end_day'] = '2020-09-05'
     sim.run()
     sim.save(cachefn, keep_people=True)
 else:
@@ -115,14 +131,13 @@ def step(t, X, A, B, C, K, beta):
 
     xs = x[0]
     xi = np.sum(x[np.arange(nEI+1, nEI+nIR+1)])
-    xi += np.sum(x[np.arange(nEI+1, nEI+4)]) # Double infectivity early
+    xi += np.sum(x[np.arange(nEI+1, nEI+4)]) # Double early infectivity
 
     Xu = X[[0] + list(range(1+1, nEI+nIR+1+1)),:] # integrated error, E, I
     #u = beta * xs*xi / pop_size # np.power(xi, 1)
     u = -K*Xu
-    u = np.maximum(u,0) # !!!
     print(t, u)
-    #exit()
+    u = np.median([u,0,xs]) # !!!
     y = C*x
 
     new_integrated_error = integrated_error + y - EI_ref
@@ -136,9 +151,10 @@ def step(t, X, A, B, C, K, beta):
 def run_SEIR(A, B, C, K, beta, seeds, n_days):
     dt = 1
     X = np.zeros((2+nEI+nIR + 1, n_days+1)) # +1 for error dynamics
-    print('WARNING: 10x number of seeds!')
-    X[1,0] = pop_size-10*seeds # 10x number of seeds!!!!!
-    X[2,0] = 10*seeds
+    #print('WARNING: 10x number of seeds!')
+    #seeds *= 10
+    X[1,0] = pop_size-seeds
+    X[2,0] = seeds
     for k in range(n_days):
         X[:,k+1] = step(k*dt, X[:,k], A, B, C, K, beta)
 
@@ -199,8 +215,8 @@ fig.tight_layout()
 ax = axv[1,0] # Bottom left
 ax.plot(sim.results['date'], E+I, 'k')
 ax.plot(sim.results['date'], np.asarray(C*X[1:,:])[0], 'k--')
-ax.axhline(y=EI_ref, color='r')
-ax.legend(['Exposed + Infectious', 'Reference E+I'])
+ax.axhline(y=EI_ref, color='r', zorder=-1)
+ax.legend(['Covasim Exposed + Infectious', 'SEIR E+I', 'Reference E+I'])
 
 
 plt.show()
