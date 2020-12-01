@@ -45,51 +45,6 @@ if force_run or not os.path.isfile(cachefn):
 else:
     sim = cv.load(cachefn)
 
-def step(t, X, A, B, C, beta):
-    x = np.matrix(X).T
-
-    xs = x[0]
-    xi = np.sum(x[np.arange(nEI+1, nEI+nIR+1)])
-    xi += np.sum(x[np.arange(nEI+1, nEI+4)]) # Double infectivity early
-
-    u = beta * xs*xi / pop_size # np.power(xi, 1)
-    y = C*x
-
-    new_x = A*x + B*u
-
-    return np.squeeze(np.asarray(new_x))
-
-def run_SEIR(seeds, n_days):
-    dt = 1
-    beta = 0.185
-
-    belowEI = np.zeros((nIR, nEI))
-    belowEI[0,:] = 1 - EI.sum(axis=0) #1-EI[-1,-1]
-
-    #belowIR = np.zeros(nIR)
-    belowIR = 1 - IR.sum(axis=0) # 1-IR[-1,-1]
-
-    # Full SEIR Dynamics
-    Af = np.block([ [1,                 np.zeros(nEI),     np.zeros(nIR),       0],
-                    [np.zeros((nEI,1)), EI,                np.zeros((nEI,nIR)), np.zeros((nEI,1))],
-                    [np.zeros((nIR,1)), belowEI,           IR,                  np.zeros((nIR,1))],
-                    [0,                 np.zeros((1,nEI)), belowIR,             1] ])
-
-
-    Bf = np.zeros((2+nEI+nIR,1))
-    Bf[0] = -1
-    Bf[1] = 1
-
-    Cf = np.zeros((1,2+nEI+nIR))
-    Cf[1:-1] = 1
-
-    X = np.zeros((2+nEI+nIR,n_days+1))
-    X[0,0] = pop_size-seeds
-    X[1,0] = seeds
-    for k in range(n_days):
-        X[:,k+1] = step(k*dt, X[:,k], Af, Bf, Cf, beta)
-
-    return X
 
 
 

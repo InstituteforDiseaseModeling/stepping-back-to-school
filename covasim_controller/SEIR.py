@@ -14,19 +14,17 @@ class TransitionMatrix:
         return M
 
 class SEIR:
-    def __init__(self, nSteps, dt, EI, IR, C=None):
-
-        self.nSteps = nSteps
+    def __init__(self, dt, pop_size, EI, IR, beta=0.185, C=None):
         self.dt = dt
+        self.pop_size = pop_size
         self.EI = EI
         self.IR = IR
+        self.beta = beta
         self.C = C
 
         self._build()
-        self.check_controllability()
+        #self.check_controllability()
         self.check_observability()
-
-        self.X = np.matrix(np.zeros((self.A.shape[0], self.nSteps)))
 
     def _build(self):
 
@@ -73,5 +71,29 @@ class SEIR:
             ctrb[:,i+1] = Ac*ctrb[:,i] # columns of controllability matrix
     '''
 
-    def step(self, dt):
-        pass
+def step(self, X, u_beta):
+    x = np.matrix(X).T # Move away from matrix
+
+    xs = x[0]
+    xi = np.sum(x[np.arange(nEI+1, nEI+nIR+1)])
+    xi += np.sum(x[np.arange(nEI+1, nEI+4)]) # Double infectivity early
+
+    u = u_beta * xs*xi / self.pop_size # np.power(xi, 1)
+    y = C*x
+
+    new_x = A*x + B*u
+
+    return np.squeeze(np.asarray(new_x)), y
+
+
+def run(self, n_seeds, n_days):
+    X = np.zeros((self.A.shape[1], n_days+1))
+    X[0,0] = self.pop_size - n_seeds
+    X[1,0] = n_seeds
+    Y = np.zeros(n_days)
+
+    for k in range(n_days):
+        X[:,k+1], Y[k] = self.step(X[:,k], self.beta)
+
+    return X
+
