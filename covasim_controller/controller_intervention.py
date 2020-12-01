@@ -9,7 +9,7 @@ managers, which handle different cohorting options (and school days).
 import covasim as cv
 import numpy as np
 import sciris as sc
-from .controller import TransitionMatrix as tm
+from .TransitionMatrix import TransitionMatrix as tm
 
 
 __all__ = ['controller_intervention']

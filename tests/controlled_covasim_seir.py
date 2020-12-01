@@ -15,91 +15,39 @@ cachefn = 'sim_controlled.obj'
 force_run = True
 
 pop_size = 100_000 #500_000
-EI_ref = 0.02 * pop_size # prevalence target
+EI_ref = 0.03 * pop_size # prevalence target
 pole_loc = 0.7 # 0.3
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
     'change_beta': 1,
-    'symp_prob': 0.1
+    'symp_prob': 0.1,
+    #'end_day': '2020-09-05',
 }
 
 targets = {
-    'cases':         200, # per 100k over 2-weeks, from DOH website
+    #'cases':        200, # per 100k over 2-weeks, from DOH website
     #'re':           1.0,
     #'prevalence':   0.003, # KC image from Niket in #nowcasting-inside-voice dated 11/02 using data through 10/23
-    'yield':        0.029, # 2.4% positive
-    'tests':        225,   # per 100k (per day) - 225 is 5000 tests in 2.23M pop per day
-    'EI': EI_ref
+    #'yield':        0.029, # 2.4% positive
+    #'tests':        225,   # per 100k (per day) - 225 is 5000 tests in 2.23M pop per day
+    'EI':           EI_ref
 }
 
-ct = cvc.Controller()
+# These come from fit_transmats
+ei = sc.loadobj('EI.obj')
+ir = sc.loadobj('IR.obj')
 
+seir = cvc.SEIR(pop_size, ei.Mopt, ir.Mopt, beta=0.365, Ipow=0.925)
 
-#EI = coxian(np.array([0.4950429 , 0.51759924, 0.5865702 ]))
-#IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
+ct = cvc.Controller(seir)
 
+EI = ei.Mopt
+IR = ir.Mopt
 
+nEI = ei.n
+nIR = ir.n
 
-nEI = ct.EI.shape[0]
-nIR = ct.IR.shape[0]
-
-'''
-def design_controller(A,B,C,pole_loc):
-    # Dynamics for feedback controller design
-    Af = A[1:-1,1:-1]
-    Bf = B[1:-1]
-    Cf = C[:,1:-1]
-
-    # Error dynamics: e_dot, E_dot, I_dot
-    Ac = np.block( [[1, Cf], [np.zeros((nEI+nIR,1)), Af]] )
-    Bc = np.vstack([0, Bf])
-
-    ctrb = np.matrix(np.zeros((nEI+nIR+1, nEI+nIR+1))) # +1 for error dynamics
-    ctrb[:,0] = Bc
-    for i in range(nEI+nIR):
-        ctrb[:,i+1] = Ac*ctrb[:,i] # columns of controllability matrix
-
-    # Characteristic (monic) polynomial coefficients given pole locations:
-    alpha = np.poly(pole_loc*np.ones(ctrb.shape[0])) # All poles at same place?
-
-    alpha_c_F = mp(Ac,nEI+nIR+1)
-    for i in range(1, nEI+nIR+1):
-        alpha_c_F += alpha[i] * mp(Ac,nEI+nIR+1-i)  # Start at 1
-    alpha_c_F += alpha[-1] * np.eye(nEI+nIR+1)
-
-    last_row = np.matrix(np.zeros(nEI+nIR+1))
-    last_row[:,-1] = 1
-
-    # Ackermann's formula for pole placement
-    assert(ctrb.shape[0] == np.linalg.matrix_rank(ctrb))
-    K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
-    print('K:', K)
-
-    return K
-
-def build_SEIR():
-    belowEI = np.zeros((nIR, nEI))
-    belowEI[0,:] = 1-np.sum(EI, axis=0)
-    belowIR = 1-np.sum(IR, axis=0)
-
-    # Full SEIR Dynamics
-    A = np.block([ [1,                 np.zeros(nEI),     np.zeros(nIR),       0],
-                    [np.zeros((nEI,1)), EI,                np.zeros((nEI,nIR)), np.zeros((nEI,1))],
-                    [np.zeros((nIR,1)), belowEI,           IR,                  np.zeros((nIR,1))],
-                    [0,                 np.zeros((1,nEI)), belowIR,             1] ])
-
-    B = np.matrix(np.zeros((2+nEI+nIR,1)))
-    B[0] = -1
-    B[1] = 1
-
-    C = np.matrix(np.zeros((1,2+nEI+nIR)))
-    C[:, 1:-1] = 1
-
-    K = design_controller(A,B,C,pole_loc)
-
-    return A,B,C,K
-'''
 
 
 A,B,C,K = ct.build_SEIR()
@@ -108,9 +56,7 @@ if force_run or not os.path.isfile(cachefn):
     sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
 
     ctr = cvc.controller_intervention(targets)
-    sim.pars['interventions'] = [ctr] # Remove interventions (hopefully not necessary!)
-    #sim.pars['rand_seed'] = 0
-    #sim.pars['end_day'] = '2020-09-05'
+    sim.pars['interventions'] = [ctr] # Remove other interventions (hopefully not necessary!)
     sim.run()
     sim.save(cachefn, keep_people=True)
 else:

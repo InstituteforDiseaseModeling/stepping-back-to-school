@@ -6,33 +6,23 @@ __all__ = ['Controller']
 
 class Controller:
 
-    def __init__(self):
+    def __init__(self, SEIR):
+        self.SEIR = SEIR
 
-        tm = TransitionMatrix()
 
-        self.EI = tm.full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049 ,
-               0.40917672])
-
-        self.IR = tm.full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
-                9.65784905e-01,  1.12059492e-02,  4.37587969e-06, -1.21861188e-07,
-                9.62334305e-01,  9.75919056e-03, -6.23660031e-10,  1.64779825e-08,
-                1.01696020e-02,  9.77812849e-01,  5.15078739e-02,  4.48849543e-10,
-                1.53316944e-08,  1.62901373e-02,  1.24279573e-02,  9.48492111e-01,
-                3.71067650e-01,  4.71039087e-09,  7.12066962e-04,  3.37529797e-12,
-               -5.69699539e-10,  1.97380899e-08,  6.28932347e-01,  5.53031491e-01])
-
-    def design_controller(self, pole_loc):
+    def design_controller(self, pole_loc=0.7):
         # Dynamics for feedback controller design
-        Af = self.A[1:-1,1:-1]
-        Bf = self.B[1:-1]
-        Cf = self.C[:,1:-1]
-        nEI = self.nEI
-        nIR = self.nIR
+        Af = self.SEIR.A[1:-1,1:-1]
+        Bf = self.SEIR.B[1:-1]
+        Cf = self.SEIR.C[:,1:-1]
+        nEI = self.EI.shape[0]
+        nIR = self.IR.shape[0]
 
         # Error dynamics: e_dot, E_dot, I_dot
         Ac = np.block( [[1, Cf], [np.zeros((nEI+nIR,1)), Af]] )
         Bc = np.vstack([0, Bf])
 
+        # Controllability matrix of combined error & state dynamics
         ctrb = np.matrix(np.zeros((nEI+nIR+1, nEI+nIR+1))) # +1 for error dynamics
         ctrb[:,0] = Bc
         for i in range(nEI+nIR):
@@ -53,7 +43,4 @@ class Controller:
         assert(ctrb.shape[0] == np.linalg.matrix_rank(ctrb))
         K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
         return K
-
-
-        # self.K = self.design_controller(pole_loc=0.7)
 
