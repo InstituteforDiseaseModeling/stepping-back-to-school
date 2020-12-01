@@ -9,17 +9,12 @@ managers, which handle different cohorting options (and school days).
 import covasim as cv
 import numpy as np
 import sciris as sc
+from .controller import TransitionMatrix as tm
 
-__all__ = ['controller']
 
-def full(p):
-    n = int((-1 + np.sqrt( (1 + 8*len(p)) ))/2)
-    M = np.zeros((n,n))
-    np.put(M, np.ravel_multi_index(np.tril_indices(n), M.shape), p)
+__all__ = ['controller_intervention']
 
-    return M
-
-class controller(cv.Intervention):
+class controller_intervention(cv.Intervention):
     '''
     TODO
     '''
@@ -36,10 +31,10 @@ class controller(cv.Intervention):
 
         self.integrated_err = 0
 
-        self.EI = full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049, 0.40917672])
+        self.EI = tm.full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049, 0.40917672])
         self.nEI = self.EI.shape[0]
 
-        self.IR = full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
+        self.IR = tm.full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
                 9.65784905e-01,  1.12059492e-02,  4.37587969e-06, -1.21861188e-07,
                 9.62334305e-01,  9.75919056e-03, -6.23660031e-10,  1.64779825e-08,
                 1.01696020e-02,  9.77812849e-01,  5.15078739e-02,  4.48849543e-10,
@@ -56,46 +51,11 @@ class controller(cv.Intervention):
         self.Q = 10 * np.eye(self.nEIR) # Process noise - TODO: better guess
         self.R = 1 * np.eye(2)  # Observation noise (E and I) # TODO
 
-        self.K = np.array([[0.04388146, 0.27750344, 0.96649746, -0.14699181, 0.92476425, -0.36230294, 0.3816167, 0.25341555, 0.21416596, 0.16789652, 0.0981611]])
+        #self.K = np.array([[0.04388146, 0.27750344, 0.96649746, -0.14699181, 0.92476425, -0.36230294, 0.3816167, 0.25341555, 0.21416596, 0.16789652, 0.0981611]])
 
         self.build_SEIR()
 
         return
-
-    def build_SEIR(self):
-        belowEI = np.zeros((self.nIR, self.nEI))
-        belowEI[0,:] = 1-np.sum(self.EI, axis=0)
-        belowIR = 1-np.sum(self.IR, axis=0)
-        nEI = self.nEI
-        nIR = self.nIR
-
-        # Full SEIR Dynamics
-        self.A = np.block( [
-            [1,                 np.zeros(nEI),     np.zeros(nIR),       0                   ],
-            [np.zeros((nEI,1)), self.EI,           np.zeros((nEI,nIR)), np.zeros((nEI,1))   ],
-            [np.zeros((nIR,1)), belowEI,           self.IR,             np.zeros((nIR,1))   ],
-            [0,                 np.zeros((1,nEI)), belowIR,             1                   ] ])
-
-        self.B = np.matrix(np.zeros((2+nEI+nIR,1)))
-        self.B[0] = -1
-        self.B[1] = 1
-
-        self.C = np.matrix(np.zeros((1,2+nEI+nIR)))
-        self.C[:, 1:-1] = 1
-
-        # Check EI observability
-        A = self.A[1:-1,1:-1]
-        C = self.C[:,1:-1]
-        Omats = [C]
-        for i in range(1,self.nEIR):
-            Omats.append(Omats[-1]*A)
-        obs_mat = np.vstack(Omats)
-        assert(np.linalg.matrix_rank(obs_mat) == self.nEIR)
-
-        #K = design_controller(A,B,C,pole_loc)
-
-        return
-
 
     def initialize(self, sim):
         self.beta0 = sim.pars['beta']
@@ -156,15 +116,25 @@ class controller(cv.Intervention):
         u = np.asarray(-self.K * Xu)[0][0]
         u = np.maximum(u,0)
 
-        print('WARNING: reducing u')
-        u *= 0.1
+        #print('WARNING: reducing u')
+        #u *= 0.1
 
+        # Should be in conditional
         self.Kalman(E, I, u)
 
         print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.EIhat[:self.nEI]):.0f}, I={np.sum(self.EIhat[self.nEI:]):.0f} --> U={u:.1f}, beta={sim.pars["beta"]}')
 
         if S*I > 0:
-            sim.pars['beta'] = np.maximum(u * N / (S*I), 0)
+            #expected_new_infections = S*I/N
+
+            xs = S
+            xi = np.sum(self.EIhat[np.arange(self.nEI, self.nEI+self.nIR)])
+            xi += np.sum(self.EIhat[np.arange(self.nEI, self.nEI+3)]) # Double infectivity early
+
+            expected_new_infections = xs*xi / N # np.power(xi, 1)
+            print(expected_new_infections, S*I/N)
+
+            sim.pars['beta'] = np.maximum(u / expected_new_infections, 0)
 
         self.integrated_err = self.integrated_err + y - self.targets['EI']
 

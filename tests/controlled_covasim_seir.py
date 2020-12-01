@@ -4,19 +4,19 @@ import numpy as np
 import covasim as cv
 import covasim.utils as cvu
 import matplotlib.pyplot as plt
+from fit_distrib import plot_dur
+from numpy.linalg import matrix_power as mp
 from risk_evaluation import create_sim as cs
 import covasim_controller as cvc
-from fit_distrib import coxian, full, plot_dur
-from numpy.linalg import matrix_power as mp
 
-do_plot = True
+plot_dur_dist = False
 
 cachefn = 'sim_controlled.obj'
 force_run = True
 
 pop_size = 100_000 #500_000
-EI_ref = 0.03 * pop_size # prevalence target
-pole_loc = 0.3 # 0.3
+EI_ref = 0.02 * pop_size # prevalence target
+pole_loc = 0.7 # 0.3
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
@@ -33,26 +33,18 @@ targets = {
     'EI': EI_ref
 }
 
+ct = cvc.Controller()
+
 
 #EI = coxian(np.array([0.4950429 , 0.51759924, 0.5865702 ]))
 #IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
 
-EI = full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049 ,
-       0.40917672])
-
-#IR = coxian(np.array([0.66154341, 0.61511552, 1.52192331, 0.69897356, 0.6143495, 0.61457423, 0.70117798]))
-IR = full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
-        9.65784905e-01,  1.12059492e-02,  4.37587969e-06, -1.21861188e-07,
-        9.62334305e-01,  9.75919056e-03, -6.23660031e-10,  1.64779825e-08,
-        1.01696020e-02,  9.77812849e-01,  5.15078739e-02,  4.48849543e-10,
-        1.53316944e-08,  1.62901373e-02,  1.24279573e-02,  9.48492111e-01,
-        3.71067650e-01,  4.71039087e-09,  7.12066962e-04,  3.37529797e-12,
-       -5.69699539e-10,  1.97380899e-08,  6.28932347e-01,  5.53031491e-01])
 
 
-nEI = EI.shape[0]
-nIR = IR.shape[0]
+nEI = ct.EI.shape[0]
+nIR = ct.IR.shape[0]
 
+'''
 def design_controller(A,B,C,pole_loc):
     # Dynamics for feedback controller design
     Af = A[1:-1,1:-1]
@@ -82,6 +74,7 @@ def design_controller(A,B,C,pole_loc):
     # Ackermann's formula for pole placement
     assert(ctrb.shape[0] == np.linalg.matrix_rank(ctrb))
     K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
+    print('K:', K)
 
     return K
 
@@ -106,14 +99,15 @@ def build_SEIR():
     K = design_controller(A,B,C,pole_loc)
 
     return A,B,C,K
+'''
 
 
-A,B,C,K = build_SEIR()
+A,B,C,K = ct.build_SEIR()
 
 if force_run or not os.path.isfile(cachefn):
     sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
 
-    ctr = cvc.controller(targets)
+    ctr = cvc.controller_intervention(targets)
     sim.pars['interventions'] = [ctr] # Remove interventions (hopefully not necessary!)
     #sim.pars['rand_seed'] = 0
     #sim.pars['end_day'] = '2020-09-05'
@@ -132,8 +126,10 @@ def step(t, X, A, B, C, K, beta):
     xi += np.sum(x[np.arange(nEI+1, nEI+4)]) # Double early infectivity
 
     Xu = X[[0] + list(range(1+1, nEI+nIR+1+1)),:] # integrated error, E, I
-    #u = beta * xs*xi / pop_size # np.power(xi, 1)
-    u = -K*Xu
+    if t < 15:
+        u = beta * xs*xi / pop_size # np.power(xi, 1)
+    else:
+        u = -K*Xu
     u = np.median([u,0,xs]) # !!!
     y = C*x
 
@@ -161,8 +157,8 @@ inds = ~sim.people.susceptible
 print(f'There were {sum(inds)} exposures')
 e_to_i = sim.people.date_infectious[inds] - sim.people.date_exposed[inds]
 i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
-fig, axv = plt.subplots(1,2,figsize=(16,10))
-if do_plot:
+if plot_dur_dist:
+    fig, axv = plt.subplots(1,2,figsize=(16,10))
     plot_dur(e_to_i, EI, axv[0])
     plot_dur(i_to_r, IR, axv[1])
 
