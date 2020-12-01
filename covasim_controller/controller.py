@@ -1,19 +1,7 @@
 import numpy as np
 from numpy.linalg import matrix_power as mp
 
-__all__ = ['Controller', 'TransitionMatrix']
-
-
-class TransitionMatrix:
-    def __init__(self):
-        return
-
-    def full(self, p):
-        n = int((-1 + np.sqrt( (1 + 8*len(p)) ))/2)
-        M = np.zeros((n,n))
-        np.put(M, np.ravel_multi_index(np.tril_indices(n), M.shape), p)
-
-        return M
+__all__ = ['Controller']
 
 
 class Controller:
@@ -66,38 +54,6 @@ class Controller:
         K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
         return K
 
-    def build_SEIR(self):
-        belowEI = np.zeros((self.nIR, self.nEI))
-        belowEI[0,:] = 1-np.sum(self.EI, axis=0)
-        belowIR = 1-np.sum(self.IR, axis=0)
-        nEI = self.nEI
-        nIR = self.nIR
 
-        # Full SEIR Dynamics
-        self.A = np.block( [
-            [1,                 np.zeros(nEI),     np.zeros(nIR),       0                   ],
-            [np.zeros((nEI,1)), self.EI,           np.zeros((nEI,nIR)), np.zeros((nEI,1))   ],
-            [np.zeros((nIR,1)), belowEI,           self.IR,             np.zeros((nIR,1))   ],
-            [0,                 np.zeros((1,nEI)), belowIR,             1                   ] ])
-
-        self.B = np.matrix(np.zeros((2+nEI+nIR,1)))
-        self.B[0] = -1
-        self.B[1] = 1
-
-        self.C = np.matrix(np.zeros((1,2+nEI+nIR)))
-        self.C[:, 1:-1] = 1
-
-        # Check EI observability
-        A = self.A[1:-1,1:-1]
-        C = self.C[:,1:-1]
-        Omats = [C]
-        for i in range(1,self.nEIR):
-            Omats.append(Omats[-1]*A)
-        obs_mat = np.vstack(Omats)
-        assert(np.linalg.matrix_rank(obs_mat) == self.nEIR)
-
-        self.K = self.design_controller(pole_loc=0.7)
-
-        return
-
+        # self.K = self.design_controller(pole_loc=0.7)
 
