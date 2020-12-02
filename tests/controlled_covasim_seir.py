@@ -1,28 +1,27 @@
 import os
-import seaborn as sns
+import sciris as sc
 import numpy as np
 import covasim as cv
 import covasim.utils as cvu
+import covasim.misc as cvm
 import matplotlib.pyplot as plt
-from fit_distrib import plot_dur
 from numpy.linalg import matrix_power as mp
 from risk_evaluation import create_sim as cs
 import covasim_controller as cvc
-
-plot_dur_dist = False
+np.set_printoptions(suppress=True)
 
 cachefn = 'sim_controlled.obj'
-force_run = True
+force_run = True # Because the control might be different each time
 
 pop_size = 100_000 #500_000
 EI_ref = 0.03 * pop_size # prevalence target
-pole_loc = 0.7 # 0.3
+pole_loc = 0.4 # 0.3
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
     'change_beta': 1,
     'symp_prob': 0.1,
-    #'end_day': '2020-09-05',
+    #'end_day': '2020-09-20',
 }
 
 targets = {
@@ -31,87 +30,49 @@ targets = {
     #'prevalence':   0.003, # KC image from Niket in #nowcasting-inside-voice dated 11/02 using data through 10/23
     #'yield':        0.029, # 2.4% positive
     #'tests':        225,   # per 100k (per day) - 225 is 5000 tests in 2.23M pop per day
-    'EI':           EI_ref
+    'infected':           EI_ref
 }
 
 # These come from fit_transmats
 ei = sc.loadobj('EI.obj')
 ir = sc.loadobj('IR.obj')
 
-seir = cvc.SEIR(pop_size, ei.Mopt, ir.Mopt, beta=0.365, Ipow=0.925)
+ref = cvc.ReferenceTrajectory(targets)
 
-ct = cvc.Controller(seir)
+def run(n_seeds, n_days, K, ref):
+    seir.reset(n_seeds, n_days)
 
-EI = ei.Mopt
-IR = ir.Mopt
+    N = seir.A.shape[0]
+    inds = np.r_[1:N-2, N-1]
 
-nEI = ei.n
-nIR = ir.n
+    for k in range(n_days):
+        if k < 15:
+            seir.step()
+            seir.X[-1,k+1] = 0 # Erase error
+        else:
+            Xu = seir.X[inds,k]
+            print('SEIR K:', K)
+            u = -np.dot(K, Xu)
+            print(f'{k}: SEIR CONTROLLER GETTING {u} new infections')
+            print(f'SEIR Xu:\n', np.matrix(Xu).T)
+            #u = np.median([u,0,xs]) # !!!
+            seir.step(u, ref.get(k))
+
+    return seir.finalize()
 
 
+seir = cvc.SEIR(pop_size, ei.Mopt, ir.Mopt, ERR=1, beta=0.365, Ipow=0.925)
 
-A,B,C,K = ct.build_SEIR()
-
+# Covasim
 if force_run or not os.path.isfile(cachefn):
     sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
 
-    ctr = cvc.controller_intervention(targets)
+    ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc)
     sim.pars['interventions'] = [ctr] # Remove other interventions (hopefully not necessary!)
     sim.run()
     sim.save(cachefn, keep_people=True)
 else:
     sim = cv.load(cachefn)
-
-def step(t, X, A, B, C, K, beta):
-    X = np.matrix(X).T
-    integrated_error = X[0]
-    x = X[1:]
-
-    xs = x[0]
-    xi = np.sum(x[np.arange(nEI+1, nEI+nIR+1)])
-    xi += np.sum(x[np.arange(nEI+1, nEI+4)]) # Double early infectivity
-
-    Xu = X[[0] + list(range(1+1, nEI+nIR+1+1)),:] # integrated error, E, I
-    if t < 15:
-        u = beta * xs*xi / pop_size # np.power(xi, 1)
-    else:
-        u = -K*Xu
-    u = np.median([u,0,xs]) # !!!
-    y = C*x
-
-    new_integrated_error = integrated_error + y - EI_ref
-
-    new_x = A*x + B*u
-    new = np.vstack( [new_integrated_error, new_x] )
-
-    return np.squeeze(np.asarray(new))
-
-
-def run_SEIR(A, B, C, K, beta, seeds, n_days):
-    dt = 1
-    X = np.zeros((2+nEI+nIR + 1, n_days+1)) # +1 for error dynamics
-    #print('WARNING: 10x number of seeds!')
-    #seeds *= 10
-    X[1,0] = pop_size-seeds
-    X[2,0] = seeds
-    for k in range(n_days):
-        X[:,k+1] = step(k*dt, X[:,k], A, B, C, K, beta)
-
-    return X
-
-inds = ~sim.people.susceptible
-print(f'There were {sum(inds)} exposures')
-e_to_i = sim.people.date_infectious[inds] - sim.people.date_exposed[inds]
-i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
-if plot_dur_dist:
-    fig, axv = plt.subplots(1,2,figsize=(16,10))
-    plot_dur(e_to_i, EI, axv[0])
-    plot_dur(i_to_r, IR, axv[1])
-
-
-#A,B,C,K = build_SEIR()
-beta = 0.185
-X = run_SEIR(A,B,C,K,beta,sim.results['n_exposed'][0], sim.pars['n_days'])
 
 N = sim.scaled_pop_size # don't really care about N vs alive...
 #alive = N - sim.results['cum_deaths']
@@ -120,15 +81,21 @@ E = sim.results['n_exposed'].values - sim.results['n_infectious'].values
 I = sim.results['n_infectious'].values
 R = sim.results['cum_recoveries']
 
+# SEIR
+ct = cvc.Controller(seir, pole_loc=pole_loc)
+n_days = sim.pars['n_days'] # cvm.daydiff('2020-09-01', '2021-01-31') #
+seir_ret = run(params['pop_infected'], n_days, ct.K, ref)
+
 fig, axv = plt.subplots(2,2, figsize=(16,10))
 ax = axv[0,0] # Top left
 ax.plot(sim.results['date'], np.vstack([S, E, I, R]).T)
 
-Xerr = X[0,:]
-Xs = X[1,:]
-Xe = np.sum(X[range(1+1,nEI+1+1),:], axis=0)
-Xi = np.sum(X[range(nEI+1+1, nEI+nIR+1+1),:], axis=0)
-Xr = X[-1,:]
+Xerr = seir_ret['e']
+Xs = seir_ret['S']
+Xe = seir_ret['E']
+Xi = seir_ret['I']
+Xr = seir_ret['R']
+Y = seir_ret['Y']
 
 xx = np.vstack([Xs, Xe, Xi, Xr])
 ax.set_prop_cycle(None)
@@ -138,7 +105,7 @@ ax.legend(['Susceptible', 'Exposed', 'Infectious', 'Recovered'])
 ax = axv[0,1] # Top right
 ax.scatter(S*I/N, sim.results['new_infections'], c=range(len(S)))
 SI = Xs*Xi/N
-ax.scatter(SI[:-1], -np.diff(X[0]), c=range(len(SI[:-1])), marker='x')
+ax.scatter(SI[:-1], -np.diff(Xs), c=range(len(SI[:-1])), marker='x')
 ax.set_xlabel('S*I/N')
 ax.set_ylabel('New infections')
 
@@ -153,7 +120,7 @@ fig.tight_layout()
 
 ax = axv[1,0] # Bottom left
 ax.plot(sim.results['date'], E+I, 'k')
-ax.plot(sim.results['date'], np.asarray(C*X[1:,:])[0], 'k--')
+ax.plot(sim.results['date'], Y, 'k--')
 ax.axhline(y=EI_ref, color='r', zorder=-1)
 ax.legend(['Covasim Exposed + Infectious', 'SEIR E+I', 'Reference E+I'])
 

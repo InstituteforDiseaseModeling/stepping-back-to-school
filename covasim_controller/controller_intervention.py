@@ -9,7 +9,8 @@ managers, which handle different cohorting options (and school days).
 import covasim as cv
 import numpy as np
 import sciris as sc
-from .TransitionMatrix import TransitionMatrix as tm
+from .controller import Controller as ct
+from .Kalman import Kalman as kf
 
 
 __all__ = ['controller_intervention']
@@ -19,80 +20,29 @@ class controller_intervention(cv.Intervention):
     TODO
     '''
 
-    def __init__(self, targets, **kwargs):
+    def __init__(self, SEIR, targets, pole_loc=None, **kwargs):
         super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args() # Store the input arguments so that intervention can be recreated
 
         # Store arguments
         self.targets = targets
-        self.betat = kwargs['betat'] if 'betat' in kwargs else None
+        self.SEIR = SEIR
+        self.u_k =  None
+
+        # TODO: Make params
         self.start_day = 15
         self.end_date = '2099-12-02'
 
+        self.Controller = ct(SEIR, pole_loc=pole_loc)
         self.integrated_err = 0
 
-        self.EI = tm.full([0.54821612, 0.40217725, 0.24984496, 0.03756642, 0.5213049, 0.40917672])
-        self.nEI = self.EI.shape[0]
-
-        self.IR = tm.full([ 3.40190364e-01,  3.63341049e-01,  3.35031247e-02,  2.96464203e-01,
-                9.65784905e-01,  1.12059492e-02,  4.37587969e-06, -1.21861188e-07,
-                9.62334305e-01,  9.75919056e-03, -6.23660031e-10,  1.64779825e-08,
-                1.01696020e-02,  9.77812849e-01,  5.15078739e-02,  4.48849543e-10,
-                1.53316944e-08,  1.62901373e-02,  1.24279573e-02,  9.48492111e-01,
-                3.71067650e-01,  4.71039087e-09,  7.12066962e-04,  3.37529797e-12,
-               -5.69699539e-10,  1.97380899e-08,  6.28932347e-01,  5.53031491e-01])
-        self.nIR = self.IR.shape[0]
-
-        # Filtered state estimate
-        self.nEIR = self.nEI + self.nIR
-        self.EIhat = np.matrix(np.zeros( (self.nEIR,1) )) # TODO: Informed guess
-        self.Sigma = 1 * np.eye(self.nEIR) # State estimate covariance # TODO: Better guess
-
-        self.Q = 10 * np.eye(self.nEIR) # Process noise - TODO: better guess
-        self.R = 1 * np.eye(2)  # Observation noise (E and I) # TODO
-
-        #self.K = np.array([[0.04388146, 0.27750344, 0.96649746, -0.14699181, 0.92476425, -0.36230294, 0.3816167, 0.25341555, 0.21416596, 0.16789652, 0.0981611]])
-
-        self.build_SEIR()
-
-        return
 
     def initialize(self, sim):
-        self.beta0 = sim.pars['beta']
-        if self.betat is None:
-            self.betat = sim.pars['beta'] * np.ones(sim.pars['n_days']+1)
+        self.u_k = sim.pars['beta'] * np.ones(sim.pars['n_days']+1)
 
-        self.EIhat[0,0] = np.sum(sim.people.exposed)
+        initial_exposed_pop = np.sum(sim.people.exposed)
+        self.Kalman = kf(initial_exposed_pop, self.SEIR)
 
-        self.tpi = sim.pars['interventions'][0]
-        self.initialized = True
-
-    def Kalman(self, yE, yI, u):
-        # remove S and R states, leaving just E and E
-        A = self.A[1:-1,1:-1]
-        B = self.B[1:-1]
-        #C = self.C[:,1:-1]
-
-        Ce = np.hstack([np.ones(self.nEI), np.zeros(self.nIR)])
-        Ci = np.hstack([np.zeros(self.nEI), np.ones(self.nIR)])
-        C = np.matrix(np.vstack([Ce, Ci]))
-        y = np.vstack([yE, yI])
-
-        print('BEFORE:', self.EIhat.T)
-        #print(self.Sigma)
-
-        # Predict
-        self.EIhat = A * self.EIhat + B * u
-        self.Sigma = A * self.Sigma * A.T + self.Q
-
-        # Correct
-        L = self.Sigma * C.T * np.linalg.inv(C*self.Sigma*C.T + self.R)
-        self.EIhat += L * (y - C*self.EIhat)
-        self.Sigma = (np.eye(self.nEIR) - L*C)*self.Sigma
-
-        print('AFTER:', self.EIhat.T)
-        print('Corrected error:', (y-C*self.EIhat).T)
-        #print(self.Sigma)
 
     def apply(self, sim):
         print(sim.t, '-'*80)
@@ -109,33 +59,74 @@ class controller_intervention(cv.Intervention):
         if sim.t < self.start_day:
             u = sim.results['new_infections'][sim.t-1] # S*I/N # np.sum(sim.people.date_exposed == sim.t-1)
             print('NEW EXPOSURES:', u, sim.results['new_infections'][sim.t-1], S*I/N)
-            self.Kalman(E, I, u)
+            self.Kalman.update(E, I, u)
             return
 
-        Xu = np.vstack([self.integrated_err, self.EIhat])
-        u = np.asarray(-self.K * Xu)[0][0]
+        print('NEW EXPOSURES:', sim.results['new_infections'][sim.t-1])
+
+        Xu = np.vstack([self.Kalman.EIhat, self.integrated_err])
+        print('Covasim Xu\n', Xu)
+        u = self.Controller.get_control(Xu)
         u = np.maximum(u,0)
 
-        #print('WARNING: reducing u')
-        #u *= 0.1
-
         # Should be in conditional
-        self.Kalman(E, I, u)
+        self.Kalman.update(E, I, u)
 
-        print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.EIhat[:self.nEI]):.0f}, I={np.sum(self.EIhat[self.nEI:]):.0f} --> U={u:.1f}, beta={sim.pars["beta"]}')
+        #print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.Kalman.Ehat()):.0f}, I={np.sum(self.Kalman.Ihat()):.0f} --> U={u:.1f}, beta={sim.pars["beta"]}')
 
         if S*I > 0:
-            #expected_new_infections = S*I/N
-
+            # TODO: In SEIR class?
             xs = S
-            xi = np.sum(self.EIhat[np.arange(self.nEI, self.nEI+self.nIR)])
-            xi += np.sum(self.EIhat[np.arange(self.nEI, self.nEI+3)]) # Double infectivity early
+            Ihat = self.Kalman.Ihat()
 
-            expected_new_infections = xs*xi / N # np.power(xi, 1)
-            print(expected_new_infections, S*I/N)
+            xi = np.sum(Ihat)
+            xi += np.sum(Ihat[:3]) # Double infectivity early
 
-            sim.pars['beta'] = np.maximum(u / expected_new_infections, 0)
+            xi = np.power(xi, self.SEIR.Ipow) # Ipow - do this in SEIR class where Ipow is known?
 
-        self.integrated_err = self.integrated_err + y - self.targets['EI']
+            SI_by_N = xs*xi / N # np.power(xi, 1)
+
+            sim.pars['beta'] = np.maximum(u / SI_by_N, 0)
+
+            print('WARNING: shrinking beta!')
+            sim.pars['beta'] /= 20
+
+            print(f'CONTROLLER IS ASKING FOR {u} NEW EXPOSURES')
+
+        self.integrated_err = self.integrated_err + y - self.targets['infected'] # TODO: use ReferenceTrajectory class
 
         return
+
+'''
+Covasim Xu
+ [[112.17865369]
+ [ 30.51657577]
+ [ 55.45949028]
+ [ 45.83044637]
+ [ 33.62408621]
+ [ 32.15680289]
+ [  2.23987394]
+ [ 34.69105998]
+ [ 34.86606363]
+ [ 56.46055562]
+ [  0.        ]]
+Controller K: [[  -3.41289082   36.74027498  -40.29917955   63.5771747   -58.89990944
+    20.76331501 -516.77749744   -3.48674763    0.40260556    0.00002028
+     0.00000898]]
+
+SEIR Xu:
+ [[180.06891832]
+ [ 65.48960762]
+ [131.0027128 ]
+ [ 95.46564201]
+ [ 60.29893253]
+ [ 49.56669586]
+ [  0.08533101]
+ [ 42.79975516]
+ [ 34.93937766]
+ [ 45.85195804]
+ [  0.        ]]
+SEIR K: [[  -3.41289082   36.74027498  -40.29917955   63.5771747   -58.89990944
+    20.76331501 -516.77749744   -3.48674763    0.40260556    0.00002028
+     0.00000898]]
+'''

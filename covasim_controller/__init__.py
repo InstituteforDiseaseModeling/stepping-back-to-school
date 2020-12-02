@@ -5,3 +5,4 @@ from .controller import *
 from .SEIR import *
 from .TransitionMatrix import *
 from .Kalman import *
+from .ReferenceTrajectory import *

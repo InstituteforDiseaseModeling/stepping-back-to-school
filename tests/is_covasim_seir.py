@@ -42,7 +42,7 @@ else:
 
 seeds = sim.results['n_exposed'][0]
 seir = cvc.SEIR(pop_size, EI, IR, beta=0.365, Ipow=0.925) # 0.365, 0.94
-X = seir.run(seeds, sim.pars['n_days'])
+seir_results = seir.run(seeds, sim.pars['n_days'])
 
 N = sim.scaled_pop_size # don't really care about N vs alive...
 #alive = N - sim.results['cum_deaths']
@@ -59,67 +59,22 @@ ax3 = fig.add_subplot(gs[1, 1])
 
 ax1.plot(sim.results['date'], np.vstack([S, E, I, R]).T)
 
-Xs = X[0,:]
-Xe = np.sum(X[1:(ei.n+1),:], axis=0)
-Xi = np.sum(X[(ei.n+1):(ei.n+ir.n+1),:], axis=0)
-Xr = X[-1,:]
-
-xx = np.vstack([Xs, Xe, Xi, Xr])
+xx = np.vstack([seir_results['S'], seir_results['E'], seir_results['I'], seir_results['R']])
 ax1.set_prop_cycle(None)
 ax1.plot(sim.results['date'], xx.T, ls='--')
 ax1.legend(['Susceptible', 'Exposed', 'Infectious', 'Recovered'])
 
 ax2.scatter(S*I/N, sim.results['new_infections'], c=range(len(S)), s=3)
-SI = Xs*Xi/N
-ax2.scatter(SI[:-1], -np.diff(X[0]), c=range(len(SI[:-1])), s=3, marker='x')
+SI = seir_results['S']*seir_results['I']/N
+ax2.scatter(SI[:-1], -np.diff(seir_results['X'][0]), c=range(len(SI[:-1])), s=3, marker='x')
 ax2.set_xlabel('S*I/N')
 ax2.set_ylabel('New infections')
 
 ax3.scatter(E, I, c=range(len(S)), s=3)
 ax3.set_prop_cycle(None)
-ax3.scatter(Xe, Xi, c=range(len(S)), s=3, marker='x')
+ax3.scatter(seir_results['E'], seir_results['I'], c=range(len(S)), s=3, marker='x')
 ax3.set_xlabel('Exposed')
 ax3.set_ylabel('Infectious')
 ax3.legend(['Covasim', 'SEIR'])
 
 fig.savefig('is_covasim_seir.png', dpi=300)
-
-'''
-cum_infections
-cum_infectious
-cum_tests
-cum_diagnoses
-cum_recoveries
-cum_symptomatic
-cum_severe
-cum_critical
-cum_deaths
-cum_quarantined
-new_infections
-new_infectious
-new_tests
-new_diagnoses
-new_recoveries
-new_symptomatic
-new_severe
-new_critical
-new_deaths
-new_quarantined
-n_susceptible
-n_exposed
-n_infectious
-n_symptomatic
-n_severe
-n_critical
-n_diagnosed
-n_quarantined
-n_alive
-prevalence
-incidence
-r_eff
-doubling_time
-test_yield
-rel_test_yield
-date
-t
-'''
