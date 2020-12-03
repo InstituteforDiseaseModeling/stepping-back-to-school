@@ -58,5 +58,4 @@ class Controller:
         self.K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
 
     def get_control(self, X):
-        print('Controller K:', self.K)
         return np.asarray(-self.K * X)[0][0]

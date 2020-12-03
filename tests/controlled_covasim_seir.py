@@ -14,8 +14,8 @@ cachefn = 'sim_controlled.obj'
 force_run = True # Because the control might be different each time
 
 pop_size = 100_000 #500_000
-EI_ref = 0.02 * pop_size # prevalence target
-pole_loc = 0.35 # 0.3
+EI_ref = 0.002 * pop_size # prevalence target
+pole_loc = 0.3 # 0.35
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
@@ -46,15 +46,13 @@ def run(n_seeds, n_days, K, ref):
     inds = np.r_[1:N-2, N-1]
 
     for k in range(n_days):
-        if k < 15:
+        if k < 15: # start day of controller intervention
             seir.step()
-            seir.X[-1,k+1] = 0 # Erase error
+            #seir.X[-1,k+1] = 0 # Erase error
+            seir.X[-1,:] = 0 # Erase error
         else:
             Xu = seir.X[inds,k]
-            print('SEIR K:', K)
             u = -np.dot(K, Xu)
-            print(f'{k}: SEIR CONTROLLER GETTING {u} new infections')
-            print(f'SEIR Xu:\n', np.matrix(Xu).T)
             #u = np.median([u,0,xs]) # !!!
             seir.step(u, ref.get(k))
 
@@ -68,7 +66,8 @@ if force_run or not os.path.isfile(cachefn):
     sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
 
     ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc)
-    sim.pars['interventions'] = [ctr] # Remove other interventions (hopefully not necessary!)
+    #sim.pars['interventions'] = [ctr] # Remove other interventions (hopefully not necessary!)
+    sim.pars['interventions'].append(ctr) # Remove other interventions (hopefully not necessary!)
     sim.run()
 
     sim.save(cachefn, keep_people=True)
@@ -125,5 +124,6 @@ ax.plot(sim.results['date'], Y, 'k--')
 ax.axhline(y=EI_ref, color='r', zorder=-1)
 ax.legend(['Covasim Exposed + Infectious', 'SEIR E+I', 'Reference E+I'])
 
-
-plt.show()
+fn = 'ControlledCovasim.png'
+print(f'Saving figure to {fn}')
+fig.savefig(fn, dpi=300)

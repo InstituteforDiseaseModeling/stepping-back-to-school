@@ -36,7 +36,7 @@ fig = ei.plot()
 
 etoi_fn = 'EtoI.png'
 print(f'Saving E-->I figure to {etoi_fn}')
-fig.savefig(etoi_fn, dpi=600)
+fig.savefig(etoi_fn, dpi=300)
 
 
 i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
@@ -47,4 +47,4 @@ fig = ir.plot()
 
 itor_fn = 'ItoR.png'
 print(f'Saving I-->R figure to {itor_fn}')
-fig.savefig(itor_fn, dpi=600)
+fig.savefig(itor_fn, dpi=300)

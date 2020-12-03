@@ -28,9 +28,6 @@ class Kalman():
         C = np.matrix(np.vstack([Ce, Ci]))
         y = np.vstack([yE, yI])
 
-        print('BEFORE:', self.EIhat.T)
-        #print(self.Sigma)
-
         # Predict
         self.EIhat = A * self.EIhat + B * u
         self.Sigma = A * self.Sigma * A.T + self.Q
@@ -40,9 +37,7 @@ class Kalman():
         self.EIhat += L * (y - C*self.EIhat)
         self.Sigma = (np.eye(self.nEIR) - L*C)*self.Sigma
 
-        print('AFTER:', self.EIhat.T)
-        print('Corrected error:', (y-C*self.EIhat).T)
-        #print(self.Sigma)
+        #print('Corrected error:', (y-C*self.EIhat).T)
 
 
     def Ehat(self):
