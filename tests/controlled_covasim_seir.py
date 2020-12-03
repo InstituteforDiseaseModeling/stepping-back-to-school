@@ -14,8 +14,8 @@ cachefn = 'sim_controlled.obj'
 force_run = True # Because the control might be different each time
 
 pop_size = 100_000 #500_000
-EI_ref = 0.03 * pop_size # prevalence target
-pole_loc = 0.4 # 0.3
+EI_ref = 0.02 * pop_size # prevalence target
+pole_loc = 0.35 # 0.3
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
@@ -70,6 +70,7 @@ if force_run or not os.path.isfile(cachefn):
     ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc)
     sim.pars['interventions'] = [ctr] # Remove other interventions (hopefully not necessary!)
     sim.run()
+
     sim.save(cachefn, keep_people=True)
 else:
     sim = cv.load(cachefn)

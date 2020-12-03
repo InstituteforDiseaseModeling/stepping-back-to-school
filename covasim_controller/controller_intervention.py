@@ -50,7 +50,7 @@ class controller_intervention(cv.Intervention):
         #    import time
         #    r = np.random.rand(int(time.time_ns() % 1e4)) # Pull a random number to mess up the stream
 
-        y = np.sum(sim.people.exposed)#sim.results['n_exposed'][sim.t-1]
+        y = sim.results['n_exposed'][sim.t-1] # np.sum(sim.people.exposed)#
         N = sim.scaled_pop_size # don't really care about N vs alive...
         S = N - np.count_nonzero(~np.isnan(sim.people.date_exposed)) #sim.results['cum_infections'][sim.t-1]
         I = np.sum(sim.people.infectious)#sim.results['n_infectious'][sim.t-1]
@@ -89,11 +89,12 @@ class controller_intervention(cv.Intervention):
             sim.pars['beta'] = np.maximum(u / SI_by_N, 0)
 
             print('WARNING: shrinking beta!')
-            sim.pars['beta'] /= 20
+            sim.pars['beta'] /= 18
 
             print(f'CONTROLLER IS ASKING FOR {u} NEW EXPOSURES')
 
         self.integrated_err = self.integrated_err + y - self.targets['infected'] # TODO: use ReferenceTrajectory class
+        print(f'New Error --- y={y}, n_exp={sim.results["n_exposed"][sim.t-1]}, t={self.targets["infected"]}, err={y - self.targets["infected"]} --> int err now {self.integrated_err}')
 
         return
 
