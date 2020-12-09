@@ -24,6 +24,8 @@ class controller_intervention(cv.Intervention):
         super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args() # Store the input arguments so that intervention can be recreated
 
+        self.verbose = False
+
         # Store arguments
         self.targets = targets
         self.SEIR = SEIR
@@ -45,7 +47,7 @@ class controller_intervention(cv.Intervention):
 
 
     def apply(self, sim):
-        print(sim.t, '-'*80)
+        if self.verbose: print(sim.t, '-'*80)
         #if sim.t == sim.day('2020-11-02'):
         #    import time
         #    r = np.random.rand(int(time.time_ns() % 1e4)) # Pull a random number to mess up the stream
@@ -56,7 +58,7 @@ class controller_intervention(cv.Intervention):
         I = np.sum(sim.people.infectious)#sim.results['n_infectious'][sim.t-1]
         E = y - I
 
-        print('NEW EXPOSURES:', sim.results['new_infections'][sim.t-1])
+        if self.verbose: print('NEW EXPOSURES:', sim.results['new_infections'][sim.t-1])
 
         if sim.t < self.start_day or S*I==0:
             u = sim.results['new_infections'][sim.t-1] # S*I/N # np.sum(sim.people.date_exposed == sim.t-1)
@@ -72,20 +74,20 @@ class controller_intervention(cv.Intervention):
                 xi = np.power(xi, self.SEIR.Ipow) # Ipow - do this in SEIR class where Ipow is known?
             SI_by_N = xs*xi / N
             expecting = 18*sim.pars['beta'] * SI_by_N
-            print(f'EXPECTING {expecting}')
+            if self.verbose: print(f'EXPECTING {expecting}')
             # END TEMP
 
         else:
 
             Xu = np.vstack([self.Kalman.EIhat, self.integrated_err])
-            #print('Covasim Xu\n', Xu)
+            #if self.verbose: print('Covasim Xu\n', Xu)
             u = self.Controller.get_control(Xu)
             u = np.maximum(u,0)
 
             # Should be in conditional
             self.Kalman.update(E, I, u)
 
-            #print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.Kalman.Ehat()):.0f}, I={np.sum(self.Kalman.Ihat()):.0f} --> U={u:.1f}, beta={sim.pars["beta"]}')
+            #if self.verbose: print(f'Covasim E={E:.0f}, I={I:.0f} | SEIR E={np.sum(self.Kalman.Ehat()):.0f}, I={np.sum(self.Kalman.Ihat()):.0f} --> U={u:.1f}, beta={sim.pars["beta"]}')
 
             # TODO: In SEIR class?
             xs = S
@@ -100,12 +102,13 @@ class controller_intervention(cv.Intervention):
 
             sim.pars['beta'] = np.maximum(u / SI_by_N, 0)
 
-            print('WARNING: shrinking beta!')
+            if self.verbose: print('WARNING: shrinking beta!')
             sim.pars['beta'] /= 18
 
-            print(f'CONTROLLER IS ASKING FOR {u} NEW EXPOSURES')
+            if self.verbose:
+                print(f'CONTROLLER IS ASKING FOR {u} NEW EXPOSURES')
 
-            print(f'New Error --- y={y}, n_exp={sim.results["n_exposed"][sim.t-1]}, t={self.targets["infected"]}, err={y - self.targets["infected"]} --> int err now {self.integrated_err}')
+                print(f'New Error --- y={y}, n_exp={sim.results["n_exposed"][sim.t-1]}, t={self.targets["infected"]}, err={y - self.targets["infected"]} --> int err now {self.integrated_err}')
 
             self.integrated_err = self.integrated_err + y - self.targets['infected'] # TODO: use ReferenceTrajectory class
 

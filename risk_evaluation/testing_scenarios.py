@@ -2,6 +2,7 @@
 This file defines the different scenarios for use with run_scenarios.
 '''
 
+import datetime as dt
 import sciris as sc
 
 def scenario(es, ms, hs):
@@ -13,7 +14,7 @@ def scenario(es, ms, hs):
         'uv': None,
     }
 
-def generate_scenarios():
+def generate_scenarios(start_day='2020-11-02'):
     ''' Generate scenarios (dictionaries of parameters) for the school intervention '''
 
     # Increase beta (multiplier) in schools from default of 0.6 to 1.5.  This achieves a R0 in schools of approximately 1.6, a modeling assumption that is consistent with global outbreaks in schools that have had limited countermeasures such as Israel (after masks were removed due to heat).
@@ -22,7 +23,7 @@ def generate_scenarios():
     scns = sc.odict()
 
     normal = {
-        'start_day': '2020-11-02',
+        'start_day': start_day,
         'schedule': 'Full',
         'screen_prob': 0,
         'test_prob': 0, # Amongst those who screen positive
@@ -35,14 +36,28 @@ def generate_scenarios():
     }
     scns['as_normal'] = scenario(es=normal, ms=normal, hs=normal)
 
+    '''
     full_with_countermeasures = {
-        'start_day': '2020-11-02',
+        'start_day': start_day,
         'schedule': 'Full',
         'screen_prob': 0.9,
         'test_prob': 0.5, # Amongst those who screen positive
         'screen2pcr': 3, # Days from screening to receiving PCR results
         'trace_prob': 0.75, # Fraction of newly diagnosed index cases who are traced
         'quar_prob': 0.75, # Of those reached by contact tracing, this fraction will quarantine
+        'ili_prob': 0.002, # Daily ili probability equates to about 10% incidence over the first 3 months of school
+        'beta_s': 0.75 * base_beta_s, # 25% reduction due to NPI
+        'testing': None,
+    }
+    '''
+    full_with_countermeasures = {
+        'start_day': start_day,
+        'schedule': 'Full',
+        'screen_prob': 0.5,
+        'test_prob': 0.5, # Amongst those who screen positive
+        'screen2pcr': 1, # Days from screening to receiving PCR results
+        'trace_prob': 1.0, # Fraction of newly diagnosed index cases who are traced
+        'quar_prob': 1.0, # Of those reached by contact tracing, this fraction will quarantine
         'ili_prob': 0.002, # Daily ili probability equates to about 10% incidence over the first 3 months of school
         'beta_s': 0.75 * base_beta_s, # 25% reduction due to NPI
         'testing': None,
@@ -58,7 +73,7 @@ def generate_scenarios():
 
     # All remote
     remote = {
-        'start_day': '2020-11-02',
+        'start_day': start_day,
         'schedule': 'Remote',
         'screen_prob': 0,
         'test_prob': 0,
@@ -76,10 +91,13 @@ def generate_scenarios():
 
     return scns
 
-def generate_testing():
+def generate_testing(start_day='2020-11-02'):
+
+    one_week_ahead = (dt.datetime.strptime(start_day, '%Y-%m-%d') - dt.timedelta(days=7)).strftime('%Y-%m-%d')
+
     # Testing interventions to add
     PCR_1w_prior = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': None,
         'groups': ['students', 'teachers', 'staff'],
         'coverage': 1,
@@ -88,8 +106,18 @@ def generate_testing():
         'delay': 1,
     }]
 
+    PCR_every_4w_starting_1wprior = [{
+        'start_date': one_week_ahead,
+        'repeat': 28,
+        'groups': ['students', 'teachers', 'staff'],
+        'coverage': 1,
+        'is_antigen': False,
+        'sensitivity': 1,
+        'delay': 1,
+    }]
+
     PCR_every_2w_starting_1wprior = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 14,
         'groups': ['students', 'teachers', 'staff'],
         'coverage': 1,
@@ -99,7 +127,7 @@ def generate_testing():
     }]
 
     PCR_every_1w_starting_1wprior = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 7,
         'groups': ['students', 'teachers', 'staff'],
         'coverage': 1,
@@ -109,7 +137,7 @@ def generate_testing():
     }]
 
     PCR_every_1d_starting_1wprior = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 1,
         'groups': ['students', 'teachers', 'staff'],
         'coverage': 1,
@@ -119,7 +147,7 @@ def generate_testing():
     }]
 
     Antigen_every_1w_starting_1wprior_teachersstaff_PCR_followup = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 7,
         'groups': ['teachers', 'staff'], # No students
         'coverage': 1,
@@ -132,8 +160,22 @@ def generate_testing():
     }]
 
 
+    Antigen_every_4w_starting_1wprior_all_PCR_followup = [{
+        'start_date': one_week_ahead,
+        'repeat': 28,
+        'groups': ['students', 'teachers', 'staff'], # No students
+        'coverage': 1,
+        'is_antigen': True,
+        'symp7d_sensitivity': 0.971, # https://www.fda.gov/media/141570/download
+        'other_sensitivity': 0.90, # Modeling assumption
+        'specificity': 0.985, # https://www.fda.gov/media/141570/download
+        'PCR_followup_perc': 1.0,
+        'PCR_followup_delay': 3.0,
+    }]
+
+
     Antigen_every_2w_starting_1wprior_all_PCR_followup = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 14,
         'groups': ['students', 'teachers', 'staff'], # No students
         'coverage': 1,
@@ -146,7 +188,7 @@ def generate_testing():
     }]
 
     Antigen_every_1w_starting_1wprior_all_PCR_followup = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 7,
         'groups': ['students', 'teachers', 'staff'], # No students
         'coverage': 1,
@@ -159,7 +201,7 @@ def generate_testing():
     }]
 
     Antigen_every_2w_starting_1wprior_all_no_followup = [{
-        'start_date': '2020-10-26',
+        'start_date': one_week_ahead,
         'repeat': 14,
         'groups': ['students', 'teachers', 'staff'], # No students
         'coverage': 1,
@@ -175,6 +217,8 @@ def generate_testing():
     return {
         'None': None,
         'PCR 1w prior': PCR_1w_prior,
+        'PCR every 4w': PCR_every_4w_starting_1wprior,
+        'Antigen every 4w, PCR f/u': Antigen_every_4w_starting_1wprior_all_PCR_followup,
         'Antigen every 1w teach&staff, PCR f/u': Antigen_every_1w_starting_1wprior_teachersstaff_PCR_followup,
         'PCR every 2w': PCR_every_2w_starting_1wprior,
         'Antigen every 2w, no f/u': Antigen_every_2w_starting_1wprior_all_no_followup,
