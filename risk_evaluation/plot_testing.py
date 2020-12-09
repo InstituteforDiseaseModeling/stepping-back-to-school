@@ -34,7 +34,7 @@ mplt.rcParams['font.family'] = font_style
 # Other configuration
 folder = 'v2020-12-02'
 #variant = 'k5_AntigenFreq_10reps'
-variant = 'k5_PCROptimistic_10reps'
+variant = 'k5_PCROptimistic_Sweep1reps'
 
 cachefn = os.path.join(folder, 'sims', f'{variant}.sims') # Might need to change the extension here, depending in combine.py was used
 simple = False # Boolean flag to select a subset of the scenarios
@@ -113,6 +113,7 @@ for sim in sims:
     ret.update(perf)
     #ret['introductions'] = np.zeros(10)
     ret['introductions'] = []
+    ret['introductions_per_100_students'] = []
     ret['outbreak_size'] = []
 
     n_schools = {'es':0, 'ms':0, 'hs':0}
@@ -185,6 +186,7 @@ for sim in sims:
         #n_introductions = len(stats['outbreaks'])
         #ret['introductions'][np.min([n_introductions,len(ret['introductions'])-1])] += 1
         ret['introductions'].append(len(stats['outbreaks']))
+        ret['introductions_per_100_students'].append( len(stats['outbreaks'])/stats['num']['students'] * 100 )
         ret['outbreak_size'] += [ob['Infected Student'] + ob['Infected Teacher'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
     for stype in ['es', 'ms', 'hs']:
@@ -201,8 +203,8 @@ for sim in sims:
 # Convert results to a dataframe
 df = pd.DataFrame(results)
 
-#print(df.head())
-
+print('WARNING: Removing 0.1%')
+df = df.loc[df['key3']>0.001]
 
 ################
 #%% PLOT RESULTS
@@ -211,6 +213,32 @@ df = pd.DataFrame(results)
 #msim = cv.MultiSim(sims)
 #msim.plot(to_plot={'Prevalence':['n_exposed']}, do_show=False)
 #cv.savefig(os.path.join(imgdir, f'Prevalence.png'), dpi=300)
+
+def get_zgrid(zlab, xlab, ylab, df):
+    from sklearn import preprocessing
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern
+
+    x = df[xlab].values.ravel()
+    y = df[ylab].values.ravel()
+    z = df[zlab].values.ravel()
+    xi, yi = np.meshgrid(np.linspace(0, 0.015, 20), np.linspace(0, 12000, 20))
+    X = np.vstack((x, y, z)).T
+    scaler = preprocessing.StandardScaler().fit(X)
+    sX = scaler.transform(X)
+    #kernel = 1.0 * RBF(length_scale=[0.1,10], length_scale_bounds=(1e-2, 1e6)) \
+    #         + WhiteKernel(noise_level_bounds=(1e-10, 1e+1))
+    kernel = 1.0 * Matern(nu=1.5,length_scale=[0.1,10], length_scale_bounds=(1e-2, 1e6)) + WhiteKernel(noise_level_bounds=(1e-10, 1e+1))
+    gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=5, alpha=0)
+    #print('PARS:', gp.get_params())
+    gp.fit(sX[:, :2], sX[:, -1])
+    print('PARS:', gp.kernel_)
+    sXi = scaler.transform(np.vstack((xi.flatten(), yi.flatten(), np.zeros(xi.shape).flatten())).T)
+    szi_lin = gp.predict(sXi[:, :2])
+    zi_lin = scaler.inverse_transform(np.vstack((np.ones((2, szi_lin.size)), szi_lin)).T)
+    zi_lin = zi_lin[:, -1].reshape(xi.shape)
+
+    return xi, yi, zi_lin
 
 
 '''
@@ -221,15 +249,65 @@ print(tips)
 exit()
 '''
 
-
 d = df[['key1', 'key2', 'key3', 'outbreak_size']]
 l = []
-#ho = ['No diagnostic screening', 'Antigen every 4w, PCR f/u', 'Fortnightly antigen, PCR f/u', 'Weekly antigen, PCR f/u']
-ho = [test_names[x][0] for x in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']]
 for k,dat in d.groupby(['key1', 'key2', 'key3']):
     for entry in np.hstack(dat['outbreak_size']):
         l.append([k[0], k[1], k[2], entry])
 osdf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'outbreak_size'])
+
+d = df[['key1', 'key2', 'key3', 'introductions']]
+l = []
+for k,dat in d.groupby(['key1', 'key2', 'key3']):
+    for entry in np.hstack(dat['introductions']):
+        l.append([k[0], k[1], k[2], entry])
+idf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'introductions'])
+
+
+d = df[['key1', 'key2', 'key3', 'introductions_per_100_students']]
+l = []
+for k,dat in d.groupby(['key1', 'key2', 'key3']):
+    for entry in np.hstack(dat['introductions_per_100_students']):
+        l.append([k[0], k[1], k[2], entry])
+isdf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'introductions_per_100_students'])
+
+####################
+
+#mat = pd.crosstab(isdf['key3'], isdf['introductions_per_100_students']) # All testing scenarios ...
+
+norm = mplt.colors.LogNorm()#vmin=1, vmax=50)
+h, xe, ye, img = plt.hist2d(isdf['key3'], isdf['introductions_per_100_students'], bins=20, norm=norm, cmap='inferno')
+plt.show()
+exit()
+
+'''
+xx,yy = np.meshgrid(xe[:-1], ye[:-1])
+#tmp = pd.DataFrame({'X':xx.ravel(), 'Y':yy.ravel(), 'Z':np.log10(1+h.T.ravel())})
+tmp = pd.DataFrame({'X':xx.ravel(), 'Y':yy.ravel(), 'Z':h.T.ravel()})
+xi, yi, zi_lin = get_zgrid('Z', 'X', 'Y', tmp)
+fig, ax = plt.subplots(figsize=(8,5))
+from matplotlib import ticker, cm
+cs = ax.contourf(xi, yi, zi_lin)#, levels=levels, colors=['k']) , locator=ticker.LogLocator()
+
+plt.figure()
+xi, yi, zi_lin = get_zgrid('Z', 'X', 'Y', tmp)
+fig, ax = plt.subplots(figsize=(8,5))
+cs = ax.contour(xi, yi, zi_lin)#, levels=levels, colors=['k'])
+
+plt.figure()
+#plt.scatter(isdf['key3'], isdf['introductions'])#, c=[float(x) for x in df['key3']])
+X,Y = np.meshgrid(isdf['key3'].unique(), isdf['introductions_per_100_students'].unique())
+plt.contourf(X,Y,np.log(mat).T)
+
+plt.figure()
+sns.heatmap(np.log(1+mat))
+'''
+
+
+
+
+#ho = ['No diagnostic screening', 'Antigen every 4w, PCR f/u', 'Fortnightly antigen, PCR f/u', 'Weekly antigen, PCR f/u']
+ho = [test_names[x][0] for x in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']]
 #osdf['log10_outbreak_size'] = np.log10(osdf['outbreak_size'])
 osdf = osdf[osdf['outbreak_size'] > 1]
 g = sns.catplot(data=osdf, x='outbreak_size', y='key2', order=ho, col='key3', orient='h', kind='boxen', legend=False)
@@ -240,28 +318,19 @@ for ax in g.axes.flat:
     ax.set_ylabel('')
     ax.set_xlabel('')
 plt.figtext(0.6,0.02,'Outbreak size', ha='center')
-
-
 plt.tight_layout()
 cv.savefig(os.path.join(imgdir, f'OutbreakSize.png'), dpi=300)
 
-d = df[['key1', 'key2', 'key3', 'introductions']]
-l = []
-for k,dat in d.groupby(['key1', 'key2', 'key3']):
-    #sns.violinplot(data=np.hstack(dat['introductions']), orient='h')
-    for entry in np.hstack(dat['introductions']):
-        l.append([k[0], k[1], k[2], entry])
-idf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'introductions'])
-g = sns.catplot(data=idf, x='introductions', y='key2', order=ho, col='key3', orient='h', kind='boxen', legend=False)
+g = sns.catplot(data=isdf, x='introductions_per_100_students', y='key2', order=ho, col='key3', orient='h', kind='boxen', legend=False)
 g.set_titles(col_template='{col_name}')
 for ax in g.axes.flat:
     ax.set_title(f'{100*float(ax.get_title()):.1f}%')
     ax.set_ylabel('')
     ax.set_xlabel('')
 plt.figtext(0.6,0.02,'Number of unique introductions per school over 3-months', ha='center')
-
 plt.tight_layout()
 cv.savefig(os.path.join(imgdir, f'Introductions.png'), dpi=300)
+
 
 #sns.displot(idf, x='introductions', hue='key3', col='key2', stat='probability', common_norm=False)
 #idf_subset = idf.loc[idf['key2']=='No diagnostic screening']
@@ -288,7 +357,6 @@ ax.legend(handles, labels, title='Prevalence')
 plt.tight_layout()
 cv.savefig(os.path.join(imgdir, f'Intros.png'), dpi=300)
 
-exit()
 
 def f(d):
     s = pd.Series(np.bincount(d['introductions'], minlength=25))
@@ -355,267 +423,6 @@ d = pd.concat(l).reset_index()
 fig, ax = plt.subplots(figsize=(16,10))
 sns.lineplot(data=d, x='Date', y='Prevalence', hue='Prevalence Target', style='Scenario', palette='Set1', ax=ax)
 cv.savefig(os.path.join(imgdir, f'Prevalence.png'), dpi=300)
-
-exit()
-
-
-d = pd.melt(df, id_vars=['key1', 'key2', 'key3', 'rep'], value_vars=[f'attackrate_{gkey}' for gkey in ['Students, Teachers, and Staff']], var_name='Group', value_name='Cum Inc (%)')
-
-g = sns.FacetGrid(data=d, height=8, aspect=1.4, legend_out=False) # col='key1', 
-g.map_dataframe( sns.lineplot, x='key3', y='Cum Inc (%)', hue='key1', style='key2')#, hue_order=test_order, order=so, palette=test_hue)
-g.add_legend(fontsize=14)
-g.set_titles(col_template="{col_name}", fontsize=24)
-g.set_axis_labels(x_var="Prevalence", y_var='Percent acquiring COVID-19 over 3 months')
-plt.tight_layout()
-plt.gcf().canvas.set_window_title('Fig. X: Attack vs Prevalence')
-cv.savefig(os.path.join(imgdir, f'CumInc.png'), dpi=300)
-
-
-
-#%% Fig. 1
-
-# Attack rate - two axes in one plot
-d = pd.melt(df, id_vars=['key1', 'key2'], value_vars=[f'attackrate_{gkey}' for gkey in grp_dict.keys()], var_name='Group', value_name='Cum Inc (%)')
-d.replace( {'Group': {f'attackrate_{gkey}':gkey for gkey in grp_dict.keys()}}, inplace=True)
-d.replace( {'key1': scen_names}, inplace=True)
-d.to_csv(os.path.join(imgdir, f'3mAttackRate_combined.csv'))
-so = [scen_names[x] for x in scen_order]
-
-if to_plot['Fig. 1']:
-    fig = plt.figure('Fig. 1: 3-month attack rate', constrained_layout=True, figsize=figsize)
-    gs = fig.add_gridspec(20, 50)
-
-    ts = d.loc[(d['Group']=='Teachers & Staff')]
-
-    # Teachers and Staff
-    ax = fig.add_subplot(gs[0, :])
-    ax.axis('off')
-    ax.text(0.5, 0, 'Teachers & Staff', horizontalalignment='center')
-
-    # Top left
-    ax = fig.add_subplot(gs[1:8, 0:10])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.xaxis.set_tick_params(length=0)
-    sns.barplot(data=ts, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-    ax.get_legend().remove()
-    ax.set_xlim([-0.5,0.5])
-    ax.set_ylim([0, 65])
-    ax.set_xlabel('')
-    ax.set_xticklabels([])
-    ax.set_ylabel('3-Month Attack Rate (%)')
-
-    # Top right
-    ax = fig.add_subplot(gs[1:8, 10:])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.xaxis.set_tick_params(length=0)
-    sns.barplot(data=ts, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-    ax.get_legend().remove()
-    ax.set_xlim([0.5,4.5])
-    ax.set_ylim([0, 35])
-    ax.set_ylabel('')
-    ax.set_xlabel('')
-    ax.set_xticklabels([])
-    if simple:
-        ax_col(ax)
-
-    stu = d.loc[(d['Group']=='Students')]
-
-    # Students
-    ax = fig.add_subplot(gs[8, :])
-    ax.axis('off')
-    ax.text(0.5, 0, 'Students', horizontalalignment='center')
-
-    # Bottom left
-    ax = fig.add_subplot(gs[9:16, 0:10])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.xaxis.set_tick_params(length=0)
-    sns.barplot(data=stu, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-    ax.get_legend().remove()
-    ax.set_xlim([-0.5,0.5])
-    ax.set_ylim([0, 65])
-    ax.set_xlabel('')
-    ax.set_ylabel('3-Month Attack Rate (%)')
-
-    # Bottom right
-    ax = fig.add_subplot(gs[9:16, 10:])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.xaxis.set_tick_params(length=0)
-    sns.barplot(data=stu, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-    hnd, lbl = ax.get_legend_handles_labels()
-    ax.get_legend().remove()
-    ax.set_xlim([0.5,4.5])
-    ax.set_ylim([0, 35])
-    ax.set_ylabel('')
-    ax.set_xlabel('')
-    if simple:
-        ax_col(ax)
-
-    ax = fig.add_subplot(gs[16:, :])
-    ax.axis('off')
-    ax.legend(hnd, lbl, ncol=3, loc='center', fontsize=16)
-
-    cv.savefig(os.path.join(imgdir, f'3mAttackRate_combined_{figsize}.png'), dpi=300)
-
-
-
-#%% Combined attack rate
-
-if to_plot['Combined attack rate']:
-
-    # Attack rate - All school community members
-    d = pd.melt(df, id_vars=['key1', 'key2'], value_vars=[f'attackrate_{gkey}' for gkey in grp_dict.keys()], var_name='Group', value_name='Cum Inc (%)')
-    d.replace( {'Group': {f'attackrate_{gkey}':gkey for gkey in grp_dict.keys()}}, inplace=True)
-    d.replace( {'key1': scen_names}, inplace=True)
-    d.to_csv(os.path.join(imgdir, f'3mAttackRate_sts.csv'))
-    so = [scen_names[x] for x in scen_order]
-
-    fig = plt.figure('Combined attack rate', constrained_layout=True, figsize=figsize)
-    gs = fig.add_gridspec(20, 50)
-
-    # Teachers and Staff
-    ax = fig.add_subplot(gs[0, :])
-    ax.axis('off')
-    ax.text(0.5, 0, 'Students, Teachers, and Staff', horizontalalignment='center')
-
-    sts = d.loc[(d['Group']=='Students, Teachers, and Staff')]
-
-    # Left
-    ax = fig.add_subplot(gs[1:18, 0:16])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.xaxis.set_tick_params(length=0)
-    sns.barplot(data=sts, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-    ax.get_legend().remove()
-    ax.set_xlim([-0.5, 0.5])
-    ax.set_ylim([0, 45])
-    ax.set_yticks([0,10,20,30,40])
-    ax.set_xlabel('')
-    ax.set_ylabel('Percent acquiring COVID-19 over 3 months')
-
-    # Right
-    ax = fig.add_subplot(gs[1:18, 16:])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.xaxis.set_tick_params(length=0)
-    sns.barplot(data=sts, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-    hnd, lbl = ax.get_legend_handles_labels()
-    ax.get_legend().remove()
-    ax.set_xlim([0.5,4.5])
-    ax.set_ylim([0, 4.5])
-    ax.set_yticks([0,1,2,3,4])
-    ax.set_ylabel('')
-    ax.set_xlabel('')
-    if simple:
-        ax_col(ax)
-
-    ax = fig.add_subplot(gs[18:, :])
-    ax.axis('off')
-    ax.legend(hnd, lbl, ncol=3, loc='center', fontsize=15)
-
-    cv.savefig(os.path.join(imgdir, f'3mAttackRate_sts_{figsize}.png'), dpi=300)
-
-
-
-#%% Separate attack rates
-
-if to_plot['Separate attack rates']:
-
-    # Attack rate
-    for name in ['all', 'no_normal']:
-        d = pd.melt(df, id_vars=['key1', 'key2'], value_vars=[f'attackrate_{gkey}' for gkey in grp_dict.keys()], var_name='Group', value_name='Cum Inc (%)')
-        d.replace( {'Group': {f'attackrate_{gkey}':gkey for gkey in grp_dict.keys()}}, inplace=True)
-        d.to_csv(os.path.join(imgdir, f'3mAttackRate_{name}.csv'))
-
-        so = scen_order
-        if name == 'no_normal':
-            d = d.loc[d['key1']!='as_normal'] # Remove normal
-            so = so[1:]
-
-        g = sns.FacetGrid(data=d, row='Group', height=4, aspect=3, row_order=['Teachers & Staff', 'Students'], legend_out=False)
-
-        g.map_dataframe( sns.barplot, x='key1', y='Cum Inc (%)', hue='key2', hue_order=test_order, order=so, palette=test_hue)
-        if name == 'all':
-            g.add_legend(fontsize=14)
-
-        g.set_titles(row_template="{row_name}")
-        xtl = g.axes[1,0].get_xticklabels()
-        xtl = [l.get_text() for l in xtl]
-        g.set(xticklabels=[scen_names[k] if k in scen_names else k for k in xtl])
-        g.set_axis_labels(y_var="3-Month Attack Rate (%)")
-        plt.tight_layout()
-        cv.savefig(os.path.join(imgdir, f'3mAttackRate_{name}.png'), dpi=300)
-
-
-
-#%% Fig. 2 -- Population-wide reproduction number
-
-if to_plot['Fig. 2']:
-    df.to_csv(os.path.join(imgdir, f'Re_3mAverage.csv'))
-    fig, ax = plt.subplots(figsize=figsize)
-    fig.canvas.set_window_title('Fig. 2: Population-wide reproduction number')
-    sns.barplot(data=df, x='key1', y='re', hue='key2', hue_order=test_order, order=scen_order, palette=test_hue)
-    ax.set_ylim([0.8, 1.45])
-    ax.set_ylabel(r'Population-wide reproduction number ($R_e$)')
-    ax.set_xlabel('')
-    xtl = ax.get_xticklabels()
-    xtl = [l.get_text() for l in xtl]
-    ax.set_xticklabels([scen_names[k] if k in scen_names else k for k in xtl])
-    ax.axhline(y=1, color='k', ls=':', lw=2)
-    plt.legend().set_title('')
-    plt.tight_layout()
-    cv.savefig(os.path.join(imgdir, f'Re_3mAverage_{figsize}.png'), dpi=300)
-
-
-
-#%% Fig. 4 -- Fraction of in-person days lost
-
-if to_plot['Fig. 4']:
-    d = pd.melt(df, id_vars=['key1', 'key2'], value_vars=[f'perc_inperson_days_lost_{gkey}' for gkey in grp_dict.keys()], var_name='Group', value_name='Days lost (%)')
-    d.replace( {'Group': {f'perc_inperson_days_lost_{gkey}':gkey for gkey in grp_dict.keys()}}, inplace=True)
-    d.to_csv(os.path.join(imgdir, f'InPersonDaysLost.csv'))
-    g = sns.FacetGrid(data=d, row='Group', height=4, aspect=aspect, row_order=['Teachers & Staff', 'Students'], legend_out=False)
-    g.map_dataframe( sns.barplot, x='key1', y='Days lost (%)', hue='key2', hue_order=test_order, order=scen_order, palette=test_hue) #'Reds'
-    g.add_legend(fontsize=14)
-    g.set_titles(row_template="{row_name}", fontsize=24)
-    xtl = g.axes[1,0].get_xticklabels()
-    xtl = [l.get_text() for l in xtl]
-    g.set(xticklabels=[scen_names[k] if k in scen_names else k for k in xtl])
-    g.set_axis_labels(y_var="Remote learning days (%)")
-    plt.tight_layout()
-    plt.gcf().canvas.set_window_title('Fig. 4: Remote learning days')
-    cv.savefig(os.path.join(imgdir, f'InPersonDaysLost_{aspect}.png'), dpi=300)
-
-
-
-#%% Number of diagnostic tests required
-
-if to_plot['Additional tests']:
-
-    fig, ax = plt.subplots(figsize=(12,8))
-    d = pd.DataFrame(byschool)
-
-    # Additional tests per 100,000 population
-    d['PCR'] *= 100000 / d['Days'] / d['Pop*Scale']
-    d['Antigen'] *= 100000 / d['Days'] / d['Pop*Scale']
-    test_order.reverse()
-
-    d['Total'] = d['PCR'] + d['Antigen']
-    d = d.loc[d['key1'] == 'with_countermeasures']
-    d = d.groupby('key2').mean().loc[test_order][['n', 'PCR', 'Antigen', 'Total']].reset_index()
-    ax.barh(d['key2'], d['Total'], color='r', label='Antigen')
-    ax.barh(d['key2'], d['PCR'], color='b', label='PCR')
-    ax.grid(axis='x')
-    ax.set_xlabel('Additional tests required (daily per 100k population)')
-    fig.tight_layout()
-    plt.legend()
-    cv.savefig(os.path.join(imgdir, f'NumTests.png'), dpi=300)
-
-    # Save mean to CSV
-    df.groupby(['key1', 'key2']).mean().to_csv(os.path.join(imgdir, 'Mean.csv'))
 
 
 # Wrap up
