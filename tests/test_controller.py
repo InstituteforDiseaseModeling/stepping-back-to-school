@@ -1,5 +1,6 @@
 '''
 Script for quick and dirty single run of a school-based intervention
+TODO: SCRIPT IS OUT OF DATE - NEEDS FIXING!
 '''
 
 import os
@@ -19,7 +20,7 @@ plt.rcParams['font.family'] = 'Roboto Condensed'
 load = False
 # NOTE: The following may be bypassed below by hard-coded pop_size and folder
 bypass = False
-folder = '../risk_evaluation/v2020-11-10'
+folder = '../risk_evaluation/v2020-12-02'
 pop_size = 2.25e5 #50e3 
 
 def test_controller(do_plot=False):
@@ -55,9 +56,9 @@ def test_controller(do_plot=False):
 
     if load:
         betat = sc.loadobj('betat.obj')
-        ctr = cvc.controller(targets, betat=betat)
+        ctr = cvc.Controller(targets, betat=betat)
     else:
-        ctr = cvc.controller(targets, gain=0.05)
+        ctr = cvc.Controller(targets, gain=0.05)
     sim['interventions'] += [ctr]
 
     if load:

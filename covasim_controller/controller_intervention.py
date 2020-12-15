@@ -40,6 +40,8 @@ class controller_intervention(cv.Intervention):
 
 
     def initialize(self, sim):
+        self.beta0 = sim.pars['beta']
+        self.beta_layer0 = sim.pars['beta_layer'].copy()
         self.u_k = sim.pars['beta'] * np.ones(sim.pars['n_days']+1)
 
         initial_exposed_pop = np.sum(sim.people.exposed)
@@ -96,14 +98,24 @@ class controller_intervention(cv.Intervention):
             xi = np.sum(Ihat)
             xi += np.sum(Ihat[:3]) # Double infectivity early
 
-            xi = np.power(xi, self.SEIR.Ipow) # Ipow - do this in SEIR class where Ipow is known?
+            if xi > 0:
+                xi = np.power(xi, self.SEIR.Ipow) # Ipow - do this in SEIR class where Ipow is known?
+                SI_by_N = xs*xi / N
+                new_beta = np.maximum(u / SI_by_N, 0)
 
-            SI_by_N = xs*xi / N # np.power(xi, 1)
+                if self.verbose: print('WARNING: shrinking beta!')
+                new_beta /= 18
+            else:
+                print(f'WARNING: Estimate of infectious population ({xi}) is negative!')
+                new_beta = self.beta0 # Hmm!
 
-            sim.pars['beta'] = np.maximum(u / SI_by_N, 0)
-
-            if self.verbose: print('WARNING: shrinking beta!')
-            sim.pars['beta'] /= 18
+            if False:
+                # Set beta directly - includes all layers including inside each school
+                sim.pars['beta'] = new_beta
+            else:
+                # Set beta_layer for all "traditional" layers, will include individuals schools if using covid_schools
+                for lkey in ['h', 's', 'w', 'c', 'l']:
+                    sim.pars['beta_layer'][lkey] = self.beta_layer0[lkey] * new_beta / self.beta0
 
             if self.verbose:
                 print(f'CONTROLLER IS ASKING FOR {u} NEW EXPOSURES')
