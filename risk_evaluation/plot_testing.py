@@ -118,6 +118,8 @@ for sim in sims:
 
     perf = evaluate_sim(sim) # TODO: check if hit desired targets
     ret.update(perf)
+    ret['n_introductions'] = 0
+    ret['in_person_days'] = 0
     ret['introductions'] = []
     ret['introductions_per_100_students'] = []
     ret['introductions_postscreen'] = []
@@ -196,6 +198,8 @@ for sim in sims:
             'Pop*Scale': sim.pars['pop_size']*sim.pars['pop_scale'],
         })
 
+        ret['n_introductions'] += len(stats['outbreaks'])
+        ret['in_person_days'] += np.sum([v for v in stats['in_person'].values()])
         ret['introductions'].append(len(stats['outbreaks']))
         ret['introductions_per_100_students'].append( len(stats['outbreaks']) / stats['num']['students'] * 100 )
         intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
@@ -289,6 +293,7 @@ def plot_prev():
 if to_plot['Prevalence']:
     prev_plot()
 
+cols = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
 q = pd.melt(df, id_vars=['key1', 'key2', 'key3'], value_vars=cols, var_name='indicator', value_name='value') \
     .set_index(['indicator', 'key1', 'key2', 'key3'])['value'] \
     .apply(func=lambda x: pd.Series(x)) \
@@ -296,6 +301,36 @@ q = pd.melt(df, id_vars=['key1', 'key2', 'key3'], value_vars=cols, var_name='ind
     .dropna() \
     .to_frame(name='value')
 q.index.rename('outbreak_idx', level=4, inplace=True)
+
+# Regression #######
+
+from patsy import dmatrices
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+mask = np.random.rand(len(df)) < 0.8
+df_train = df[mask]
+df_test = df[~mask]
+print('Training data set length='+str(len(df_train)))
+print('Testing data set length='+str(len(df_test)))
+
+#Setup the regression expression in patsy notation. We are telling patsy that BB_COUNT is our dependent variable and it depends on the regression variables: DAY, DAY_OF_WEEK, MONTH, HIGH_T, LOW_T and PRECIP
+expr = """n_introductions ~ key2 + key3""" # in_person_days + 
+
+#Set up the X and y matrices for the training and testing data sets
+y_train, X_train = dmatrices(expr, df_train, return_type='dataframe')
+y_test, X_test = dmatrices(expr, df_test, return_type='dataframe')
+
+#Using the statsmodels GLM class, train the Poisson regression model on the training data set
+poisson_training_results = sm.GLM(y_train, X_train, family=sm.families.Poisson()).fit()
+
+#print out the training summary
+print(poisson_training_results.summary())
+# 1.219 = np.exp(198.2789 * 0.001) ## 198 is coeff of key3.  Each 0.1% increase in community prevalence --> 22% increase in importations
+
+sns.scatterplot(data=df, x='in_person_days', y='n_introductions', hue='key2', size='key3')
+plt.show()
+
 
 ####################
 
