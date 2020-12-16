@@ -14,17 +14,19 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import seaborn as sns
 from calibrate_model import evaluate_sim # Local import
-
+import copy
 
 # Which figures to plot
-to_plot = {'Fig. 1': True, # 3-month attack rate for students and teachers + staff
-           'Combined attack rate': False, # Like Fig. 1, but with students, staff, and teachers combined
-           'Separate attack rates': False, # Like Fig. 1, but plot attack rates in separate figures
-           'Fig. 2': True, # Population-wide reproduction number
-           'Fig. 4': True, # Proportion of days that are remote instead of in-person learning
-           'Additional tests': False, # Additional diagnostic tests required
-           }
-tree_plot = False
+to_plot = {
+    'Fig. 1': True, # 3-month attack rate for students and teachers + staff
+    'Combined attack rate': False, # Like Fig. 1, but with students, staff, and teachers combined
+    'Separate attack rates': False, # Like Fig. 1, but plot attack rates in separate figures
+    'Fig. 2': True, # Population-wide reproduction number
+    'Fig. 4': True, # Proportion of days that are remote instead of in-person learning
+    'Prevalence': False, # Plot prevalence longitudinally
+    'Additional tests': False, # Additional diagnostic tests required
+    'Debug trees': False, # Show each introduced tree for debugging
+}
 
 # Global plotting styles
 font_size = 18
@@ -34,7 +36,8 @@ mplt.rcParams['font.family'] = font_style
 
 # Other configuration
 folder = 'v2020-12-02'
-variant = 'optimistic_countermeasures_Antigen_10reps'
+#variant = 'optimistic_countermeasures_Antigen_10reps'
+variant = 'optimistic_countermeasures_PCR_10reps'
 #variant = 'k5_PCROptimistic_Sweep1reps'
 
 cachefn = os.path.join(folder, 'sims', f'{variant}.sims') # Might need to change the extension here, depending in combine.py was used
@@ -88,14 +91,16 @@ test_names = sc.odict({ # key2
     'PCR every 1d':                             ('Daily PCR, no delay',                             blues(5/6)),
 })
 
+all_test_names = list(set([sim.key2 for sim in sims]))
 if simple:
     # Select a subset
-    test_order = [v[0] for k,v in test_names.items() if k in [ 'None', 'PCR 1w prior', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u'] ]
+    test_order = [v[0] for k,v in test_names.items() if k in [ 'None', 'PCR 1w prior', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u'] if k in all_test_names]
 else:
-    test_order = [v[0] for k,v in test_names.items()]
-test_hue = {v[0]:v[1] for v in test_names.values()}
+    test_order = [v[0] for k,v in test_names.items() if k in all_test_names]
+test_hue = {v[0]:v[1] for k,v in test_names.items() if k in all_test_names}
 
-
+inferno_black_bad = copy.copy(mplt.cm.get_cmap('inferno'))
+inferno_black_bad.set_bad((0,0,0))
 
 #%% Process the simulations
 
@@ -191,6 +196,13 @@ for sim in sims:
             'Pop*Scale': sim.pars['pop_size']*sim.pars['pop_scale'],
         })
 
+
+        '''
+        if len(stats['outbreaks']) > 0:
+            print(stats['outbreaks'])
+            exit()
+        '''
+
         #n_introductions = len(stats['outbreaks'])
         #ret['introductions'][np.min([n_introductions,len(ret['introductions'])-1])] += 1
         ret['introductions'].append(len(stats['outbreaks']))
@@ -201,10 +213,11 @@ for sim in sims:
         ret['outbreak_size'] += [ob['Infected Student'] + ob['Infected Teacher'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
         for i,tree in enumerate(stats['school_trees']):
-            if tree_plot and sim.key2 == 'Monthly PCR, 1d delay':
+            if to_plot['Debug trees'] and sim.key2 == 'Monthly PCR, 1d delay':
                 fig, ax = plt.subplots(figsize=(16,10))
                 date_range = [sim.pars['n_days'],0]
 
+            # TODO: move tree plotting to a function
             #print(f'Tree {i}', sid, sim.key1, sim.key2, sim.key2)
             #for u,v,w in tree.edges.data():
                 #print('\tEDGE', u,v,w)
@@ -212,7 +225,7 @@ for sim in sims:
             for j, (u,v) in enumerate(tree.nodes.data()):
                 #print('\tNODE', u,v)
                 recovered = sim.pars['n_days'] if np.isnan(v['date_recovered']) else v['date_recovered']
-                if tree_plot and sim.key2 == 'Monthly PCR, 1d delay':
+                if to_plot['Debug trees'] and sim.key2 == 'Monthly PCR, 1d delay':
                     col = 'gray' if v['type'] == 'Other' else 'black'
                     date_range[0] = min(date_range[0], v['date_exposed']-1)
                     date_range[1] = max(date_range[1], recovered+1)
@@ -230,7 +243,7 @@ for sim in sims:
                             elif int(u) in outcomes['Negative']:
                                 plt.plot(t, j, marker='x', color='green', ms=10)
 
-            if tree_plot and sim.key2 == 'Monthly PCR, 1d delay':
+            if to_plot['Debug trees'] and sim.key2 == 'Monthly PCR, 1d delay':
                 for t, r in stats['testing'].items():
                     ax.axvline(x=t, zorder=-100)
                 date_range[1] = min(date_range[1], sim.pars['n_days'])
@@ -239,8 +252,8 @@ for sim in sims:
                 ax.set_yticks(range(0, len(tree.nodes)))
                 ax.set_yticklabels([f'{u}: {v["type"]} {v["age"]}' for u,v in tree.nodes.data()])
                 ax.set_title(f'School {sid}, Tree {i}')
-                #plt.show()
-                plt.close('all')
+                plt.show()
+                #plt.close('all')
 
 
     for stype in ['es', 'ms', 'hs']:
@@ -282,17 +295,34 @@ def plot_prev():
 
     cv.savefig(os.path.join(imgdir, f'Prevalence.png'), dpi=300)
 
-plot_prev()
+if to_plot['Prevalence']:
+    prev_plot()
 
 #msim = cv.MultiSim(sims)
 #msim.plot(to_plot={'Prevalence':['n_exposed']}, do_show=False)
 #cv.savefig(os.path.join(imgdir, f'Prevalence.png'), dpi=300)
 
-d = df[['key1', 'key2', 'key3', 'outbreak_size']]
+cols = ['outbreak_size', 'introductions_per_100_students', 'introductions_postscreen_per_100_students']
+d = df[['key1', 'key2', 'key3'] + cols]
+def unpack(x, *args, **kwds):
+    return pd.Series(x)
+#q = d.set_index(['key1', 'key2', 'key3']).stack()#.apply(func=unpack).stack().dropna()
+q = pd.melt(df, id_vars=['key1', 'key2', 'key3'], value_vars=cols, var_name='indicator', value_name='value') \
+    .set_index(['indicator', 'key1', 'key2', 'key3'])['value'] \
+    .apply(func=unpack) \
+    .stack() \
+    .dropna() \
+    .to_frame(name='value')
+
+q.index.rename('outbreak_idx', level=4, inplace=True)
+
+'''
 l = []
 for k,dat in d.groupby(['key1', 'key2', 'key3']):
-    for entry in np.hstack(dat['outbreak_size']):
-        l.append([k[0], k[1], k[2], entry])
+    for col in cols:
+        for entry in np.hstack(dat[col]):
+            l.append([k[0], k[1], k[2], col, entry])
+
 osdf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'outbreak_size'])
 
 d = df[['key1', 'key2', 'key3', 'introductions_per_100_students', 'introductions_postscreen_per_100_students']]
@@ -309,15 +339,17 @@ for k,dat in d.groupby(['key1', 'key2', 'key3']):
     for entry in np.hstack(dat['introductions_postscreen_per_100_students']):
         l.append([k[0], k[1], k[2], entry])
 isdf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'introductions_postscreen_per_100_students'])
+'''
 
 ####################
 
 fig, ax = plt.subplots(figsize=(6,5))
 norm = mplt.colors.LogNorm()#vmin=1, vmax=50)
-import copy
-my_cmap = copy.copy(mplt.cm.get_cmap('inferno')) # copy the default cmap
-my_cmap.set_bad((0,0,0))
-h = ax.hist2d(isdf['key3'], isdf['introductions_postscreen_per_100_students'], norm=norm, bins=15, cmap=my_cmap)
+
+
+d = q.loc['introductions_postscreen_per_100_students'].reset_index('key3')[['key3', 'value']]
+h = ax.hist2d(d['key3'], d['value'], norm=norm, bins=15, cmap=inferno_black_bad)
+
 fig.colorbar(h[3], ax=ax)
 ax.set_xlabel('Prevalence')
 ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
@@ -325,15 +357,15 @@ ax.set_ylabel('Introductions per 100 students\nover 3 months')
 plt.tight_layout()
 cv.savefig(os.path.join(imgdir, f'IntroductionsHeatmap.png'), dpi=300)
 
-#ho = [test_names[x][0] for x in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']]
-ho = [test_names[x][0] for x in ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']]
 #osdf['log10_outbreak_size'] = np.log10(osdf['outbreak_size'])
 
 ### OUTBREAK SIZE #############################################################
-osdf = osdf[osdf['outbreak_size'] > 1]
-g = sns.catplot(data=osdf, x='outbreak_size', y='key2', order=ho, col='key3', orient='h', kind='boxen', legend=False)
-#g = sns.catplot(data=osdf, x='outbreak_size', y='key2', order=ho, col='key3', orient='h', kind='violin', area='area', inner='quartile', legend=False)
-#g = sns.catplot(data=osdf, x='outbreak_size', y='key2', order=ho, col='key3', kind='bar', legend=False)
+#osdf = osdf[osdf['outbreak_size'] > 1]
+d = q.loc['outbreak_size'].reset_index()[['key2', 'key3', 'value']]
+d = d.loc[d['value'] > 1]
+g = sns.catplot(data=d, x='value', y='key2', order=test_order, col='key3', orient='h', kind='boxen', legend=False)
+#g = sns.catplot(data=osdf, x='outbreak_size', y='key2', order=test_order, col='key3', orient='h', kind='violin', area='area', inner='quartile', legend=False)
+#g = sns.catplot(data=osdf, x='outbreak_size', y='key2', order=test_order, col='key3', kind='bar', legend=False)
 g.set_titles(col_template='{col_name}')
 for ax in g.axes.flat:
     ax.set_title(f'{100*float(ax.get_title()):.1f}%')
@@ -347,23 +379,16 @@ cv.savefig(os.path.join(imgdir, f'OutbreakSize.png'), dpi=300)
 def histplot(**kwargs):
     d = kwargs.pop('data')
     x1 = kwargs.pop('x1')
-    x2 = kwargs.pop('x2') if 'x2' in kwargs else None
     col1 = kwargs.pop('color')
-    #https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
-    import colorsys
-    c = colorsys.rgb_to_hls(*col1)
-    amount = 0.5
-    col2 = colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
     sns.histplot(data=d, x=x1, color=col1, zorder=-1, **kwargs)
-    if x2 is not None:
-        sns.histplot(data=d, x=x2, color=col2, zorder=1, **kwargs)
 
 
 ### INTRODUCTIONS #############################################################
-#g = sns.catplot(data=idf, x='introductions', y='key2', order=ho, col='key3', orient='h', kind='boxen', legend=False)
-#g = sns.displot(data=idf, x='introductions_postscreen_per_100_students', row='key2', row_order=ho, col='key3', hue='key2', kind='hist', legend=False, stat='probability', common_norm=False, discrete=True, height=3, aspect=2.5) # , binrange=(0,10)
-g = sns.FacetGrid(data=idf, row='key2', row_order=ho, col='key3', hue='key2', height=3, aspect=2.5) # , binrange=(0,10)
-g.map_dataframe(histplot, x1='introductions_postscreen_per_100_students', x2=None, stat='probability', common_norm=False, discrete=True)#, stat='probability', common_norm=False)
+#g = sns.catplot(data=idf, x='introductions', y='key2', order=test_order, col='key3', orient='h', kind='boxen', legend=False)
+#g = sns.displot(data=idf, x='introductions_postscreen_per_100_students', row='key2', row_order=test_order, col='key3', hue='key2', kind='hist', legend=False, stat='probability', common_norm=False, discrete=True, height=3, aspect=2.5) # , binrange=(0,10)
+d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['key2', 'key3', 'value']]
+g = sns.FacetGrid(data=d, row='key2', row_order=test_order, col='key3', hue='key2', height=3, aspect=2.5) # , binrange=(0,10)
+g.map_dataframe(histplot, x1='value', stat='probability', common_norm=False, discrete=True)#, stat='probability', common_norm=False)
 g.set_titles(col_template='{col_name}')
 for ax in g.axes.flat:
     #ax.set_title(f'{100*float(ax.get_title()):.1f}%')
@@ -378,8 +403,9 @@ cv.savefig(os.path.join(imgdir, f'Introductions.png'), dpi=300)
 
 ### INTRODUCTIONS 2 ###########################################################
 
-g = sns.FacetGrid(data=idf, row='key2', row_order=ho, col='key3', hue='key2', height=3, aspect=2.5) # , binrange=(0,10)
-g.map_dataframe(histplot, x1='introductions_postscreen_per_100_students',  x2='introductions_per_100_students', discrete=True)#, stat='probability', common_norm=False)
+d = q.loc['introductions_per_100_students'].reset_index()[['key2', 'key3', 'value']]
+g = sns.FacetGrid(data=d, row='key2', row_order=test_order, col='key3', hue='key2', height=3, aspect=2.5) # , binrange=(0,10)
+g.map_dataframe(histplot, x1='value', stat='probability', common_norm=False, discrete=True)#, stat='probability', common_norm=False)
 g.set_titles(col_template='{col_name}')
 for ax in g.axes.flat:
     #ax.set_title(f'{100*float(ax.get_title()):.1f}%')
@@ -388,88 +414,27 @@ for ax in g.axes.flat:
     ax.set_xlabel('')
 plt.figtext(0.6,0.02,'Number of unique introductions per 100 students per school over 3-months', ha='center')
 plt.tight_layout()
-cv.savefig(os.path.join(imgdir, f'Introductions2.png'), dpi=300)
+cv.savefig(os.path.join(imgdir, f'IntroductionsPreScreen.png'), dpi=300)
 ###############################################################################
 
-#sns.displot(idf, x='introductions', hue='key3', col='key2', stat='probability', common_norm=False)
-#idf_subset = idf.loc[idf['key2']=='No diagnostic screening']
 fig, ax = plt.subplots(figsize=(8,6))
-##right = 5
-##idf.loc[idf['introductions_per_100_students']>right, 'introductions_per_100_students'] = right
-cmap = {
-    0.01:(0.9603888539940703, 0.3814317878772117, 0.8683117650835491),
-    0.005: (0.6423044349219739, 0.5497680051256467, 0.9582651433656727),
-    0.002: (0.22335772267769388, 0.6565792317435265, 0.8171355503265633)
-}
-sns.histplot(isdf, x='introductions_postscreen_per_100_students', hue='key3', stat='probability', binwidth=0.15, common_norm=False, element='step', palette=cmap, legend=True, linewidth=2, ax=ax)
-#sns.histplot(idf, x='introductions', hue='key3', stat='probability', binwidth=1, common_norm=False, discrete=True, palette='tab10', legend=True, linewidth=2, ax=ax)
-##ax.set_xlim(left=0 ,right=right)
+d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['key2', 'key3', 'value']]
+# Subset to e.g. 'No diagnostic screening'?
+
+right = 5
+d.loc[d['value']>right, 'value'] = right
+
+sns.histplot(d, x='value', hue='key3', stat='probability', binwidth=0.15, common_norm=False, element='step', palette='tab10', legend=True, linewidth=2, ax=ax)
+ax.set_xlim(left=0 ,right=right)
 ax.set_xlabel('Introductions post-screen per 100 students over 3-months')
 ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
 handles, labels = ax.get_legend_handles_labels()
-#print(handles, labels)
-#print([f'{100*float(l):.1f}%' for l in labels])
-#ax.legend(handles, [f'{100*float(l):.1f}%' for l in labels], title='Prevalence')
 old_legend = ax.legend_
 handles = old_legend.legendHandles
 labels = [f'{100*float(t.get_text()):.1f}%' for t in old_legend.get_texts()]
 ax.legend(handles, labels, title='Prevalence')
 plt.tight_layout()
 cv.savefig(os.path.join(imgdir, f'Intros.png'), dpi=300)
-
-def f(d):
-    s = pd.Series(np.bincount(d['introductions'], minlength=25))
-    s = 100 * s / s.sum()
-    s['key3'] = d['key3']
-    return s
-
-for grp, dat in df.groupby(['key1', 'key2']):
-    zzz = dat[['key3', 'rep', 'introductions']].apply(f, axis=1)
-    zzz = zzz.set_index('key3').unstack().reset_index()
-    zzz.rename({0:'Probability (%)'}, axis=1, inplace=True)
-    fig, ax = plt.subplots(figsize=(10,6))
-    sns.lineplot(data=zzz, x='level_0', y='Probability (%)', hue='key3', palette='Set1', ax=ax)
-    h, l = ax.get_legend_handles_labels()#title='Prevalence')
-    l = [f'{100*float(q)}%' for q in l]
-    ax.legend(h,l,title='Prevalence')
-    ax.set_title(grp)
-    ax.set_xlabel('Number of unique introductions per school over 3-months')
-    plt.tight_layout()
-    fn = '-'.join([g.replace('/','_') for g in grp])
-    cv.savefig(os.path.join(imgdir, f'{fn}.png'), dpi=300)
-    plt.close(fig)
-
-#d = pd.melt(df, id_vars=['key3', 'rep'], value_vars=['introductions'], var_name='Group', value_name='introductions')
-#print(d)
-#sns.lineplot(data=d, x='', y=0, hue='key3')
-
-'''
-def plot_one(data, color):
-    intr = np.vstack([np.bincount(x, minlength=25) for x in data['introductions'].tolist()])
-    z = pd.DataFrame(intr, columns=pd.RangeIndex(1,intr.shape[1]+1))
-    z = z.div(z.sum(axis=1), axis=0)
-    z = z.transpose().stack().reset_index()
-    z.rename({0:'count'}, axis=1, inplace=True)
-    return sns.lineplot(data=z, x='level_0', y='count', color=color)
-
-#fig, ax = plt.subplots(figsize=(16,10))
-def plot_distrib(**kwds):
-    data = kwds['data']
-    color = kwds['color']
-    for grp, dat in data.groupby(['key1', 'key2', 'key3']):
-        r = plot_one(dat, color)
-    return r
-
-d = pd.melt(df, id_vars=['key1', 'key2', 'key3', 'rep'], value_vars=['introductions'], var_name='Group', value_name='introductions')
-g = sns.FacetGrid(data=d, col='key1', row='key2', hue='key3', height=5, aspect=1.4, legend_out=True) # col='key1', 
-g.map_dataframe( plot_distrib )#, hue_order=test_order, order=so, palette=test_hue)
-g.add_legend()
-cv.savefig(os.path.join(imgdir, f'FG_no_leg.png'), dpi=300)
-'''
-
-#plt.plot(df['introductions'])
-
-
 
 # Wrap up
 sc.toc(T)

@@ -39,7 +39,8 @@ verbose = 0.1 if test_run else 0.0 # Print progress this fraction of simulated d
 
 folder = 'v2020-12-02'
 #stem = f'k5_PCROptimistic_Sweep{n_reps}reps'
-stem = f'optimistic_countermeasures_Antigen_{n_reps}reps'
+stem = f'optimistic_countermeasures_PCR_{n_reps}reps'
+#stem = f'optimistic_countermeasures_Antigen_{n_reps}reps'
 
 
 # For a test run only use a subset of scenarios
@@ -52,8 +53,8 @@ if test_run:
 else:
     scenarios = {k:v for k,v in scenarios.items() if k in ['with_optimistic_countermeasures']}#, 'with_countermeasures', 'k5', 'all_hybrid', 'all_remote']}
     #testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
-    #testing = {k:v for k,v in testing.items() if k in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
-    testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
+    testing = {k:v for k,v in testing.items() if k in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
+    #testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
 
 
 sc.heading('Choosing correct number of CPUs...')
