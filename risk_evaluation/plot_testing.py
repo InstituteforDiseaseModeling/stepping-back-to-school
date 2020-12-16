@@ -196,15 +196,6 @@ for sim in sims:
             'Pop*Scale': sim.pars['pop_size']*sim.pars['pop_scale'],
         })
 
-
-        '''
-        if len(stats['outbreaks']) > 0:
-            print(stats['outbreaks'])
-            exit()
-        '''
-
-        #n_introductions = len(stats['outbreaks'])
-        #ret['introductions'][np.min([n_introductions,len(ret['introductions'])-1])] += 1
         ret['introductions'].append(len(stats['outbreaks']))
         ret['introductions_per_100_students'].append( len(stats['outbreaks']) / stats['num']['students'] * 100 )
         intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
@@ -298,48 +289,13 @@ def plot_prev():
 if to_plot['Prevalence']:
     prev_plot()
 
-#msim = cv.MultiSim(sims)
-#msim.plot(to_plot={'Prevalence':['n_exposed']}, do_show=False)
-#cv.savefig(os.path.join(imgdir, f'Prevalence.png'), dpi=300)
-
-cols = ['outbreak_size', 'introductions_per_100_students', 'introductions_postscreen_per_100_students']
-d = df[['key1', 'key2', 'key3'] + cols]
-def unpack(x, *args, **kwds):
-    return pd.Series(x)
-#q = d.set_index(['key1', 'key2', 'key3']).stack()#.apply(func=unpack).stack().dropna()
 q = pd.melt(df, id_vars=['key1', 'key2', 'key3'], value_vars=cols, var_name='indicator', value_name='value') \
     .set_index(['indicator', 'key1', 'key2', 'key3'])['value'] \
-    .apply(func=unpack) \
+    .apply(func=lambda x: pd.Series(x)) \
     .stack() \
     .dropna() \
     .to_frame(name='value')
-
 q.index.rename('outbreak_idx', level=4, inplace=True)
-
-'''
-l = []
-for k,dat in d.groupby(['key1', 'key2', 'key3']):
-    for col in cols:
-        for entry in np.hstack(dat[col]):
-            l.append([k[0], k[1], k[2], col, entry])
-
-osdf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'outbreak_size'])
-
-d = df[['key1', 'key2', 'key3', 'introductions_per_100_students', 'introductions_postscreen_per_100_students']]
-l = []
-for k,dat in d.groupby(['key1', 'key2', 'key3']):
-    for intr, intr_ps in zip(np.hstack(dat['introductions_per_100_students']), np.hstack(dat['introductions_postscreen_per_100_students'])):
-        l.append([k[0], k[1], k[2], intr, intr_ps])
-idf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'introductions_per_100_students', 'introductions_postscreen_per_100_students'])
-
-
-d = df[['key1', 'key2', 'key3', 'introductions_postscreen_per_100_students']]
-l = []
-for k,dat in d.groupby(['key1', 'key2', 'key3']):
-    for entry in np.hstack(dat['introductions_postscreen_per_100_students']):
-        l.append([k[0], k[1], k[2], entry])
-isdf = pd.DataFrame(l, columns=['key1', 'key2', 'key3', 'introductions_postscreen_per_100_students'])
-'''
 
 ####################
 
