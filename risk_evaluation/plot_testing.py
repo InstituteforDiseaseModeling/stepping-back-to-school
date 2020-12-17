@@ -22,12 +22,12 @@ import copy
 # Which figures to plot
 to_plot = {
     'Prevalence':               True, # Plot prevalence longitudinally
-    'Regression':               False,
+    'Regression':               True,
     'IntroductionsHeatmap':     True,
     'Introductions':            True,
-    'IntroductionsPreScreen':   True,
-    'OutbreakSize':             True,
-    'IntroDistributions':       True,
+    'IntroductionsPreScreen':   False,
+    'OutbreakSize':             False,
+    'IntroDistributions':       False,
 
     'Debug trees':              False, # Show each introduced tree for debugging
 }
@@ -40,7 +40,7 @@ mplt.rcParams['font.family'] = font_style
 
 # Other configuration
 folder = 'v2020-12-16'
-variant = 'test_223000_1reps'
+variant = 'test_223000_2reps'
 
 cachefn = os.path.join(folder, 'sims', f'{variant}.sims') # Might need to change the extension here, depending in combine.py was used
 simple = False # Boolean flag to select a subset of the scenarios
@@ -106,6 +106,7 @@ inferno_black_bad.set_bad((0,0,0))
 
 #%% Process the simulations
 
+origin = []
 for sim in sims:
     first_date = '2021-02-01' # TODO: Read from sim
     last_date = '2021-04-30'
@@ -203,6 +204,11 @@ for sim in sims:
         ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
         ret['outbreak_size'] += [ob['Infected Student'] + ob['Infected Teacher'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
+
+        for ob in stats['outbreaks']:
+            for ty, lay, wkd in zip(ob['Origin type'], ob['Origin layer'], ob['Origin day of week']):
+                origin.append([sim.key1, sim.key2, sim.key3, ty, lay, wkd])
+
         if to_plot['Debug trees'] and sim.key2 == 'Weekly PCR, 1d delay' and intr_postscreen > 0:
             for i,tree in enumerate(stats['school_trees']):
                 if len(tree.nodes) < 5:
@@ -245,10 +251,13 @@ for sim in sims:
                 ax.set_yticklabels([f'{int(u)}: {v["type"]}, age {v["age"]}' for u,v in tree.nodes.data()])
                 ax.set_title(f'School {sid}, Tree {i}')
 
-
                 plt.show()
                 #plt.close('all')
 
+    odf = pd.DataFrame(origin, columns=['Scenario', 'Dx Screening', 'Prevalence', 'Type', 'Layer', 'Weekday'])
+    print('Type & Layer:\n', pd.crosstab(odf['Type'], odf['Layer']))
+    print('Weekday:', np.bincount(odf['Weekday']))
+    exit()
 
     for stype in ['es', 'ms', 'hs']:
         ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
