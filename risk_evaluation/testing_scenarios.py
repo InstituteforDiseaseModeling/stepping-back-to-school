@@ -20,9 +20,6 @@ def generate_scenarios(start_day='2020-11-02'):
     # Increase beta (multiplier) in schools from default of 0.6 to 1.5.  This achieves a R0 in schools of approximately 1.6, a modeling assumption that is consistent with global outbreaks in schools that have had limited countermeasures such as Israel (after masks were removed due to heat).
     base_beta_s = 1.5
 
-    #print('WARNING: SETTING base_beta_s to HIGH value!')
-    #base_beta_s = 10000
-
     scns = sc.odict()
 
     normal = {
@@ -40,29 +37,15 @@ def generate_scenarios(start_day='2020-11-02'):
     }
     scns['as_normal'] = scenario(es=normal, ms=normal, hs=normal)
 
-
+    # UPDATED: was screen prob 0.5 and 3 day screen2pcr
     full_with_countermeasures = {
         'start_day': start_day,
         'schedule': 'Full',
-        'screen_prob': 0.9,
-        'test_prob': 0.5, # Amongst those who screen positive
-        'screen2pcr': 3, # Days from screening to receiving PCR results
-        'trace_prob': 0.75, # Fraction of newly diagnosed index cases who are traced
-        'quar_prob': 0.75, # Of those reached by contact tracing, this fraction will quarantine
-        'ili_prob': 0.002, # Daily ili probability equates to about 10% incidence over the first 3 months of school
-        'beta_s': 0.75 * base_beta_s, # 25% reduction due to NPI
-        'testing': None,
-        'save_trees': True,
-    }
-
-    full_with_optimistic_countermeasures = {
-        'start_day': start_day,
-        'schedule': 'Full',
         'screen_prob': 0.5,
-        'test_prob': 0.8, # Amongst those who screen positive
-        'screen2pcr': 1, # Days from screening to receiving PCR results
-        'trace_prob': 1.0, # Fraction of newly diagnosed index cases who are traced
-        'quar_prob': 1.0, # Of those reached by contact tracing, this fraction will quarantine
+        'test_prob': 0.5, # Amongst those who screen positive
+        'screen2pcr': 2, # Days from screening to receiving PCR results
+        'trace_prob': 0.75, # Fraction of newly diagnosed index cases who are traced
+        'quar_prob': 0.95, # Of those reached by contact tracing, this fraction will quarantine
         'ili_prob': 0.002, # Daily ili probability equates to about 10% incidence over the first 3 months of school
         'beta_s': 0.75 * base_beta_s, # 25% reduction due to NPI
         'testing': None,
@@ -71,7 +54,6 @@ def generate_scenarios(start_day='2020-11-02'):
 
     # Add screening and NPI
     scns['with_countermeasures'] = scenario(es=full_with_countermeasures, ms=full_with_countermeasures, hs=full_with_countermeasures)
-    scns['with_optimistic_countermeasures'] = scenario(es=full_with_optimistic_countermeasures, ms=full_with_optimistic_countermeasures, hs=full_with_optimistic_countermeasures)
 
     # Add hybrid scheduling
     hybrid = sc.dcp(full_with_countermeasures)

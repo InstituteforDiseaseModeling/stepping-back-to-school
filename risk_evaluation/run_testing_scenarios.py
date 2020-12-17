@@ -23,13 +23,13 @@ import covasim_controller as cvc
 sc.heading('Setting parameters...')
 
 # Check that versions are correct
-cv.check_save_version('1.7.6', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
+cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
 
 test_run = False # Whether to do a small test run, or the full results: changes the number of runs and scenarios -- 1 for testing, or 30 for full results
 parallel = True # Only switch to False for debugging
 
-n_reps = 10
-pop_size = 100_000 #2.25e5
+n_reps = 2
+pop_size = 223_000
 skip_screening = False # Set True for the no-screening variant
 save_each_sim = False # Save each sim separately instead of all together
 n_cpus = None # Manually set the number of CPUs -- otherwise calculated automatically
@@ -37,25 +37,24 @@ cpu_thresh = 0.75 # Don't use more than this amount of available CPUs, if number
 mem_thresh = 0.75 # Don't use more than this amount of available RAM, if number of CPUs is not set
 verbose = 0.1 if test_run else 0.0 # Print progress this fraction of simulated days (1 = every day, 0.1 = every 10 days, 0 = no output)
 
-folder = 'v2020-12-02'
+folder = 'v2020-12-16'
 #stem = f'k5_PCROptimistic_Sweep{n_reps}reps'
-stem = f'optimistic_countermeasures_PCR_{n_reps}reps'
+stem = f'test_{pop_size}_{n_reps}reps'
 #stem = f'optimistic_countermeasures_Antigen_{n_reps}reps'
 
 
 # For a test run only use a subset of scenarios
-start_day = '2020-11-30' # first day of school
+start_day = '2021-02-01' # first day of school
 scenarios = t_s.generate_scenarios(start_day) # Can potentially select a subset of scenarios
 testing = t_s.generate_testing(start_day) # Potentially select a subset of testing
 if test_run:
     scenarios = {k:v for k,v in scenarios.items() if k in ['k5']}#, 'with_countermeasures', 'k5', 'all_hybrid', 'all_remote']}
     testing = {k:v for k,v in testing.items() if k in ['None']}#, 'Antigen every 1w, PCR f/u']}
 else:
-    scenarios = {k:v for k,v in scenarios.items() if k in ['with_optimistic_countermeasures']}#, 'with_countermeasures', 'k5', 'all_hybrid', 'all_remote']}
+    scenarios = {k:v for k,v in scenarios.items() if k in ['with_countermeasures']}#, 'with_countermeasures', 'k5', 'all_hybrid', 'all_remote']}
     #testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
-    testing = {k:v for k,v in testing.items() if k in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
-    #testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
-
+    #testing = {k:v for k,v in testing.items() if k in ['None', 'PCR every 4w', 'PCR every 2w', 'PCR every 1w']} # ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
+    testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']}
 
 sc.heading('Choosing correct number of CPUs...')
 if n_cpus is None:
@@ -71,7 +70,7 @@ else:
 pars = { # Not really needed...
     "pop_infected": 100,
     "change_beta": 1,
-    "symp_prob": 0.09
+    "symp_prob": 0.1 # About 57% of symptomatic infections will be diagnosed 1-(1-0.1)**8, and assuming none of the asymptomatics will be diagnosed, that's about 40% ovrall.  Adding some asymptomatics should result in more than 40% diagnosed, consistent with latest RAINIER modeling. Was 0.09 previously.
 }
 
 #%% Configuration
@@ -79,13 +78,13 @@ sc.heading('Creating sim configurations...')
 sim_configs = []
 count = -1
 
-for prev in [0.002, 0.005, 0.01]: #np.linspace(0.001, 0.015, 30): # [0.002, 0.005, 0.01]#0.001 * np.sqrt(2)**np.arange(9): #np.linspace(0.002, 0.02, 5):
+for prev in np.linspace(0.001, 0.02, 30): # [0.002, 0.005, 0.01]#0.001 * np.sqrt(2)**np.arange(9): #np.linspace(0.002, 0.02, 5):
     for skey, base_scen in scenarios.items():
         for tidx, (tkey, test) in enumerate(testing.items()):
-            for eidx, rand_seed in enumerate(range(n_reps)): # I know...
+            for eidx in range(n_reps):
                 count += 1
                 p = sc.dcp(pars)
-                p['rand_seed'] = rand_seed
+                p['rand_seed'] = eidx# np.random.randint(1e6)
 
                 sconf = sc.objdict(count=count, pars=p, pop_size=pop_size, folder=folder)
 
