@@ -20,6 +20,8 @@ import seaborn as sns
 import copy
 import plotting as pt
 
+variant = 'import_223000_1reps'
+
 # Which figures to plot
 to_plot = {
     'Prevalence':               False, # Plot prevalence longitudinally
@@ -41,7 +43,6 @@ mplt.rcParams['font.family'] = font_style
 
 # Other configuration
 folder = 'v2020-12-16'
-variant = 'import_223000_1reps'
 
 cachefn = os.path.join(folder, 'sims', f'{variant}.sims') # Might need to change the extension here, depending in combine.py was used
 simple = False # Boolean flag to select a subset of the scenarios
@@ -253,13 +254,13 @@ df = pd.DataFrame(results)
 
 # Wrangling
 cols = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
-q = pd.melt(df, id_vars=['skey', 'tkey', 'prev'], value_vars=cols, var_name='indicator', value_name='value') \
-    .set_index(['indicator', 'skey', 'tkey', 'prev'])['value'] \
+q = pd.melt(df, id_vars=['skey', 'tkey', 'ikey', 'prev'], value_vars=cols, var_name='indicator', value_name='value') \
+    .set_index(['indicator', 'skey', 'tkey', 'ikey', 'prev'])['value'] \
     .apply(func=lambda x: pd.Series(x)) \
     .stack() \
     .dropna() \
     .to_frame(name='value')
-q.index.rename('outbreak_idx', level=4, inplace=True)
+q.index.rename('outbreak_idx', level=5, inplace=True)
 
 
 ################
@@ -321,7 +322,6 @@ def prev_reg(**kwargs): #df, yvar, xvars, df_test=None, do_print=False, do_plot=
     err = np.vstack([yhat['mean']-yhat['mean_ci_lower'], yhat['mean_ci_upper']-yhat['mean']])
 
     color = kwargs['color']
-    print(kwargs)
     plt.errorbar(X_test[xvars[0]], yhat['mean'], yerr=err, zorder=-1, color=color, label=df.iloc[0]['ikey'])
     plt.plot(df[xvars[0]], df[yvar], marker='o', color=color, ls='None')
     #sns.scatterplot(data=df, x=xvars[0], y=yvar)
@@ -345,20 +345,9 @@ if to_plot['Regression']:
 
     ##### OUTBREAK SIZE
     d = df.loc[df['tkey'] == 'No diagnostic screening']
-    print(d.iloc[0])
-    d['mean_outbreak_size'] = d['outbreak_size'].apply(lambda x: np.array(x).mean())
-    g = sns.FacetGrid(data=d, hue='ikey', height=10)
-    g.map_dataframe(prev_reg, yvar='mean_outbreak_size', xvars=['prev', 'tkey']) 
-    g.add_legend()
-    for ax in g.axes.flat:
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
-    #ax.set_xlabel('Prevalence')
-    #ax.set_ylabel('Total number of introductions in simulation')
-
-    #box = ax.get_position()
-    #ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-    #ax.legend(title='', loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
-    cv.savefig(os.path.join(imgdir, f'OutbreakSizeRegressionBySim.png'), dpi=300)
+    d = q.loc['outbreak_size'].reset_index(['ikey', 'prev'])[['ikey', 'prev', 'value']]
+    sns.lmplot(data=d, x='prev', y='value', hue='ikey', height=10, x_estimator=np.mean, order=2)
+    cv.savefig(os.path.join(imgdir, f'OutbreakSizeRegression.png'), dpi=300)
 
     #d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['tkey', 'prev', 'value']]
     #fit, fig = prev_reg(d, yvar='value', xvars=['prev', 'tkey'])

@@ -67,7 +67,7 @@ def generate_configs():
         'full': { 'screen_prob': 1 },
     }
 
-    for prev in np.linspace(0.002, 0.02, 4):
+    for prev in np.linspace(0.002, 0.02, 20):
         for skey, base_scen in scenarios.items():
             for tkey, test in testing.items():
                 for ikey, import_scen in import_scens.items():
