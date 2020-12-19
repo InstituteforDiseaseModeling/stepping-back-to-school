@@ -15,18 +15,28 @@ def create_run_sim(sconf, n_sims, config):
     children_equally_sus = config['children_equally_sus'] if 'children_equally_sus' in config else False
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.pars, pop_size=sconf.pop_size, folder=sconf.folder, alternate_symptomaticity=alternate_symptomaticity, children_equally_sus=children_equally_sus)
-    sim.count = sconf.count
-    sim.label = sconf.label
-    sim.key1 = sconf.skey
-    sim.key2 = sconf.tkey
-    sim.key3 = sconf.prev
-    sim.eidx = sconf.eidx
-    sim.tscen = sconf.test
-    sim.scen = sconf.this_scen # After modification with testing above
-    sim.dynamic_par = sconf.pars
+    sim = cs.create_sim(sconf.sim_pars, pop_size=sconf.pop_size, folder=sconf.folder, alternate_symptomaticity=alternate_symptomaticity, children_equally_sus=children_equally_sus)
+
     sim['interventions'].append(sconf.sm)
     sim['interventions'].append(sconf.ctr)
+    sconf.pop('sm')
+    sconf.pop('ctr')
+
+    for k,v in sconf.items():
+        setattr(sim,k,v)
+        '''
+        sim.count = sconf.count
+        sim.label = sconf.label
+        sim.key1 = sconf.skey
+        sim.key2 = sconf.tkey
+        sim.key3 = sconf.prev
+        sim.eidx = sconf.eidx
+        sim.tscen = sconf.test
+        sim.scen = sconf.this_scen
+        sim.dynamic_par = sconf.sim_pars
+        '''
+    print(sim.prev)
+
     sim.run(verbose=verbose)
     if config['shrink']:
         if verbose > 0:

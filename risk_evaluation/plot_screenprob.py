@@ -18,13 +18,14 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import seaborn as sns
 import copy
+import plotting as pt
 
 # Which figures to plot
 to_plot = {
     'Prevalence':               False, # Plot prevalence longitudinally
-    'Regression':               False,
-    'IntroductionsHeatmap':     True,
-    'Introductions':            True,
+    'Regression':               True,
+    'IntroductionsHeatmap':     False,
+    'Introductions':            False,
     'IntroductionsPreScreen':   False,
     'OutbreakSize':             False,
     'IntroDistributions':       False,
@@ -40,7 +41,7 @@ mplt.rcParams['font.family'] = font_style
 
 # Other configuration
 folder = 'v2020-12-16'
-variant = 'altsus_223000_2reps'
+variant = 'import_223000_1reps'
 
 cachefn = os.path.join(folder, 'sims', f'{variant}.sims') # Might need to change the extension here, depending in combine.py was used
 simple = False # Boolean flag to select a subset of the scenarios
@@ -68,7 +69,7 @@ results = []
 byschool = []
 groups = ['students', 'teachers', 'staff']
 
-scen_names = sc.odict({ # key1
+scen_names = sc.odict({ # skey
     'as_normal': 'Full Schedule\nNo Countermeasures',
     'with_countermeasures': 'Full Schedule',
     'all_hybrid': 'Hybrid',
@@ -79,7 +80,7 @@ scen_order = scen_names.keys()
 
 blues = plt.cm.get_cmap('Blues')
 reds = plt.cm.get_cmap('Reds')
-test_names = sc.odict({ # key2
+test_names = sc.odict({ # tkey
     'None':                                     ('No diagnostic screening',                         'gray'),
     'PCR 1w prior':                             ('PCR one week prior, 1d delay',                    blues(1/6)),
     'PCR every 4w':                             ('Monthly PCR, 1d delay',                           blues(2/6)),
@@ -93,7 +94,8 @@ test_names = sc.odict({ # key2
     'PCR every 1d':                             ('Daily PCR, no delay',                             blues(5/6)),
 })
 
-all_test_names = list(set([sim.key2 for sim in sims]))
+
+all_test_names = list(set([sim.tkey for sim in sims]))
 if simple:
     # Select a subset
     test_order = [v[0] for k,v in test_names.items() if k in [ 'None', 'PCR 1w prior', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u'] if k in all_test_names]
@@ -113,12 +115,13 @@ for sim in sims:
     last_date = '2021-04-30'
     first_school_day = sim.day(first_date)
     last_school_day = sim.day(last_date)
-    sim.key2 = test_names[sim.key2][0] if sim.key2 in test_names else sim.key2
+    sim.tkey = test_names[sim.tkey][0] if sim.tkey in test_names else sim.tkey
 
     ret = {
-        'key1': sim.key1,
-        'key2': sim.key2,
-        'key3': sim.key3,
+        'skey': sim.skey,
+        'tkey': sim.tkey,
+        'prev': sim.prev,
+        'ikey': sim.ikey,
         'rep': sim.eidx,
     }
 
@@ -183,9 +186,9 @@ for sim in sims:
         byschool.append({
             'sid': sid,
             'type': stats['type'],
-            'key1': sim.key1, # Filtered to just one scenario (key1)
-            'key2': sim.key2,
-            'key3': sim.key3,
+            'skey': sim.skey, # Filtered to just one scenario (skey)
+            'tkey': sim.tkey,
+            'prev': sim.prev,
             'n_students': stats['num']['students'],
             'n': sum([stats['num'][g] for g in groups]),
             'd1 infectious': sum([inf_first[g] for g in groups]),
@@ -207,21 +210,17 @@ for sim in sims:
 
         for ob in stats['outbreaks']:
             for ty, lay in zip(ob['Origin type'], ob['Origin layer']):
-                origin.append([stats['type'], sim.key1, sim.key2, sim.key3, ty, lay])
+                origin.append([stats['type'], sim.skey, sim.tkey, sim.prev, ty, lay])
 
                 uids = [int(u) for u in ob['Tree'].nodes]
                 data = [v for u,v in ob['Tree'].nodes.data()]
                 was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
                 if any(was_detected):
                     first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
-                    detected.append([stats['type'], sim.key1, sim.key2, sim.key3, first[1]['type'], 'Unknown'])
+                    detected.append([stats['type'], sim.skey, sim.tkey, sim.prev, first[1]['type'], 'Unknown'])
 
-            if to_plot['Debug trees'] and sim.key2 == 'Weekly PCR, 1d delay' and intr_postscreen > 0:
-                if len(tree.nodes) < 5:
-                    continue
-
-                plot_tree(ob['Tree'])
-                plt.show()
+            if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
+                pt.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
 
     for stype in ['es', 'ms', 'hs']:
         ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
@@ -254,8 +253,8 @@ df = pd.DataFrame(results)
 
 # Wrangling
 cols = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
-q = pd.melt(df, id_vars=['key1', 'key2', 'key3'], value_vars=cols, var_name='indicator', value_name='value') \
-    .set_index(['indicator', 'key1', 'key2', 'key3'])['value'] \
+q = pd.melt(df, id_vars=['skey', 'tkey', 'prev'], value_vars=cols, var_name='indicator', value_name='value') \
+    .set_index(['indicator', 'skey', 'tkey', 'prev'])['value'] \
     .apply(func=lambda x: pd.Series(x)) \
     .stack() \
     .dropna() \
@@ -282,8 +281,8 @@ if to_plot['Prevalence']:
         t = sim.results['t'] #pd.to_datetime(sim.results['date'])
         y = sim.results['n_exposed'].values / sim.pars['pop_size']
         d = pd.DataFrame({'Prevalence': y}, index=pd.Index(data=t, name='Date'))
-        d['Prevalence Target'] = f'{sim.key3}'
-        d['Scenario'] = f'{sim.key1} + {sim.key2}'
+        d['Prevalence Target'] = f'{sim.prev}'
+        d['Scenario'] = f'{sim.skey} + {sim.tkey}'
         d['Rep'] = sim.eidx
         l.append( d )
     d = pd.concat(l).reset_index()
@@ -299,15 +298,17 @@ if to_plot['Prevalence']:
 
 
 # Regression ##################################################################
-def prev_reg(df, yvar, xvars, df_test=None, do_print=False, do_plot=True):
+def prev_reg(**kwargs): #df, yvar, xvars, df_test=None, do_print=False, do_plot=True):
+    df = kwargs['data']
+    yvar = kwargs['yvar']
+    xvars = kwargs['xvars']
+    df_test = kwargs['df_test'] if 'df_test' in kwargs else None
     xv = ' + '.join(xvars)
     expr = f'{yvar} ~ {xv}'
 
     y, X = dmatrices(expr, df, return_type='dataframe')
     fit = sm.GLM(y, X, family=sm.families.Gaussian()).fit() # Poisson() Gaussian(), NegativeBinomial()
-
-    if do_print:
-        print(fit.summary())
+    print(fit.summary())
 
     if df_test is not None:
         y_test, X_test = dmatrices(expr, df_test, return_type='dataframe')
@@ -315,42 +316,78 @@ def prev_reg(df, yvar, xvars, df_test=None, do_print=False, do_plot=True):
         y_test = y
         X_test = X
 
+    yhat_pred = fit.get_prediction(X_test)
+    yhat = yhat_pred.summary_frame()
+    err = np.vstack([yhat['mean']-yhat['mean_ci_lower'], yhat['mean_ci_upper']-yhat['mean']])
 
-    fig = None
-    if do_plot:
-        yhat_pred = fit.get_prediction(X_test)
-        yhat = yhat_pred.summary_frame()
-        err = np.vstack([yhat['mean']-yhat['mean_ci_lower'], yhat['mean_ci_upper']-yhat['mean']])
+    color = kwargs['color']
+    print(kwargs)
+    plt.errorbar(X_test[xvars[0]], yhat['mean'], yerr=err, zorder=-1, color=color, label=df.iloc[0]['ikey'])
+    plt.plot(df[xvars[0]], df[yvar], marker='o', color=color, ls='None')
+    #sns.scatterplot(data=df, x=xvars[0], y=yvar)
 
-        fig, ax = plt.subplots(figsize=((7,6)))
-        plt.errorbar(X_test[xvars[0]], yhat['mean'], yerr=err, zorder=-1)
-        sns.scatterplot(data=df, x=xvars[0], y=yvar, hue=xvars[1])
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
-        ax.set_xlabel('Prevalence')
-        ax.set_ylabel('Total number of introductions in simulation')
-
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-        ax.legend(title='', loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
-
-    return fit, fig
 
 if to_plot['Regression']:
-    df_noscreen = df.loc[df['key2'] == 'No diagnostic screening']
-    fit, fig = prev_reg(df_noscreen, yvar='n_introductions', xvars=['key3', 'key2'])
+    d = df.loc[df['tkey'] == 'No diagnostic screening']
+    g = sns.FacetGrid(data=d, hue='ikey', height=10)
+    g.map_dataframe(prev_reg, yvar='n_introductions', xvars=['prev', 'tkey']) 
+    g.add_legend()
+    for ax in g.axes.flat:
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+    #ax.set_xlabel('Prevalence')
+    #ax.set_ylabel('Total number of introductions in simulation')
+
+    #box = ax.get_position()
+    #ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    #ax.legend(title='', loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
     cv.savefig(os.path.join(imgdir, f'IntroductionsRegressionBySim.png'), dpi=300)
 
-    d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['key2', 'key3', 'value']]
-    fit, fig = prev_reg(d, yvar='value', xvars=['key3', 'key2'])
-    cv.savefig(os.path.join(imgdir, f'IntroductionsRegressionBySchool.png'), dpi=300)
+
+    ##### OUTBREAK SIZE
+    d = df.loc[df['tkey'] == 'No diagnostic screening']
+    print(d.iloc[0])
+    d['mean_outbreak_size'] = d['outbreak_size'].apply(lambda x: np.array(x).mean())
+    g = sns.FacetGrid(data=d, hue='ikey', height=10)
+    g.map_dataframe(prev_reg, yvar='mean_outbreak_size', xvars=['prev', 'tkey']) 
+    g.add_legend()
+    for ax in g.axes.flat:
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+    #ax.set_xlabel('Prevalence')
+    #ax.set_ylabel('Total number of introductions in simulation')
+
+    #box = ax.get_position()
+    #ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    #ax.legend(title='', loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
+    cv.savefig(os.path.join(imgdir, f'OutbreakSizeRegressionBySim.png'), dpi=300)
+
+    #d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['tkey', 'prev', 'value']]
+    #fit, fig = prev_reg(d, yvar='value', xvars=['prev', 'tkey'])
+    #cv.savefig(os.path.join(imgdir, f'IntroductionsRegressionBySchool.png'), dpi=300)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### INTRODUCTIONS HEATMAP #####################################################
 if to_plot['IntroductionsHeatmap']:
     fig, ax = plt.subplots(figsize=(6,5))
     norm = mplt.colors.LogNorm()#vmin=1, vmax=50)
 
-    d = q.loc['introductions_postscreen_per_100_students'].reset_index('key3')[['key3', 'value']]
-    h = ax.hist2d(d['key3'], d['value'], norm=norm, bins=15, cmap=inferno_black_bad, zorder=-1)
+    d = q.loc['introductions_postscreen_per_100_students'].reset_index('prev')[['prev', 'value']]
+    h = ax.hist2d(d['prev'], d['value'], norm=norm, bins=15, cmap=inferno_black_bad, zorder=-1)
 
     fig.colorbar(h[3], ax=ax)
     ax.set_xlabel('Prevalence')
@@ -358,25 +395,25 @@ if to_plot['IntroductionsHeatmap']:
     ax.set_ylabel('Introductions per 100 students\nover 3 months')
 
 # TODO: Reuse from above
-    expr = """value ~ key3""" # in_person_days + key2
+    expr = """value ~ prev""" # in_person_days + tkey
     y, X = dmatrices(expr, d, return_type='dataframe')
     fit = sm.GLM(y, X, family=sm.families.Gaussian()).fit() # Poisson() Gaussian(), NegativeBinomial()
     yhat_pred = fit.get_prediction(X)#X_noscreen)
     yhat = yhat_pred.summary_frame()
 
     err = np.vstack([yhat['mean']-yhat['mean_ci_lower'], yhat['mean_ci_upper']-yhat['mean']])
-    ax.errorbar(X['key3'], yhat['mean'], yerr=err, zorder=10, color='white')
+    ax.errorbar(X['prev'], yhat['mean'], yerr=err, zorder=10, color='white')
     plt.tight_layout()
     cv.savefig(os.path.join(imgdir, f'IntroductionsHeatmap.png'), dpi=300)
 
 
 ### INTRODUCTIONS POST-SCREENING ##############################################
 if to_plot['Introductions']:
-    d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['key2', 'key3', 'value']]
-    prev = df['key3'].unique() # Choose prevalence level
+    d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['tkey', 'prev', 'value']]
+    prev = df['prev'].unique() # Choose prevalence level
     prev = prev[len(prev)//2]
     rows = ['No diagnostic screening', 'Weekly PCR, 1d delay', 'Weekly antigen, PCR f/u']
-    g = sns.FacetGrid(data=d, row='key2', row_order=rows, col='key3', col_order=[prev], hue='key2', height=3, aspect=3) # , binrange=(0,10)
+    g = sns.FacetGrid(data=d, row='tkey', row_order=rows, col='prev', col_order=[prev], hue='tkey', height=3, aspect=3) # , binrange=(0,10)
     g.map_dataframe(histplot, x1='value', stat='probability', common_norm=False, discrete=True, linewidth=1.5)#, stat='probability', common_norm=False)
     g.set_titles(row_template='{row_name}', col_template='')
     g.set_xlabels('Number of unique introductions per 100 students per school over 3-months')
@@ -391,8 +428,8 @@ if to_plot['Introductions']:
 
 ### INTRODUCTIONS PRE-SCREENING ###############################################
 if to_plot['IntroductionsPreScreen']:
-    d = q.loc['introductions_per_100_students'].reset_index()[['key2', 'key3', 'value']]
-    g = sns.FacetGrid(data=d, row='key2', row_order=test_order, col='key3', hue='key2', height=3, aspect=2.5) # , binrange=(0,10)
+    d = q.loc['introductions_per_100_students'].reset_index()[['tkey', 'prev', 'value']]
+    g = sns.FacetGrid(data=d, row='tkey', row_order=test_order, col='prev', hue='tkey', height=3, aspect=2.5) # , binrange=(0,10)
     g.map_dataframe(histplot, x1='value', stat='probability', common_norm=False, discrete=True)#, stat='probability', common_norm=False)
     g.set_titles(col_template='{col_name}')
     for ax in g.axes.flat:
@@ -404,9 +441,9 @@ if to_plot['IntroductionsPreScreen']:
 
 ### OUTBREAK SIZE #############################################################
 if to_plot['OutbreakSize']:
-    d = q.loc['outbreak_size'].reset_index()[['key2', 'key3', 'value']]
+    d = q.loc['outbreak_size'].reset_index()[['tkey', 'prev', 'value']]
     d = d.loc[d['value'] > 1]
-    g = sns.catplot(data=d, x='value', y='key2', order=test_order, col='key3', orient='h', kind='boxen', legend=False)
+    g = sns.catplot(data=d, x='value', y='tkey', order=test_order, col='prev', orient='h', kind='boxen', legend=False)
     g.set_titles(col_template='{col_name}')
     for ax in g.axes.flat:
         ax.set_title(f'{100*float(ax.get_title()):.1f}%')
@@ -419,13 +456,13 @@ if to_plot['OutbreakSize']:
 ### OLD INTROS FIGRURE ########################################################
 if to_plot['IntroDistributions']:
     fig, ax = plt.subplots(figsize=(8,6))
-    d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['key2', 'key3', 'value']]
+    d = q.loc['introductions_postscreen_per_100_students'].reset_index()[['tkey', 'prev', 'value']]
     # Subset to e.g. 'No diagnostic screening'?
 
     right = 8
     d.loc[d['value']>right, 'value'] = right
 
-    sns.histplot(d, x='value', hue='key3', stat='probability', binwidth=0.15, common_norm=False, element='step', palette='tab10', legend=True, linewidth=2, ax=ax)
+    sns.histplot(d, x='value', hue='prev', stat='probability', binwidth=0.15, common_norm=False, element='step', palette='tab10', legend=True, linewidth=2, ax=ax)
     ax.set_xlim(left=0 ,right=right)
     ax.set_xlabel('Introductions post-screen per 100 students over 3-months')
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))

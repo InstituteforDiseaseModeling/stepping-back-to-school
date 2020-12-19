@@ -73,7 +73,7 @@ def generate_configs():
                     p = sc.dcp(pars)
                     p['rand_seed'] = eidx# np.random.randint(1e6)
 
-                    sconf = sc.objdict(count=count, pars=p, pop_size=pop_size, folder=folder)
+                    sconf = sc.objdict(count=count, sim_pars=p, pop_size=pop_size, folder=folder)
 
                     # Add controller ######################################
                     pole_loc = 0.35
