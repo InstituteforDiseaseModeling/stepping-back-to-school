@@ -1,15 +1,21 @@
 import os
 import psutil
 import sciris as sc
-import create_sim as cs
+import covasim as cv
 import multiprocessing as mp
+import create_sim as cs
 
 #%% Running
-def create_run_sim(sconf, n_sims, verbose):
+def create_run_sim(sconf, n_sims, config):
     ''' Create and run the actual simulations '''
     print(f'Creating and running sim {sconf.count} of {n_sims}...')
+
+    verbose = config['verbose'] if 'verbose' in config else 0
+    alternate_symptomaticity = config['alternate_symptomaticity'] if 'alternate_symptomaticity' in config else False
+    children_equally_sus = config['children_equally_sus'] if 'children_equally_sus' in config else False
+
     T = sc.tic()
-    sim = cs.create_sim(sconf.pars, pop_size=sconf.pop_size, folder=sconf.folder)
+    sim = cs.create_sim(sconf.pars, pop_size=sconf.pop_size, folder=sconf.folder, alternate_symptomaticity=alternate_symptomaticity, children_equally_sus=children_equally_sus)
     sim.count = sconf.count
     sim.label = sconf.label
     sim.key1 = sconf.skey
@@ -22,12 +28,15 @@ def create_run_sim(sconf, n_sims, verbose):
     sim['interventions'].append(sconf.sm)
     sim['interventions'].append(sconf.ctr)
     sim.run(verbose=verbose)
-    sim.shrink() # Do not keep people after run
+    if config['shrink']:
+        if verbose > 0:
+            print('Shrinking')
+        sim.shrink() # Do not keep people after run
     sc.toc(T)
     return sim
 
 
-def run_configs(sim_configs, stem, run_cfg):
+def run_configs(sim_configs, stem, run_cfg, filename=None):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.pop_size for c in sim_configs])
 
@@ -45,16 +54,19 @@ def run_configs(sim_configs, stem, run_cfg):
     sc.heading('Running sims...')
     TT = sc.tic()
     if run_cfg['parallel']:
-        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), verbose=run_cfg['verbose']), ncpus=n_cpus)
+        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), config=run_cfg), ncpus=n_cpus)
     else:
         sims = []
         for sconf in sim_configs:
             sim = create_run_sim(sconf, n_sims=len(sim_configs))
             sims.append(sim)
 
-    sc.heading('Saving all sims...')
-    filename = os.path.join(folder, 'sims', f'{stem}.sims')
-    cv.save(filename, sims)
-    print(f'Done, saved {filename}')
+    if filename is not None:
+        sc.heading('Saving all sims...')
+        cv.save(filename, sims)
+        print(f'Done, saved {filename}')
 
     sc.toc(TT)
+
+    return sims
+

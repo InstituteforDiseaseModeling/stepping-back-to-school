@@ -6,6 +6,7 @@ about 1 minute to run. With full settings, there are about 1300 scripts to run;
 the test run uses 8.
 '''
 
+import os
 import numpy as np
 import covasim as cv
 import sciris as sc
@@ -19,18 +20,21 @@ import utils as ut
 # Check that versions are correct
 cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
 
-n_reps = 2
+n_reps = 1
 pop_size = 223_000
 folder = 'v2020-12-16'
-test_run = False # Whether to do a small test run, or the full results: changes the number of runs and scenarios -- 1 for testing, or 30 for full results
+stem = f'altsus009_{pop_size}_{n_reps}reps'
+test_run = True # Whether to do a small test run, or the full results: changes the number of runs and scenarios -- 1 for testing, or 30 for full results
 skip_screening = False # Set True for the no-screening variant
-stem = f'test_{pop_size}_{n_reps}reps'
 
 run_cfg = {
+    'alternate_symptomaticity':  True,
+
     'n_cpus':       None, # Manually set the number of CPUs -- otherwise calculated automatically
     'cpu_thresh':   0.75, # Don't use more than this amount of available CPUs, if number of CPUs is not set
     'mem_thresh':   0.75, # Don't use more than this amount of available RAM, if number of CPUs is not set
     'parallel':     True, # Only switch to False for debugging
+    'shrink':       True, #
     'verbose':      0.1 if test_run else 0.0 # Print progress this fraction of simulated days (1 = every day, 0.1 = every 10 days, 0 = no output)
 }
 
@@ -51,13 +55,17 @@ def generate_configs():
         scenarios = {k:v for k,v in scenarios.items() if k in ['with_countermeasures']}#, 'with_countermeasures', 'k5', 'all_hybrid', 'all_remote']}
         testing = {k:v for k,v in testing.items() if k in ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']}
 
-    pars = { # Not really needed...
-        "pop_infected": 100,
-        "change_beta": 1,
-        "symp_prob": 0.1 # About 57% of symptomatic infections will be diagnosed 1-(1-0.1)**8, and assuming none of the asymptomatics will be diagnosed, that's about 40% ovrall.  Adding some asymptomatics should result in more than 40% diagnosed, consistent with latest RAINIER modeling. Was 0.09 previously.
+    pars = {
+        'pop_infected': 100,
+        'change_beta': 1,
+        #'symp_prob': 0.1 # About 57% of symptomatic infections will be diagnosed 1-(1-0.1)**8, and assuming none of the asymptomatics will be diagnosed, that's about 40% ovrall.  Adding some asymptomatics should result in more than 40% diagnosed, consistent with latest RAINIER modeling. Was 0.09 previously.
+        'symp_prob':    0.08,
+        'asymp_factor': 0.8,
+        'start_day':    '2020-12-01', # First day of sim
+        'end_day':      '2021-04-30', # Last day of sim
     }
 
-    for prev in np.linspace(0.001, 0.02, 30): # [0.002, 0.005, 0.01]#0.001 * np.sqrt(2)**np.arange(9): #np.linspace(0.002, 0.02, 5):
+    for prev in np.linspace(0.002, 0.02, 30): # [0.002, 0.005, 0.01]#0.001 * np.sqrt(2)**np.arange(9): #np.linspace(0.002, 0.02, 5):
         for skey, base_scen in scenarios.items():
             for tidx, (tkey, test) in enumerate(testing.items()):
                 for eidx in range(n_reps):
@@ -83,7 +91,7 @@ def generate_configs():
                     ir = sc.loadobj('IR.obj')
 
                     seir = cvc.SEIR(pop_size, ei.Mopt, ir.Mopt, ERR=1, beta=0.365, Ipow=0.925)
-                    ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc)
+                    ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc, start_day=1)
                     ######################3################################
 
                     # Modify base_scen with testing intervention
@@ -116,5 +124,6 @@ def generate_configs():
 
 # Windows requires a main block for running in parallel
 if __name__ == '__main__':
+    filename = os.path.join(folder, 'sims', f'{stem}.sims')
     sim_configs = generate_configs()
-    ut.run_configs(sim_configs, stem, run_cfg)
+    sims = ut.run_configs(sim_configs, stem, run_cfg, filename)

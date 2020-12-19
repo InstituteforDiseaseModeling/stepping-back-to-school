@@ -21,8 +21,8 @@ import copy
 
 # Which figures to plot
 to_plot = {
-    'Prevalence':               True, # Plot prevalence longitudinally
-    'Regression':               True,
+    'Prevalence':               False, # Plot prevalence longitudinally
+    'Regression':               False,
     'IntroductionsHeatmap':     True,
     'Introductions':            True,
     'IntroductionsPreScreen':   False,
@@ -40,7 +40,7 @@ mplt.rcParams['font.family'] = font_style
 
 # Other configuration
 folder = 'v2020-12-16'
-variant = 'test_223000_2reps'
+variant = 'altsus_223000_2reps'
 
 cachefn = os.path.join(folder, 'sims', f'{variant}.sims') # Might need to change the extension here, depending in combine.py was used
 simple = False # Boolean flag to select a subset of the scenarios
@@ -107,6 +107,7 @@ inferno_black_bad.set_bad((0,0,0))
 #%% Process the simulations
 
 origin = []
+detected = []
 for sim in sims:
     first_date = '2021-02-01' # TODO: Read from sim
     last_date = '2021-04-30'
@@ -202,62 +203,26 @@ for sim in sims:
         intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
         ret['introductions_postscreen'].append(intr_postscreen)
         ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
-        ret['outbreak_size'] += [ob['Infected Student'] + ob['Infected Teacher'] + ob['Infected Staff'] for ob in stats['outbreaks']]
-
+        ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
         for ob in stats['outbreaks']:
-            for ty, lay, wkd in zip(ob['Origin type'], ob['Origin layer'], ob['Origin day of week']):
-                origin.append([sim.key1, sim.key2, sim.key3, ty, lay, wkd])
+            for ty, lay in zip(ob['Origin type'], ob['Origin layer']):
+                origin.append([stats['type'], sim.key1, sim.key2, sim.key3, ty, lay])
+
+                uids = [int(u) for u in ob['Tree'].nodes]
+                data = [v for u,v in ob['Tree'].nodes.data()]
+                was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
+                if any(was_detected):
+                    first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
+                    detected.append([stats['type'], sim.key1, sim.key2, sim.key3, first[1]['type'], 'Unknown'])
 
         if to_plot['Debug trees'] and sim.key2 == 'Weekly PCR, 1d delay' and intr_postscreen > 0:
             for i,tree in enumerate(stats['school_trees']):
                 if len(tree.nodes) < 5:
                     continue
 
-                fig, ax = plt.subplots(figsize=(16,10))
-                date_range = [sim.pars['n_days'],0]
-
-                # TODO: move tree plotting to a function
-                #print(f'Tree {i}', sid, sim.key1, sim.key2, sim.key2)
-                #for u,v,w in tree.edges.data():
-                    #print('\tEDGE', u,v,w)
-                #print(f'N{i}', sid, sim.key1, sim.key2, sim.key2, tree.nodes.data())
-                for j, (u,v) in enumerate(tree.nodes.data()):
-                    #print('\tNODE', u,v)
-                    recovered = sim.pars['n_days'] if np.isnan(v['date_recovered']) else v['date_recovered']
-                    col = 'gray' if v['type'] == 'Other' else 'black'
-                    date_range[0] = min(date_range[0], v['date_exposed']-1)
-                    date_range[1] = max(date_range[1], recovered+1)
-                    ax.plot( [v['date_exposed'], recovered], [j,j], '-', marker='o', color=col)
-                    ax.plot( v['date_diagnosed'], j, marker='d', color='b')
-                    ax.plot( v['date_infectious'], j, marker='|', color='r', mew=3, ms=10)
-                    ax.plot( v['date_symptomatic'], j, marker='s', color='orange')
-                    for day in range(int(v['date_exposed']), int(recovered)):
-                        if day in stats['uids_at_home'] and int(u) in stats['uids_at_home'][day]:
-                            plt.plot([day,day+1], [j,j], '-', color='lightgray')
-                    for t, r in stats['testing'].items():
-                        for kind, outcomes in r.items():
-                            if int(u) in outcomes['Positive']:
-                                plt.plot(t, j, marker='x', color='red', ms=10, lw=2)
-                            elif int(u) in outcomes['Negative']:
-                                plt.plot(t, j, marker='x', color='green', ms=10, lw=2)
-
-                for t, r in stats['testing'].items():
-                    ax.axvline(x=t, zorder=-100)
-                date_range[1] = min(date_range[1], sim.pars['n_days'])
-                ax.set_xlim(date_range)
-                ax.set_xticks(range(int(date_range[0]), int(date_range[1])))
-                ax.set_yticks(range(0, len(tree.nodes)))
-                ax.set_yticklabels([f'{int(u)}: {v["type"]}, age {v["age"]}' for u,v in tree.nodes.data()])
-                ax.set_title(f'School {sid}, Tree {i}')
-
+                plot_tree(tree)
                 plt.show()
-                #plt.close('all')
-
-    odf = pd.DataFrame(origin, columns=['Scenario', 'Dx Screening', 'Prevalence', 'Type', 'Layer', 'Weekday'])
-    print('Type & Layer:\n', pd.crosstab(odf['Type'], odf['Layer']))
-    print('Weekday:', np.bincount(odf['Weekday']))
-    exit()
 
     for stype in ['es', 'ms', 'hs']:
         ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
@@ -269,6 +234,21 @@ for sim in sims:
         ret[f'count_{gkey}'] = np.sum(count[gkey])
 
     results.append(ret)
+
+# TODO: PIE CHART!
+def tab(lbl, df):
+    ct = pd.crosstab(df['Type'], df['Dx Screening'])
+    ct['total'] = ct.sum(axis=1)
+    ct['total'] = 100*ct['total']/ct['total'].sum()
+    print('\n'+lbl+'\n', ct)
+
+odf = pd.DataFrame(origin, columns=['School Type', 'Scenario', 'Dx Screening', 'Prevalence', 'Type', 'Layer'])
+ddf = pd.DataFrame(detected, columns=['School Type', 'Scenario', 'Dx Screening', 'Prevalence', 'Type', 'Layer'])
+es = ddf.loc[ddf['School Type']=='es']
+
+tab('All', odf)
+tab('All Detected', ddf)
+tab('Detected ES Only', es)
 
 # Convert results to a dataframe
 df = pd.DataFrame(results)

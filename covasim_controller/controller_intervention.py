@@ -20,7 +20,7 @@ class controller_intervention(cv.Intervention):
     TODO
     '''
 
-    def __init__(self, SEIR, targets, pole_loc=None, **kwargs):
+    def __init__(self, SEIR, targets, pole_loc=None, start_day=0, **kwargs):
         super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args() # Store the input arguments so that intervention can be recreated
 
@@ -31,8 +31,7 @@ class controller_intervention(cv.Intervention):
         self.SEIR = SEIR
         self.u_k =  None
 
-        # TODO: Make params
-        self.start_day = 15
+        self.start_day = start_day
         self.end_date = '2099-12-02'
 
         self.Controller = ct(SEIR, pole_loc=pole_loc)
@@ -66,7 +65,7 @@ class controller_intervention(cv.Intervention):
             u = sim.results['new_infections'][sim.t-1] # S*I/N # np.sum(sim.people.date_exposed == sim.t-1)
             self.Kalman.update(E, I, u)
 
-
+            '''
             # BEGIN TEMP
             xs = S
             Ihat = self.Kalman.Ihat()
@@ -78,6 +77,7 @@ class controller_intervention(cv.Intervention):
             expecting = 18*sim.pars['beta'] * SI_by_N
             if self.verbose: print(f'EXPECTING {expecting}')
             # END TEMP
+            '''
 
         else:
 
@@ -116,6 +116,7 @@ class controller_intervention(cv.Intervention):
                 # Set beta_layer for all "traditional" layers, will include individuals schools if using covid_schools
                 for lkey in ['h', 's', 'w', 'c', 'l']:
                     sim.pars['beta_layer'][lkey] = self.beta_layer0[lkey] * new_beta / self.beta0
+            self.u_k[sim.t] = new_beta
 
             if self.verbose:
                 print(f'CONTROLLER IS ASKING FOR {u} NEW EXPOSURES')
