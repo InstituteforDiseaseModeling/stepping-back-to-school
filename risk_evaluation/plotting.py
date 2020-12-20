@@ -1,5 +1,13 @@
 import matplotlib.pyplot as plt
+import matplotlib as mplt
 import numpy as np
+
+# Global plotting styles
+font_size = 18
+font_style = 'Roboto Condensed'
+mplt.rcParams['font.size'] = font_size
+mplt.rcParams['font.family'] = font_style
+
 
 #Plotting
 def plot_tree(tree, stats, n_days, do_show=False):

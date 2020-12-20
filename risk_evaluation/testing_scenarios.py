@@ -217,3 +217,33 @@ def generate_testing(start_day='2020-11-02'):
         'PCR every 1w': PCR_every_1w_starting_1wprior,
         'PCR every 1d': PCR_every_1d_starting_1wprior,
     }
+
+def scenario_map():
+    col = plt.cm.get_cmap('tab10')
+    scen_names = sc.odict({
+        'as_normal':            ('Full Schedule No Countermeasures', col(0)),
+        'with_countermeasures': ('Full Schedule', col(1)),
+        'all_hybrid':           ('Hybrid', col(2)),
+        'k5':                   ('K-5 In-Person Others Remote', col(3)),
+        'all_remote':           ('All Remote', col(4)),
+    })
+    return scen_map
+
+
+def testing_map():
+    blues = plt.cm.get_cmap('Blues')
+    reds = plt.cm.get_cmap('Reds')
+    test_map = sc.odict({ # tkey
+        'None':                                     ('No diagnostic screening',                         'gray'),
+        'PCR 1w prior':                             ('PCR one week prior, 1d delay',                    blues(1/6)),
+        'PCR every 4w':                             ('Monthly PCR, 1d delay',                           blues(2/6)),
+        'Antigen every 1w teach&staff, PCR f/u':    ('Weekly antigen for teachers & staff, PCR f/u',    reds(1/6)),
+        'Antigen every 4w, PCR f/u':                ('Monthly antigen, no f/u',                         reds(2/6)),
+        'Antigen every 2w, no f/u':                 ('Fortnightly antigen, no f/u',                     reds(3/6)),
+        'Antigen every 2w, PCR f/u':                ('Fortnightly antigen, PCR f/u',                    reds(4/6)),
+        'PCR every 2w':                             ('Fortnightly PCR, 1d delay',                       blues(3/6)),
+        'Antigen every 1w, PCR f/u':                ('Weekly antigen, PCR f/u',                         reds(5/6)),
+        'PCR every 1w':                             ('Weekly PCR, 1d delay',                            blues(4/6)),
+        'PCR every 1d':                             ('Daily PCR, no delay',                             blues(5/6)),
+    })
+    return test_map

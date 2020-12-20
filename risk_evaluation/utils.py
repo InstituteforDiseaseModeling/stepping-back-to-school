@@ -79,4 +79,3 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
     sc.toc(TT)
 
     return sims
-
