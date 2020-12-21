@@ -4,6 +4,7 @@ This file defines the different scenarios for use with run_scenarios.
 
 import datetime as dt
 import sciris as sc
+import matplotlib.pyplot as plt
 
 def scenario(es, ms, hs):
     return {

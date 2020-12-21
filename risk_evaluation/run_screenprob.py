@@ -29,7 +29,7 @@ import utils as ut
 # Check that versions are correct
 cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
 
-force_run = True
+force_run = False
 for_presentation = False # Choose between report style and presentation style (different aspect ratio)
 simple_plot = False # Boolean flag to select a subset of the scenarios
 n_reps = 1
@@ -303,4 +303,4 @@ if __name__ == '__main__':
         print(f'Loading {cachefn}')
         sims = cv.load(cachefn) # Use for *.sims
 
-    plot(sims)
+    plot(sims, to_plot)
