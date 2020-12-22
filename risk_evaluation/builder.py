@@ -1,13 +1,13 @@
 import covasim_schools as cvsch
-import screening_scenarios as scn
 import covasim_controller as cvc
 import covasim as cv
 import sciris as sc
+import scenarios as scn
 
 class Config:
     def __init__(self, sim_pars=None, label=None):
-        self.label = label # TODO: From keys?
-        self.keys = {}
+        self.label = label # TODO: From tags?
+        self.tags = {}
         self.sim_pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
         self.school_config = None
         self.interventions = []
@@ -15,7 +15,7 @@ class Config:
 
     def __repr__(self):
         return '-' *80 + '\n'+ f'Configuration {self.label}:\n\
- * Keys: {self.keys}\n\
+ * Tags: {self.tags}\n\
  * Pars: {self.sim_pars}\n\
  * School config: {self.school_config}\n\
  * Num interventions: {len(self.interventions)}'
@@ -81,7 +81,7 @@ class Builder:
         for config in self.configs:
             for k,v in level.items():
                 cfg = func(sc.dcp(config), k, v)
-                cfg.keys[keyname] = k
+                cfg.tags[keyname] = k
                 new_configs += [cfg]
         self.configs = new_configs
 

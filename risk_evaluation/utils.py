@@ -58,10 +58,9 @@ def create_run_sim(sconf, n_sims, run_config):
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
 
-    for k,v in sconf.keys.items():
-        setattr(sim,k,v)
+    sim.tags = sc.dcp(sconf.tags)
 
-    sim.run()#verbose=verbose)
+    sim.run()
 
     if run_config['shrink']:
         sim.shrink() # Do not keep people after run

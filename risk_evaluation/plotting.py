@@ -6,8 +6,9 @@ import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import sciris as sc
 import covasim as cv
-import screening_scenarios as scn
+import scenarios as scn
 import utils as ut
 
 # Global plotting styles
@@ -31,16 +32,18 @@ class Plotting():
         #inferno_black_bad = copy.copy(mplt.cm.get_cmap('inferno'))
         #inferno_black_bad.set_bad((0,0,0))
 
-        sim_scenario_names = list(set([sim.skey for sim in sims]))
+        sim_scenario_names = list(set([sim.tags['skey'] for sim in sims]))
         self.scenario_map = scn.scenario_map()
         self.scenario_order = [v[0] for k,v in self.scenario_map.items() if k in sim_scenario_names]
 
-        sim_screen_names = list(set([sim.tkey for sim in sims]))
+        sim_screen_names = list(set([sim.tags['tkey'] for sim in sims]))
         self.screen_map = scn.screening_map()
         self.screen_order = [v[0] for k,v in self.screen_map.items() if k in sim_screen_names]
 
         self._process()
-        self._wrangle()
+        rename = {'skey':'sname', 'tkey':'tname', 'prev':'prev_tgt'}
+        keys = [rename[k] if k in rename else k for k in sims[0].tags.keys()]
+        self._wrangle(keys)
 
     def _process(self):
         #%% Process the simulations
@@ -54,18 +57,14 @@ class Plotting():
             first_school_day = sim.day(first_date)
             last_school_day = sim.day(last_date)
 
-            # Map to friendly names
-            sim.skey = self.scenario_map[sim.skey][0] if sim.skey in self.scenario_map else sim.skey
-            sim.tkey = self.screen_map[sim.tkey][0] if sim.tkey in self.screen_map else sim.tkey
+            ret = sc.dcp(sim.tags)
+            ret['prev_tgt'] = ut.p2f(sim.tags['prev'])
 
-            ret = {
-                'skey': sim.skey,
-                'tkey': sim.tkey,
-                'pkey': sim.prev,
-                'prev': ut.p2f(sim.prev),
-                'ikey': sim.ikey,
-                'rep': sim.eidx,
-            }
+            # Map to friendly names
+            skey = sim.tags['skey']
+            tkey = sim.tags['tkey']
+            ret['sname'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
+            ret['tname'] = self.screen_map[tkey][0] if tkey in self.screen_map else tkey
 
             ret['n_introductions'] = 0
             ret['in_person_days'] = 0
@@ -136,14 +135,14 @@ class Plotting():
 
                 for ob in stats['outbreaks']:
                     for ty, lay in zip(ob['Origin type'], ob['Origin layer']):
-                        origin.append([stats['type'], sim.skey, sim.tkey, sim.prev, ty, lay])
+                        origin.append([stats['type'], ret['sname'], ret['tname'], ret['prev_tgt'], ty, lay])
 
                         uids = [int(u) for u in ob['Tree'].nodes]
                         data = [v for u,v in ob['Tree'].nodes.data()]
                         was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
                         if any(was_detected):
                             first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
-                            detected.append([stats['type'], sim.skey, sim.tkey, sim.prev, first[1]['type'], 'Unknown'])
+                            detected.append([stats['type'], ret['sname'], ret['tname'], ret['prev_tgt'], first[1]['type'], 'Unknown'])
 
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #    pt.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
@@ -162,17 +161,18 @@ class Plotting():
         # Convert results to a dataframe
         self.raw = pd.DataFrame(results)
 
-    def _wrangle(self, cols=None):
+    def _wrangle(self, keys, outputs=None):
         # Wrangling - build self.results from self.raw
-        if cols == None:
-            cols = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
-        self.results = pd.melt(self.raw, id_vars=['skey', 'tkey', 'ikey', 'prev'], value_vars=cols, var_name='indicator', value_name='value') \
-            .set_index(['indicator', 'skey', 'tkey', 'ikey', 'prev'])['value'] \
+        if outputs == None:
+            outputs = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
+
+        self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
+            .set_index(['indicator']+keys)['value'] \
             .apply(func=lambda x: pd.Series(x)) \
             .stack() \
             .dropna() \
             .to_frame(name='value')
-        self.results.index.rename('outbreak_idx', level=5, inplace=True)
+        self.results.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
 
     def source_pie(self):
@@ -192,39 +192,41 @@ class Plotting():
         tab('Detected ES Only', es)
 
 
-    def prevalence(self):
+    def timeseries(self, channel, filename, normalize):
         fig, ax = plt.subplots(figsize=((10,6)))
         l = []
         for sim in self.sims:
             t = sim.results['t'] #pd.to_datetime(sim.results['date'])
-            y = sim.results['n_exposed'].values / sim.pars['pop_size']
+            y = sim.results[channel].values
+            if normalize:
+                y /= sim.pars['pop_size']
             d = pd.DataFrame({'Prevalence': y}, index=pd.Index(data=t, name='Date'))
-            d['Prevalence Target'] = f'{sim.prev}'
-            d['Scenario'] = f'{sim.skey} + {sim.tkey}'
-            d['Rep'] = sim.eidx
+            d['prev_tgt'] = ut.p2f(sim.tags['prev'])
+            d['Scenario'] = f'{sim.tags["skey"]} + {sim.tags["tkey"]}'
+            d['Rep'] = sim.tags['eidx']
             l.append( d )
         d = pd.concat(l).reset_index()
 
         fig, ax = plt.subplots(figsize=(16,10))
-        sns.lineplot(data=d, x='Date', y='Prevalence', hue='Prevalence Target', style='Scenario', palette='cool', ax=ax, legend=False)
+        sns.lineplot(data=d, x='Date', y='Prevalence', hue='prev_tgt', style='Scenario', palette='cool', ax=ax, legend=False)
         # Y-axis gets messed up when I introduce horizontal lines!
-        #for prev in d['Prevalence Target'].unique():
+        #for prev in d['prev_tgt'].unique():
         #    ax.axhline(y=prev, ls='--')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
-        cv.savefig(os.path.join(self.imgdir, f'Prevalence.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, filename), dpi=300)
 
 
-    def introductions_reg(self):
+    def introductions_reg(self, hue_key):
         ##### Introductions
-        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index(['ikey', 'prev'])[['ikey', 'prev', 'value']]
-        sns.lmplot(data=d, x='prev', y='value', hue='ikey', height=10, x_estimator=np.mean, order=2)
+        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([hue_key, 'prev_tgt'])[[hue_key, 'prev_tgt', 'value']]
+        sns.lmplot(data=d, x='prev_tgt', y='value', hue=hue_key, height=10, x_estimator=np.mean, order=2)
         cv.savefig(os.path.join(self.imgdir, f'IntroductionsRegression.png'), dpi=300)
 
 
-    def outbreak_reg(self):
+    def outbreak_reg(self, hue_key):
         ##### OUTBREAK SIZE
-        d = self.results.loc['outbreak_size'].reset_index(['ikey', 'prev'])[['ikey', 'prev', 'value']]
-        sns.lmplot(data=d, x='prev', y='value', hue='ikey', height=10, x_estimator=np.mean, order=2)
+        d = self.results.loc['outbreak_size'].reset_index([hue_key, 'prev_tgt'])[[hue_key, 'prev_tgt', 'value']]
+        sns.lmplot(data=d, x='prev_tgt', y='value', hue=hue_key, height=10, x_estimator=np.mean, order=2)
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeRegression.png'), dpi=300)
 
 

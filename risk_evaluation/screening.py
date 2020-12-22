@@ -25,7 +25,7 @@ n_reps = 1
 n_prev = 4
 pop_size = 100_000 #223_000
 folder = 'v2020-12-16'
-stem = f'screenprob_newbuilder_{pop_size}_{n_reps}reps'
+stem = f'screening_{pop_size}_{n_reps}reps'
 
 run_cfg = {
     'folder':       folder,
@@ -52,19 +52,13 @@ def build_configs():
     }
 
     school_start_date = '2021-02-01' # first day of school
-    b = bld.Builder(sim_pars, ['with_countermeasures'], ['None'], school_start_date)
+    #screening_keys = ['None', 'Antigen every 4w, PCR f/u', 'PCR every 4w', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w']
+    screening_keys = ['None', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u']
+    b = bld.Builder(sim_pars, ['with_countermeasures'], screening_keys, school_start_date)
 
     # Add prevalence levels
     prev_levels = {f'{100*p:.1f}%':p for p in np.linspace(0.002, 0.02, n_prev)}
     b.add_level('prev', prev_levels, b.prevctr_func)
-
-    # Sweep over symptom screening
-    symp_screens = {
-        'No symptom screening': { 'screen_prob': 0 },
-        '50% daily screening':  { 'screen_prob': 0.5 },
-        '100% daily screening': { 'screen_prob': 1 },
-    }
-    b.add_level('ikey', symp_screens, b.screenpars_func)
 
     # Configure alternate sus
     rep_levels = {'Yes' if p else 'No':p for p in [True]}
@@ -92,10 +86,10 @@ def plot(sims, to_plot):
         p.timeseries('cum_infections', 'CumInfections.png', normalize=True)
 
     if to_plot['IntroductionsRegression']:
-        p.introductions_reg(hue_key='ikey')
+        p.introductions_reg(hue_key='tname')
 
     if to_plot['OutbreakSizeRegression']:
-        p.outbreak_reg(hue_key='ikey')
+        p.outbreak_reg(hue_key='tname')
 
 
 if __name__ == '__main__':
@@ -107,7 +101,7 @@ if __name__ == '__main__':
     # Which figures to plot
     to_plot = {
         'Prevalence':               False, # Plot prevalence longitudinally
-        'CumInfections':            True, # Plot cumulative infections longitudinally
+        'CumInfections':            False, # Plot cumulative infections longitudinally
         'IntroductionsRegression':  True,
         'OutbreakSizeRegression':   True,
         #'Debug trees':              False, # Show each introduced tree for debugging
