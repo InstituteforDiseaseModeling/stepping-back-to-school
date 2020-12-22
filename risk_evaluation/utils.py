@@ -5,42 +5,65 @@ import covasim as cv
 import multiprocessing as mp
 import create_sim as cs
 
+
+def alternate_symptomaticity(config, key, value):
+    print(f'Building alternate symptomaticity {key}={value}')
+    if not value: # Only build if value is True
+        return config
+    prog = config.sim_pars['prognoses']
+    ages = prog['age_cutoffs']
+    symp_probs = prog['symp_probs']
+
+    if False:
+        # Source: table 1 from https://arxiv.org/pdf/2006.08471.pdf
+        symp_probs[:] = 0.6456
+        symp_probs[ages<80] = 0.3546
+        symp_probs[ages<60] = 0.3054
+        symp_probs[ages<40] = 0.2241
+        symp_probs[ages<20] = 0.1809
+        prog['symp_probs'] = symp_probs
+    else:
+        print('WARNING: DAN MADE THIS UP!!!')
+        #prog['symp_probs'] = 0.10 + (0.9-0.15) * (ages - min(ages)) / (max(ages)-min(ages))
+        symp_probs[:] = 0.8
+        symp_probs[ages<20] = 0.20
+        symp_probs[ages<10] = 0.15
+        prog['symp_probs'] = symp_probs
+
+    return config
+
+
+def children_equally_sus(config, key, value):
+    print(f'Building children equally susceptibility {key}={value}')
+    if not value: # Only build if value is True
+        return config
+    prog = config.pars['prognoses']
+    ages = prog['age_cutoffs']
+    sus_ORs = prog['sus_ORs']
+    sus_ORs[ages<=20] = 1
+    prog['sus_ORs'] = sus_ORs
+
+
+def p2f(x):
+    return float(x.strip('%'))/100
+
 #%% Running
-def create_run_sim(sconf, n_sims, config):
+def create_run_sim(sconf, n_sims, run_config):
     ''' Create and run the actual simulations '''
     print(f'Creating and running sim {sconf.count} of {n_sims}...')
 
-    verbose = config['verbose'] if 'verbose' in config else 0
-    alternate_symptomaticity = config['alternate_symptomaticity'] if 'alternate_symptomaticity' in config else False
-    children_equally_sus = config['children_equally_sus'] if 'children_equally_sus' in config else False
-
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, pop_size=sconf.pop_size, folder=sconf.folder, alternate_symptomaticity=alternate_symptomaticity, children_equally_sus=children_equally_sus)
+    sim = cs.create_sim(sconf.sim_pars, folder=run_config['folder'])
 
-    sim['interventions'].append(sconf.sm)
-    sim['interventions'].append(sconf.ctr)
-    sconf.pop('sm')
-    sconf.pop('ctr')
+    for intv in sconf.interventions:
+        sim['interventions'].append(intv)
 
-    for k,v in sconf.items():
+    for k,v in sconf.keys.items():
         setattr(sim,k,v)
-        '''
-        sim.count = sconf.count
-        sim.label = sconf.label
-        sim.key1 = sconf.skey
-        sim.key2 = sconf.tkey
-        sim.key3 = sconf.prev
-        sim.eidx = sconf.eidx
-        sim.tscen = sconf.test
-        sim.scen = sconf.this_scen
-        sim.dynamic_par = sconf.sim_pars
-        '''
-    print(sim.prev)
 
-    sim.run(verbose=verbose)
-    if config['shrink']:
-        if verbose > 0:
-            print('Shrinking')
+    sim.run()#verbose=verbose)
+
+    if run_config['shrink']:
         sim.shrink() # Do not keep people after run
     sc.toc(T)
     return sim
@@ -48,7 +71,7 @@ def create_run_sim(sconf, n_sims, config):
 
 def run_configs(sim_configs, stem, run_cfg, filename=None):
     n_cpus = run_cfg['n_cpus']
-    pop_size = max([c.pop_size for c in sim_configs])
+    pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
     sc.heading('Choosing correct number of CPUs...')
     if n_cpus is None:
@@ -64,7 +87,7 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
     sc.heading('Running sims...')
     TT = sc.tic()
     if run_cfg['parallel']:
-        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), config=run_cfg), ncpus=n_cpus)
+        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), run_config=run_cfg), ncpus=n_cpus)
     else:
         sims = []
         for sconf in sim_configs:

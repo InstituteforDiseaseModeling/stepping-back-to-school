@@ -31,17 +31,14 @@ def define_pars(which='best', kind='default', ):
     return output
 
 
-def create_sim(params=None, pop_size=2.25e5, rand_seed=1, folder=None, popfile_stem=None,
-               children_equally_sus=False, alternate_symptomaticity=False, max_pop_seeds=5, load_pop=True, save_pop=False, people=None,
-               label=None, verbose=0, **kwargs):
+def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, load_pop=True, save_pop=False, people=None,
+               label=None, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
     create the sim object.
 
     Args:
         params (dict): the parameters to use for the simulation
-        pop_size (int): the number of people (merged into parameters)
-        rand_seed (int): the random seed to use (merged into parameters)
         folder (str): where to look for the population file
         popfile_stem (str): filename of population file, minus random seed (which gets added)
         children_equally_sus (bool): whether children should be equally susceptible as adults (for sensitivity)
@@ -51,7 +48,6 @@ def create_sim(params=None, pop_size=2.25e5, rand_seed=1, folder=None, popfile_s
         save_pop (bool): if a population is being generated, whether to save
         people (People): if supplied, use instead of loading from file
         label (str): a name for the simulation
-        verbose (float): level of verbosity to use (merged into parameters)
         kwargs (dict): merged with params
 
     Returns:
@@ -61,18 +57,17 @@ def create_sim(params=None, pop_size=2.25e5, rand_seed=1, folder=None, popfile_s
     # Handle parameters and merge together different sets of defaults
 
     default_pars = dict(
-        pop_size       = pop_size,
         pop_scale      = 1,
         pop_type       = 'synthpops',
         rescale        = False, # True causes problems
-        verbose        = verbose,
         start_day      = '2020-11-01',
         end_day        = '2021-04-30',
-        rand_seed      = rand_seed
     )
 
     p = sc.objdict(sc.mergedicts(default_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
-
+    if 'pop_size' not in p:
+        raise Exception('You must provide "pop_size" to create_sim')
+    pop_size = p.pop_size
 
     #%% Define interventions
     symp_prob = p.pop('symp_prob')
@@ -134,6 +129,8 @@ def create_sim(params=None, pop_size=2.25e5, rand_seed=1, folder=None, popfile_s
     # Create sim
     sim = cv.Sim(p, popfile=popfile, load_pop=True, label=label, interventions=interventions)
 
+    # TODO: DELETE...
+    '''
     # Modify sim for variations
     # 1. Children equally as susceptible as adults 20-64
     if children_equally_sus:
@@ -165,5 +162,6 @@ def create_sim(params=None, pop_size=2.25e5, rand_seed=1, folder=None, popfile_s
             symp_probs[ages<20] = 0.20
             symp_probs[ages<10] = 0.15
             prog['symp_probs'] = symp_probs
+    '''
 
     return sim

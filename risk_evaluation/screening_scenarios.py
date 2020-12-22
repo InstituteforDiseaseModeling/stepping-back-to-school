@@ -82,7 +82,7 @@ def generate_scenarios(start_day='2020-11-02'):
 
     return scns
 
-def generate_testing(start_day='2020-11-02'):
+def generate_screening(start_day='2020-11-02'):
 
     one_week_ahead = (dt.datetime.strptime(start_day, '%Y-%m-%d') - dt.timedelta(days=7)).strftime('%Y-%m-%d')
 
@@ -221,7 +221,7 @@ def generate_testing(start_day='2020-11-02'):
 
 def scenario_map():
     col = plt.cm.get_cmap('tab10')
-    scen_names = sc.odict({
+    scen_map = sc.odict({
         'as_normal':            ('Full Schedule No Countermeasures', col(0)),
         'with_countermeasures': ('Full Schedule', col(1)),
         'all_hybrid':           ('Hybrid', col(2)),
@@ -231,10 +231,10 @@ def scenario_map():
     return scen_map
 
 
-def testing_map():
+def screening_map():
     blues = plt.cm.get_cmap('Blues')
     reds = plt.cm.get_cmap('Reds')
-    test_map = sc.odict({ # tkey
+    screen_map = sc.odict({ # tkey
         'None':                                     ('No diagnostic screening',                         'gray'),
         'PCR 1w prior':                             ('PCR one week prior, 1d delay',                    blues(1/6)),
         'PCR every 4w':                             ('Monthly PCR, 1d delay',                           blues(2/6)),
@@ -247,4 +247,4 @@ def testing_map():
         'PCR every 1w':                             ('Weekly PCR, 1d delay',                            blues(4/6)),
         'PCR every 1d':                             ('Daily PCR, no delay',                             blues(5/6)),
     })
-    return test_map
+    return screen_map

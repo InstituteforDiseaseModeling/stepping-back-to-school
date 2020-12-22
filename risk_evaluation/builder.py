@@ -1,69 +1,99 @@
 import covasim_schools as cvsch
-import testing_scenarios as t_s # From the local folder
+import screening_scenarios as scn
 import covasim_controller as cvc
+import covasim as cv
 import sciris as sc
 
-pole_loc = 0.35
+class Config:
+    def __init__(self, sim_pars=None, label=None):
+        self.label = label # TODO: From keys?
+        self.keys = {}
+        self.sim_pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
+        self.school_config = None
+        self.interventions = []
+        self.count = 0
 
-def build(prev_levels, scenario_keys, testing_keys, scen_pars, sim_pars, n_reps, folder):
-    # Build simulation configuration
-    sc.heading('Creating sim configurations...')
-    sim_configs = []
-    count = -1
+    def __repr__(self):
+        return '-' *80 + '\n'+ f'Configuration {self.label}:\n\
+ * Keys: {self.keys}\n\
+ * Pars: {self.sim_pars}\n\
+ * School config: {self.school_config}\n\
+ * Num interventions: {len(self.interventions)}'
 
-    start_day = '2021-02-01' # first day of school
-    all_scenarios = t_s.generate_scenarios(start_day) # Can potentially select a subset of scenarios
-    scenarios = {k:v for k,v in all_scenarios.items() if k in scenario_keys}
 
-    all_testing = t_s.generate_testing(start_day) # Potentially select a subset of testing
-    testing = {k:v for k,v in all_testing.items() if k in testing_keys}
+class Builder:
+    def __init__(self, sim_pars, schcfg_keys, screen_keys, school_start_date):
+        self.configs = [Config(sim_pars=sim_pars)]
 
-    # These come from fit_transmats
-    ei = sc.loadobj('EI.obj')
-    ir = sc.loadobj('IR.obj')
+        # These come from fit_transmats - don't like loading multiple times
+        self.ei = sc.loadobj('EI.obj')
+        self.ir = sc.loadobj('IR.obj')
 
-    for prev in prev_levels:
-        for skey, base_scen in scenarios.items():
-            for tkey, test in testing.items():
-                for ikey, scen_par in scen_pars.items():
-                    for pkey, sim_par in sim_pars.items():
-                        for eidx in range(n_reps):
-                            count += 1
-                            p = sc.dcp(sim_par)
-                            p['rand_seed'] = eidx # np.random.randint(1e6)
+        all_mods = scn.generate_scenarios(school_start_date) # Can potentially select a subset of scenarios
+        mods = {k:v for k,v in all_mods.items() if k in schcfg_keys}
+        self.add_level('skey', mods, self.mod_func)
 
-                            sconf = sc.objdict(count=count, sim_pars=p, pop_size=p['pop_size'], folder=folder)
+        all_screenings = scn.generate_screening(school_start_date) # Potentially select a subset of diagnostic screenings
+        screens = {k:v for k,v in all_screenings.items() if k in screen_keys}
+        # Would like to reuse screenpars_func here
+        def screen_func(config, key, test):
+            print(f'Building screening parameter {key}={test}')
+            for stype, spec in config.school_config.items():
+                if spec is not None:
+                    spec['testing'] = sc.dcp(test) # dcp probably not needed because deep copied in new_schools
+            return config
 
-                            # Add controller
-                            seir = cvc.SEIR(p['pop_size'], ei.Mopt, ir.Mopt, ERR=1, beta=0.365, Ipow=0.925)
-                            targets = dict(infected= prev * p['pop_size']) # prevalence target
-                            ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc, start_day=1)
+        self.add_level('tkey', screens, screen_func)
 
-                            # Modify base_scen with testing intervention
-                            this_scen = sc.dcp(base_scen)
-                            for stype, spec in this_scen.items():
-                                if spec is not None:
-                                    spec['testing'] = sc.dcp(test) # dcp probably not needed because deep copied in new_schools
-                                    spec.update(scen_par)
+    @staticmethod
+    def mod_func(config, key, school_config):
+        print(f'Building school configuration {key}={school_config}')
+        config.school_config = sc.dcp(school_config)
+        return config
 
-                            sm = cvsch.schools_manager(this_scen)
+    @staticmethod
+    def screenpars_func(config, key, screenpar): # Generic to screen pars, move to builder
+        print(f'Building screening parameter {key}={screenpar}')
+        for stype, spec in config.school_config.items():
+            if spec is not None:
+                spec.update(screenpar)
+        return config
 
-                            sconf.update(dict(
-                                label = f'{prev} + {skey} + {tkey} + {ikey} + {pkey} + rep{eidx}',
-                                prev = prev,
-                                skey = skey,
-                                tkey = tkey,
-                                ikey = ikey,
-                                pkey = pkey,
-                                eidx = eidx,
-                                test = test,
-                                this_scen = this_scen,
-                                sm = sm,
-                                ctr = ctr,
-                            ))
 
-                            sim_configs.append(sconf)
+    @staticmethod
+    def simpars_func(config, key, simpar): # Generic to screen pars, move to builder
+        print(f'Building simulation parameter {key}={simpar}')
+        config.sim_pars.update(simpar)
+        return config
 
-    print(f'Done: {len(sim_configs)} configurations created')
-    return sim_configs
+    def prevctr_func(self, config, key, prev):
+        print(f'Building prevalence controller {key}={prev}')
+        pole_loc = 0.35
+
+        seir = cvc.SEIR(config.sim_pars['pop_size'], self.ei.Mopt, self.ir.Mopt, ERR=1, beta=0.365, Ipow=0.925)
+        targets = dict(infected= prev * config.sim_pars['pop_size']) # prevalence target
+        ctr = cvc.controller_intervention(seir, targets, pole_loc=pole_loc, start_day=1)
+        config.interventions += [ctr]
+        return config
+
+    def add_level(self, keyname, level, func):
+        new_configs = []
+        for config in self.configs:
+            for k,v in level.items():
+                cfg = func(sc.dcp(config), k, v)
+                cfg.keys[keyname] = k
+                new_configs += [cfg]
+        self.configs = new_configs
+
+    def __repr__(self):
+        ret = ''
+        for config in self.configs:
+            ret += str(config)
+        return ret
+
+    def get(self):
+        for i, config in enumerate(self.configs):
+            config.count = i
+        print(f'Done: {len(self.configs)} configurations created')
+        return self.configs
 
