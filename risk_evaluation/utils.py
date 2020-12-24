@@ -42,6 +42,7 @@ def children_equally_sus(config, key, value):
     sus_ORs = prog['sus_ORs']
     sus_ORs[ages<=20] = 1
     prog['sus_ORs'] = sus_ORs
+    return config
 
 
 def p2f(x):

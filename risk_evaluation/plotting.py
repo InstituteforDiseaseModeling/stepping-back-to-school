@@ -192,30 +192,6 @@ class Plotting():
         tab('Detected ES Only', es)
 
 
-    def timeseries(self, channel, filename, normalize):
-        fig, ax = plt.subplots(figsize=((10,6)))
-        l = []
-        for sim in self.sims:
-            t = sim.results['t'] #pd.to_datetime(sim.results['date'])
-            y = sim.results[channel].values
-            if normalize:
-                y /= sim.pars['pop_size']
-            d = pd.DataFrame({'Prevalence': y}, index=pd.Index(data=t, name='Date'))
-            d['prev_tgt'] = ut.p2f(sim.tags['prev'])
-            d['Scenario'] = f'{sim.tags["skey"]} + {sim.tags["tkey"]}'
-            d['Rep'] = sim.tags['eidx']
-            l.append( d )
-        d = pd.concat(l).reset_index()
-
-        fig, ax = plt.subplots(figsize=(16,10))
-        sns.lineplot(data=d, x='Date', y='Prevalence', hue='prev_tgt', style='Scenario', palette='cool', ax=ax, legend=False)
-        # Y-axis gets messed up when I introduce horizontal lines!
-        #for prev in d['prev_tgt'].unique():
-        #    ax.axhline(y=prev, ls='--')
-        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
-        cv.savefig(os.path.join(self.imgdir, filename), dpi=300)
-
-
     def introductions_reg(self, hue_key):
         ##### Introductions
         d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([hue_key, 'prev_tgt'])[[hue_key, 'prev_tgt', 'value']]
@@ -228,6 +204,34 @@ class Plotting():
         d = self.results.loc['outbreak_size'].reset_index([hue_key, 'prev_tgt'])[[hue_key, 'prev_tgt', 'value']]
         sns.lmplot(data=d, x='prev_tgt', y='value', hue=hue_key, height=10, x_estimator=np.mean, order=2)
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeRegression.png'), dpi=300)
+
+    def timeseries(self, channel, label, normalize):
+        fig, ax = plt.subplots(figsize=((10,6)))
+        l = []
+        for sim in self.sims:
+            t = sim.results['t'] #pd.to_datetime(sim.results['date'])
+            y = sim.results[channel].values
+            if normalize:
+                y /= sim.pars['pop_size']
+            d = pd.DataFrame({label: y}, index=pd.Index(data=t, name='Date'))
+            d['prev_tgt'] = ut.p2f(sim.tags['prev'])
+            d['Scenario'] = f'{sim.tags["skey"]} + {sim.tags["tkey"]}'
+            d['Rep'] = sim.tags['eidx']
+            l.append( d )
+        d = pd.concat(l).reset_index()
+
+        fig, ax = plt.subplots(figsize=(16,10))
+        sns.lineplot(data=d, x='Date', y=label, hue='prev_tgt', style='Scenario', palette='cool', ax=ax, legend=False)
+        # Y-axis gets messed up when I introduce horizontal lines!
+        #for prev in d['prev_tgt'].unique():
+        #    ax.axhline(y=prev, ls='--')
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+        cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=300)
+        return fig
+
+    def several_timeseries(self, config):
+        for k,v in config.items():
+            self.timeseries(k, config['channel'], config['normalize'])
 
 
 # Tree plotting
