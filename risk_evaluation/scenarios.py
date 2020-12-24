@@ -15,11 +15,10 @@ def scenario(es, ms, hs):
         'uv': None,
     }
 
-def generate_scenarios(start_day='2020-11-02'):
+def generate_scenarios(start_day='2020-11-02', base_beta_s=1.5):
     ''' Generate scenarios (dictionaries of parameters) for the school intervention '''
 
-    # Increase beta (multiplier) in schools from default of 0.6 to 1.5.  This achieves a R0 in schools of approximately 1.6, a modeling assumption that is consistent with global outbreaks in schools that have had limited countermeasures such as Israel (after masks were removed due to heat).
-    base_beta_s = 1.5
+    # Increase beta (multiplier) in schools from covasim layer default of 0.6 to 1.5.  This achieves a R0 in schools of approximately 1.6, a modeling assumption that is consistent with global outbreaks in schools that have had limited countermeasures such as Israel (after masks were removed due to heat).
 
     scns = sc.odict()
 
