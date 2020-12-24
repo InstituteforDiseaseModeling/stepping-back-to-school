@@ -230,8 +230,8 @@ class Plotting():
         return fig
 
     def several_timeseries(self, config):
-        for k,v in config.items():
-            self.timeseries(k, config['channel'], config['normalize'])
+        for lbl,v in config.items():
+            self.timeseries(v['channel'], lbl, v['normalize'])
 
 
 # Tree plotting

@@ -25,7 +25,7 @@ n_reps = 1
 n_prev = 4
 pop_size = 100_000 #223_000
 folder = 'v2020-12-16'
-stem = f'screenprob_newbuilder_{pop_size}_{n_reps}reps'
+stem = f'screenprob_{pop_size}_{n_reps}reps'
 
 run_cfg = {
     'folder':       folder,
