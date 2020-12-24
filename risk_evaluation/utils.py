@@ -10,7 +10,12 @@ def alternate_symptomaticity(config, key, value):
     print(f'Building alternate symptomaticity {key}={value}')
     if not value: # Only build if value is True
         return config
-    prog = config.sim_pars['prognoses']
+    if 'prognoses' in config.sim_pars:
+        prog = config.sim_pars['prognoses']
+    else:
+        pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **config.sim_pars)
+        prog = pars['prognoses']
+
     ages = prog['age_cutoffs']
     symp_probs = prog['symp_probs']
 
@@ -29,6 +34,8 @@ def alternate_symptomaticity(config, key, value):
         symp_probs[ages<20] = 0.20
         symp_probs[ages<10] = 0.15
         prog['symp_probs'] = symp_probs
+
+    config.sim_pars['prognoses'] = sc.dcp(prog) # Ugh
 
     return config
 

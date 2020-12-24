@@ -15,8 +15,6 @@ class ScreenProb(Run):
         super().__init__(name, sim_pars, sweep_pars, run_pars)
 
     def build_configs(self):
-        super().build_configs()
-
         # Sweep over symptom screening
         symp_screens = {
             'No symptom screening': { 'screen_prob': 0 },
@@ -25,7 +23,7 @@ class ScreenProb(Run):
         }
         self.builder.add_level('ikey', symp_screens, self.builder.screenpars_func)
 
-        return self.builder.get()
+        return super().build_configs()
 
 
 if __name__ == '__main__':
@@ -33,5 +31,5 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
 
-    runner = ScreenProb(sweep_pars=dict(n_reps=1, n_prev=4))
+    runner = ScreenProb(sweep_pars=dict(n_reps=3, n_prev=20))#, run_pars=dict(n_cpus=1))
     runner.run(args.force, 'ikey', ts_plots=True)

@@ -70,13 +70,12 @@ class Run:
         if run_pars is not None:
             self.run_pars.update(run_pars)
 
-        self.builder = None
+        self.builder = bld.Builder(self.sim_pars, self.sweep_pars['schcfg_keys'], self.sweep_pars['screen_keys'], self.sweep_pars['school_start_date']) # Just pass in sweep_pars?
 
 
     def build_configs(self):
         # Build simulation configuration
         sc.heading('Creating sim configurations...')
-        self.builder = bld.Builder(self.sim_pars, self.sweep_pars['schcfg_keys'], self.sweep_pars['screen_keys'], self.sweep_pars['school_start_date']) # Just pass in sweep_pars?
 
         # Add prevalence levels
         prev_levels = {f'{100*p:.1f}%':p for p in np.linspace(0.002, 0.02, self.sweep_pars['n_prev'])}
@@ -86,13 +85,14 @@ class Run:
         rep_levels = {'Yes' if p else 'No':p for p in [True]}
         self.builder.add_level('AltSus', rep_levels, ut.alternate_symptomaticity)
 
+        # Add reps
+        rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(self.sweep_pars['n_reps'])}
+        self.builder.add_level('eidx', rep_levels, self.builder.simpars_func)
+
         # Add school intervention
         for config in self.builder.configs:
             config.interventions.append(cvsch.schools_manager(config.school_config))
 
-        # Add reps
-        rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(self.sweep_pars['n_reps'])}
-        self.builder.add_level('eidx', rep_levels, self.builder.simpars_func)
 
         return self.builder.get()
 

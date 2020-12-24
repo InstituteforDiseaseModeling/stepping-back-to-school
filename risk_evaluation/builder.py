@@ -10,7 +10,7 @@ class Config:
         self.tags = {}
 
         # TODO: Seems necessary to have access to e.g. prognosis parameters, but can work around
-        self.sim_pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
+        self.sim_pars = sim_pars #cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
         self.school_config = None
         self.interventions = []
         self.count = 0
