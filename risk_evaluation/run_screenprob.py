@@ -33,5 +33,5 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
 
-    runner = ScreenProb(sweep_pars=dict(n_reps=2, n_prev=5))
+    runner = ScreenProb(sweep_pars=dict(n_reps=1, n_prev=4))
     runner.run(args.force, 'ikey', ts_plots=True)

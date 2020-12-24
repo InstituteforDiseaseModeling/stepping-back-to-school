@@ -8,13 +8,15 @@ class Config:
     def __init__(self, sim_pars=None, label=None):
         self.label = label # TODO: From tags?
         self.tags = {}
+
+        # TODO: Seems necessary to have access to e.g. prognosis parameters, but can work around
         self.sim_pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
         self.school_config = None
         self.interventions = []
         self.count = 0
 
     def __repr__(self):
-        return '-' *80 + '\n'+ f'Configuration {self.label}:\n\
+        return '\n' + '-'*80 + '\n'+ f'Configuration {self.label}:\n\
  * Tags: {self.tags}\n\
  * Pars: {self.sim_pars}\n\
  * School config: {self.school_config}\n\

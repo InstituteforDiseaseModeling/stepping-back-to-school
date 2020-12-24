@@ -27,13 +27,16 @@ class Run:
         # TODO: move to defaults
         self.sim_pars = {
             'pop_size':     100_000,
-            'verbose': 0.1,
+            'verbose':      0.1,
             'pop_infected': 100,
             'change_beta':  1,
             'symp_prob':    0.08,
             'asymp_factor': 0.8,
             'start_day':    '2020-12-15', # First day of sim
             'end_day':      '2021-03-31', #2021-04-30', # Last day of sim
+            'pop_scale':    1,
+            'pop_type':     'synthpops',
+            'rescale':      False, # True causes problems
         }
         if sim_pars is not None:
             self.sim_pars.update(sim_pars)
