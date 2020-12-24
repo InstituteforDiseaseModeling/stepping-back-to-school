@@ -72,7 +72,7 @@ def build_configs():
 
     # Add school intervention
     for config in b.configs:
-        config.interventions += [cvsch.schools_manager(config.school_config)]
+        config.interventions.append(cvsch.schools_manager(config.school_config))
 
     # Add reps
     rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(n_reps)}
@@ -81,24 +81,15 @@ def build_configs():
     return b.get()
 
 
-def plot(sims, to_plot):
+def plot(sims, ts_plots=None):
     imgdir = os.path.join(folder, 'img_'+stem)
     p = pt.Plotting(sims, imgdir)
 
-    if to_plot['Prevalence']:
-        p.timeseries('n_exposed', 'Prevalence', normalize=True)
+    p.introductions_reg(hue_key='ikey')
+    p.outbreak_reg(hue_key='ikey')
 
-    if to_plot['CumInfections']:
-        p.timeseries('cum_infections', 'Cumulative Infections', normalize=True)
-
-    if to_plot['Quarantined']:
-        p.timeseries('n_quarantined', 'Number Quarantined', normalize=True)
-
-    if to_plot['IntroductionsRegression']:
-        p.introductions_reg(hue_key='ikey')
-
-    if to_plot['OutbreakSizeRegression']:
-        p.outbreak_reg(hue_key='ikey')
+    if ts_plots is not None:
+        p.several_timeseries(ts_plots)
 
 
 if __name__ == '__main__':
@@ -107,14 +98,11 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
 
-    # Which figures to plot
-    to_plot = {
-        'Prevalence':               True, # Plot prevalence longitudinally
-        'CumInfections':            True, # Plot cumulative infections longitudinally
-        'Quarantined':              True,
-        'IntroductionsRegression':  True,
-        'OutbreakSizeRegression':   True,
-        #'Debug trees':              False, # Show each introduced tree for debugging
+    ts_plots = {
+        'Prevalence':      dict(channel='n_exposed', normalize=True),
+        'CumInfections':   dict(channel='cum_infections', normalize=True),
+        'Quarantined':     dict(channel='n_quarantined', normalize=True),
+        'Newly Diagnosed': dict(channel='new_diagnoses', normalize=True),
     }
 
     cachefn = os.path.join(folder, 'sims', f'{stem}.sims') # Might need to change the extension here, depending in combine.py was used
@@ -125,4 +113,4 @@ if __name__ == '__main__':
         print(f'Loading {cachefn}')
         sims = cv.load(cachefn) # Use for *.sims
 
-    plot(sims, to_plot)
+    plot(sims, ts_plots)

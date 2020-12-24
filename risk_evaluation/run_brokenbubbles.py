@@ -30,12 +30,12 @@ stem = f'brokenbubbles_{pop_size}_{n_reps}reps'
 
 run_cfg = {
     'folder':       folder,
-    'n_cpus':       15, # Manually set the number of CPUs -- otherwise calculated automatically
+    'n_cpus':       None, # Manually set the number of CPUs -- otherwise calculated automatically
     'cpu_thresh':   0.75, # Don't use more than this amount of available CPUs, if number of CPUs is not set
     'mem_thresh':   0.75, # Don't use more than this amount of available RAM, if number of CPUs is not set
     'parallel':     True, # Only switch to False for debugging
     'shrink':       True, #
-    'verbose':      1 # Print progress this fraction of simulated days (1 = every day, 0.1 = every 10 days, 0 = no output)
+    'verbose':      0.1 # Print progress this fraction of simulated days (1 = every day, 0.1 = every 10 days, 0 = no output)
 }
 
 
@@ -124,7 +124,6 @@ def build_configs():
     # Add prevalence levels
     prev_levels = {f'{100*p:.1f}%':p for p in np.linspace(0.002, 0.02, n_prev)}
     b.add_level('prev', prev_levels, b.prevctr_func)
-
 
     # Configure alternate sus
     rep_levels = {'Yes' if p else 'No':p for p in [True]}
