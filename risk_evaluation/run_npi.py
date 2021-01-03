@@ -58,7 +58,7 @@ def build_configs():
     prev_levels = {f'{100*p:.1f}%':p for p in np.linspace(0.002, 0.02, n_prev)}
     b.add_level('prev', prev_levels, b.prevctr_func)
 
-    # Sweep over symptom screening
+    # Sweep over NPI multiplier
     screen_scens = {
         'None':          { 'beta_s': 0.00 },
         '25% reduction': { 'beta_s': 0.25 },

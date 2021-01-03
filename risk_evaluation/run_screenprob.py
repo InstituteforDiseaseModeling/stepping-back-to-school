@@ -7,6 +7,7 @@ the test run uses 8.
 '''
 
 import argparse
+import numpy as np
 from run import Run
 
 class ScreenProb(Run):
@@ -16,12 +17,8 @@ class ScreenProb(Run):
 
     def build_configs(self):
         # Sweep over symptom screening
-        symp_screens = {
-            'No symptom screening': { 'screen_prob': 0 },
-            '50% daily screening':  { 'screen_prob': 0.5 },
-            '100% daily screening': { 'screen_prob': 1 },
-        }
-        self.builder.add_level('ikey', symp_screens, self.builder.screenpars_func)
+        symp_screens = {x:{'screen_prob': x} for x in np.linspace(0, 1, 5)}
+        self.builder.add_level('Screen prob', symp_screens, self.builder.screenpars_func)
 
         return super().build_configs()
 
@@ -31,5 +28,5 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
 
-    runner = ScreenProb(sweep_pars=dict(n_reps=3, n_prev=20))#, run_pars=dict(n_cpus=1))
-    runner.run(args.force, 'ikey', ts_plots=True)
+    runner = ScreenProb(sweep_pars=dict(n_reps=10, n_prev=3), sim_pars=dict(pop_size=223_000), run_pars=dict(n_cpus=15))
+    runner.run(args.force, 'Screen prob', huevar='prev', ts_plots=True, order=3)

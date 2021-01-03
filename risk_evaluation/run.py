@@ -97,11 +97,11 @@ class Run:
         return self.builder.get()
 
 
-    def plot(self, sims, hue_key, ts_plots=None):
+    def plot(self, sims, xvar, huevar, ts_plots=None, order=2):
         p = pt.Plotting(sims, self.imgdir)
 
-        p.introductions_reg(hue_key=hue_key)
-        p.outbreak_reg(hue_key=hue_key)
+        p.introductions_reg(xvar, huevar, order=order)
+        p.outbreak_reg(xvar, huevar, order=order)
 
         if ts_plots is None or ts_plots==False:
             return
@@ -116,7 +116,7 @@ class Run:
         p.several_timeseries(ts_plots)
 
 
-    def run(self, force, hue_key, ts_plots=None):
+    def run(self, force, xvar, huevar, ts_plots=None, order=2):
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
             sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?
@@ -124,4 +124,4 @@ class Run:
             print(f'Loading {self.cachefn}')
             sims = cv.load(self.cachefn) # Use for *.sims
 
-        self.plot(sims, hue_key, ts_plots)
+        self.plot(sims, xvar, huevar, ts_plots, order)

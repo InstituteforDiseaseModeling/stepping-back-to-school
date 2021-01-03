@@ -41,8 +41,9 @@ class Plotting():
         self.screen_order = [v[0] for k,v in self.screen_map.items() if k in sim_screen_names]
 
         self._process()
-        rename = {'skey':'sname', 'tkey':'tname', 'prev':'prev_tgt'}
-        keys = [rename[k] if k in rename else k for k in sims[0].tags.keys()]
+        #rename = {'skey':'sname', 'tkey':'tname', 'prev':'prev_tgt'}
+        #keys = [rename[k] if k in rename else k for k in sims[0].tags.keys()]
+        keys = list(sims[0].tags.keys()) + ['sname', 'tname', 'prev_tgt']
         self._wrangle(keys)
 
     def _process(self):
@@ -192,17 +193,21 @@ class Plotting():
         tab('Detected ES Only', es)
 
 
-    def introductions_reg(self, hue_key):
+    def introductions_reg(self, xvar, huevar, order=2):
         ##### Introductions
-        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([hue_key, 'prev_tgt'])[[hue_key, 'prev_tgt', 'value']]
-        sns.lmplot(data=d, x='prev_tgt', y='value', hue=hue_key, height=10, x_estimator=np.mean, order=2)
+        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
+        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order)
+        #ax = g.axes.flat[0]
+        #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
+        #g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         cv.savefig(os.path.join(self.imgdir, f'IntroductionsRegression.png'), dpi=300)
 
 
-    def outbreak_reg(self, hue_key):
-        ##### OUTBREAK SIZE
-        d = self.results.loc['outbreak_size'].reset_index([hue_key, 'prev_tgt'])[[hue_key, 'prev_tgt', 'value']]
-        sns.lmplot(data=d, x='prev_tgt', y='value', hue=hue_key, height=10, x_estimator=np.mean, order=2)
+    def outbreak_reg(self, xvar, huevar, order=2):
+        ##### Outbreak size
+        d = self.results.loc['outbreak_size'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
+        sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=2, legend_out=False)
+        #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeRegression.png'), dpi=300)
 
     def timeseries(self, channel, label, normalize):
@@ -225,7 +230,8 @@ class Plotting():
         # Y-axis gets messed up when I introduce horizontal lines!
         #for prev in d['prev_tgt'].unique():
         #    ax.axhline(y=prev, ls='--')
-        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+        if normalize:
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
         cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=300)
         return fig
 
