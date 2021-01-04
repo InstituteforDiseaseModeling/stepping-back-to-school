@@ -14,7 +14,7 @@ class ScreenProbSweep(Run):
     def build_configs(self):
         # Sweep over symptom screening
         symp_screens = {p:{'screen_prob': p} for p in np.linspace(0, 1, 10)}
-        self.builder.add_level('ikey', symp_screens, self.builder.screenpars_func)
+        self.builder.add_level('Screen prob', symp_screens, self.builder.screenpars_func)
 
         return super().build_configs()
 
@@ -25,4 +25,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     runner = ScreenProbSweep(sweep_pars=dict(n_reps=5, n_prev=2), sim_pars=dict(pop_size=223_000), run_pars=dict(n_cpus=15))
-    runner.run(args.force, xvar='ikey', huevar='prev', ts_plots=True)
+    runner.run(args.force)
+    runner.plot(xvar='Screen prob', huevar='prev', ts_plots=True)

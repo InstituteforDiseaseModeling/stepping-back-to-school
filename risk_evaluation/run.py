@@ -23,6 +23,7 @@ class Run:
         cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
 
         self.name = name
+        self.sims = None  # To be run or loaded by calling run()
 
         # TODO: move to defaults
         self.sim_pars = {
@@ -42,14 +43,19 @@ class Run:
             self.sim_pars.update(sim_pars)
 
         self.sweep_pars = {
-            'folder':   'v2020-12-16',
-            'schcfg_keys': ['with_countermeasures'],
-            'screen_keys': ['None'],
+            'folder':            'v2020-12-16',
+            'schcfg_keys':       ['with_countermeasures'],
+            'screen_keys':       ['None'],
             'school_start_date': '2021-02-01', # first day of school
-            'n_reps':   1,
-            'n_prev':   4,
-            'pop_size': self.sim_pars['pop_size'],
+            'n_reps':            1,
+            #'n_prev':           4,
+            'prev':              [0.01],
+            'pop_size':          self.sim_pars['pop_size'],
         }
+
+        if 'n_prev' in sweep_pars and 'prev' not in sweep_pars:
+            sweep_pars['prev'] = np.linspace(0.002, 0.02, sweep_pars['n_prev'])
+
         if sweep_pars is not None:
             self.sweep_pars.update(sweep_pars)
 
@@ -78,7 +84,7 @@ class Run:
         sc.heading('Creating sim configurations...')
 
         # Add prevalence levels
-        prev_levels = {f'{100*p:.1f}%':p for p in np.linspace(0.002, 0.02, self.sweep_pars['n_prev'])}
+        prev_levels = {f'{100*p:.1f}%':p for p in self.sweep_pars['prev']}
         self.builder.add_level('prev', prev_levels, self.builder.prevctr_func)
 
         # Configure alternate sus
@@ -93,12 +99,11 @@ class Run:
         for config in self.builder.configs:
             config.interventions.append(cvsch.schools_manager(config.school_config))
 
-
         return self.builder.get()
 
 
-    def plot(self, sims, xvar, huevar, ts_plots=None, order=2):
-        p = pt.Plotting(sims, self.imgdir)
+    def plot(self, xvar, huevar, ts_plots=None, order=2):
+        p = pt.Plotting(self.sims, self.imgdir)
 
         p.introductions_reg(xvar, huevar, order=order)
         p.outbreak_reg(xvar, huevar, order=order)
@@ -116,12 +121,10 @@ class Run:
         p.several_timeseries(ts_plots)
 
 
-    def run(self, force, xvar, huevar, ts_plots=None, order=2):
+    def run(self, force):
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
-            sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?
+            self.sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?
         else:
             print(f'Loading {self.cachefn}')
-            sims = cv.load(self.cachefn) # Use for *.sims
-
-        self.plot(sims, xvar, huevar, ts_plots, order)
+            self.sims = cv.load(self.cachefn) # Use for *.sims

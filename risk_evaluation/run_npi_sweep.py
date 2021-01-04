@@ -1,5 +1,5 @@
 '''
-Dense sweep of screen_prob at a few fixed prevalence levels.
+Dense sweep of beta_s at a few fixed prevalence levels.
 '''
 
 import argparse
@@ -14,7 +14,7 @@ class NPISweep(Run):
     def build_configs(self):
         # Sweep over NPI multipliers
         npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 1, 10)}
-        self.builder.add_level('NPI multiplier', npi_scens, self.builder.screenpars_func)
+        self.builder.add_level('NPI reduction', npi_scens, self.builder.screenpars_func)
 
         return super().build_configs()
 
@@ -25,4 +25,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     runner = NPISweep(sweep_pars=dict(n_reps=10, n_prev=3), sim_pars=dict(pop_size=223_000), run_pars=dict(n_cpus=15))
-    runner.run(args.force, xvar='NPI multiplier', huevar='prev', ts_plots=True, order=3)
+    runner.run(args.force)
+    runner.plot(xvar='NPI reduction', huevar='prev', ts_plots=True, order=3)

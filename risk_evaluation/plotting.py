@@ -125,6 +125,7 @@ class Plotting():
                 if sum([inf_first[g] for g in groups]) > 0:
                     n_schools_with_inf_d1[stats['type']] += 1
 
+                # TODO: By school type and student/staff
                 ret['n_introductions'] += len(stats['outbreaks'])
                 ret['in_person_days'] += np.sum([v for v in stats['in_person'].values()])
                 ret['introductions'].append(len(stats['outbreaks']))
@@ -200,6 +201,7 @@ class Plotting():
         #ax = g.axes.flat[0]
         #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
         #g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
+        g.set_ylabels('Introductions (post-screening) per 100 students')
         cv.savefig(os.path.join(self.imgdir, f'IntroductionsRegression.png'), dpi=300)
 
 
