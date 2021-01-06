@@ -41,18 +41,20 @@ class Analysis():
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
         self._process()
-        #rename = {'scen_key':'scen_lbl', 'dxscrn_key':'dxscrn_lbl', 'prev':'prev_tgt'}
-        #keys = [rename[k] if k in rename else k for k in sims[0].tags.keys()]
         keys = list(sims[0].tags.keys()) + ['scen_lbl', 'dxscrn_lbl', 'prev_tgt']
         self._wrangle(keys)
 
+
     def _process(self):
-        #%% Process the simulations
+        ## Process the simulations
         results = []
         groups = ['students', 'teachers', 'staff']
         stypes = ['es', 'ms', 'hs']
-        origin = []
-        detected = []
+
+        # For introduction source analysis
+        #self.origin = []
+        #self.detected = []
+
         for sim in self.sims:
             first_date = '2021-02-01' # TODO: Read from sim
             last_date = '2021-04-30'
@@ -79,6 +81,10 @@ class Analysis():
                 ret[f'introductions_{stype}'] = []
                 ret[f'susceptible_person_days_{stype}'] = []
 
+            for grp in ['Student', 'Teacher', 'Staff']:
+                ret[f'introduction_origin_{grp}'] = 0
+                ret[f'detected_origin_{grp}'] = 0
+
             n_schools = {'es':0, 'ms':0, 'hs':0}
             n_schools_with_inf_d1 = {'es':0, 'ms':0, 'hs':0}
 
@@ -88,10 +94,6 @@ class Analysis():
             exposed = {k:0 for k in grp_dict.keys()}
             inperson_days = {k:0 for k in grp_dict.keys()}
             possible_days = {k:0 for k in grp_dict.keys()}
-
-            # A few by school type
-            introductions = {k:0 for k in stypes}
-            susceptible_person_days = {k:0 for k in stypes}
 
             if sim.results['n_exposed'][first_school_day] == 0:
                 print(f'Sim has zero exposed, skipping: {ret}\n')
@@ -104,12 +106,9 @@ class Analysis():
 
                 inf_first = stats['infectious_first_day_school'] # Post-screening
                 in_person = stats['in_person']
-                exp = stats['newly_exposed']
+                n_exp = stats['newly_exposed']
                 num_school_days = stats['num_school_days']
                 possible_school_days = np.busday_count(first_date, last_date)
-                n_exp = {}
-                for grp in groups:
-                    n_exp[grp] = exp[grp]
 
                 for gkey, grps in grp_dict.items():
                     in_person_days = scheduled_person_days = num_exposed = num_people = 0
@@ -128,9 +127,6 @@ class Analysis():
                     inperson_days[gkey] += in_person_days
                     possible_days[gkey] += possible_school_days*num_people
 
-                introductions[stype] += len(stats['outbreaks'])
-                susceptible_person_days[stype] += stats['susceptible_person_days']
-
                 n_schools[stats['type']] += 1
                 if sum([inf_first[g] for g in groups]) > 0:
                     n_schools_with_inf_d1[stats['type']] += 1
@@ -138,25 +134,27 @@ class Analysis():
                 # TODO: By school type and student/staff
                 ret['n_introductions'] += len(stats['outbreaks'])
                 ret['in_person_days'] += np.sum([v for v in stats['in_person'].values()])
-                #ret['introductions'].append(len(stats['outbreaks']))
+                ret[f'introductions_{stype}'].append( len(stats['outbreaks']) )
+                ret[f'susceptible_person_days_{stype}'].append( stats['susceptible_person_days'] )
                 ret['introductions_per_100_students'].append( len(stats['outbreaks']) / stats['num']['students'] * 100 )
                 intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
                 ret['introductions_postscreen'].append(intr_postscreen)
                 ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
-                ret[f'introductions_{stype}'].append( introductions[stype] )
-                ret[f'susceptible_person_days_{stype}'].append( susceptible_person_days[stype] )
                 ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
                 for ob in stats['outbreaks']:
-                    for ty, lay in zip(ob['Origin type'], ob['Origin layer']):
-                        origin.append([stats['type'], ret['scen_lbl'], ret['dxscrn_lbl'], ret['prev_tgt'], ty, lay])
+                    for origin_type, lay in zip(ob['Origin type'], ob['Origin layer']):
+                        #self.origin.append([sid, stats['type'], ret['scen_lbl'], ret['dxscrn_lbl'], ret['prev_tgt'], origin_type, lay])
+                        ret[f'introduction_origin_{origin_type}'] += 1
 
                         uids = [int(u) for u in ob['Tree'].nodes]
                         data = [v for u,v in ob['Tree'].nodes.data()]
                         was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
                         if any(was_detected):
                             first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
-                            detected.append([stats['type'], ret['scen_lbl'], ret['dxscrn_lbl'], ret['prev_tgt'], first[1]['type'], 'Unknown'])
+                            #self.detected.append([sid, stats['type'], ret['scen_lbl'], ret['dxscrn_lbl'], ret['prev_tgt'], first[1]['type'], 'Unknown'])
+                            detected_origin_type = first[1]['type']
+                            ret[f'detected_origin_{detected_origin_type}'] += 1
 
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #    pt.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
@@ -164,8 +162,8 @@ class Analysis():
             for stype in stypes:
                 ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
                 # Sums, won't allow for full bootstrap resampling!
-                ret[f'introductions_sum_{stype}'] = np.sum(introductions[stype])
-                ret[f'susceptible_person_days_sum_{stype}'] = np.sum(susceptible_person_days[stype])
+                ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
+                ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
 
             # Deciding between district and school perspective here
             for gkey in grp_dict.keys():
@@ -194,21 +192,34 @@ class Analysis():
             .to_frame(name='value')
         self.results.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
+
     def source_pie(self):
-        # TODO: PIE CHART!
-        def tab(lbl, df):
-            ct = pd.crosstab(df['Type'], df['Dx Screening'])
-            ct['total'] = ct.sum(axis=1)
-            ct['total'] = 100*ct['total']/ct['total'].sum()
-            print('\n'+lbl+'\n', ct)
 
-        odf = pd.DataFrame(origin, columns=['School Type', 'Scenario', 'Dx Screening', 'Prevalence', 'Type', 'Layer'])
-        ddf = pd.DataFrame(detected, columns=['School Type', 'Scenario', 'Dx Screening', 'Prevalence', 'Type', 'Layer'])
-        es = ddf.loc[ddf['School Type']=='es']
+        print(self.raw.columns)
+        groups = ['Student', 'Teacher', 'Staff']
+        cols = [f'introduction_origin_{origin_type}' for origin_type in groups]
+        intro_by_origin = self.raw[cols]
+        intro_by_origin.rename(columns={f'introduction_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
+        intro_by_origin.loc[:, 'Introductions'] = 'All'
 
-        tab('All', odf)
-        tab('All Detected', ddf)
-        tab('Detected ES Only', es)
+        cols = [f'detected_origin_{origin_type}' for origin_type in groups]
+        detected_intro_by_origin = self.raw[cols]
+        detected_intro_by_origin.rename(columns={f'detected_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
+        detected_intro_by_origin.loc[:, 'Introductions'] = 'Detected'
+
+        df = pd.concat([intro_by_origin, detected_intro_by_origin], ignore_index=True)
+        df = df.set_index('Introductions').rename_axis('Source', axis=1).stack()
+        df.name='Count'
+        intr_src = df.reset_index().groupby(['Introductions', 'Source'])['Count'].sum().unstack('Source')
+
+
+        fig, axv = plt.subplots(1, intr_src.shape[0], figsize=(10,5))
+        for ax, (idx, row) in zip(axv, intr_src.iterrows()):
+            pie = ax.pie(row.values, explode=[0.05]*len(row), autopct='%.0f%%')
+            ax.set_title(idx)
+        axv[1].legend(pie[0], intr_src.columns, bbox_to_anchor=(0.0,-0.2), loc='lower center', ncol=intr_src.shape[1], frameon=True)
+        cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=300)
+
 
     def introductions_rate_by_stype(self, xvar, huevar, order=2):
         '''

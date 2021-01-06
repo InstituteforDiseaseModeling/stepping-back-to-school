@@ -105,6 +105,7 @@ class Run:
     def plot(self, xvar, huevar, ts_plots=None, order=2):
         p = an.Analysis(self.sims, self.imgdir)
 
+        p.source_pie()
         p.introductions_rate(xvar, huevar, order=order)
         p.introductions_rate_by_stype(xvar, huevar, order=order)
         p.introductions_reg(xvar, huevar, order=order)
