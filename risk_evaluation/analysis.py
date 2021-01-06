@@ -41,7 +41,7 @@ class Analysis():
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
         self._process()
-        keys = list(sims[0].tags.keys()) + ['scen_lbl', 'dxscrn_lbl', 'prev_tgt']
+        keys = list(sims[0].tags.keys()) + ['scen_lbl', 'Dx Screening', 'Prevalence Target']
         self._wrangle(keys)
 
 
@@ -62,13 +62,13 @@ class Analysis():
             last_school_day = sim.day(last_date)
 
             ret = sc.dcp(sim.tags)
-            ret['prev_tgt'] = ut.p2f(sim.tags['prev'])
+            ret['Prevalence Target'] = ut.p2f(sim.tags['prev'])
 
             # Map to friendly names
             skey = sim.tags['scen_key']
             tkey = sim.tags['dxscrn_key']
             ret['scen_lbl'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
-            ret['dxscrn_lbl'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
+            ret['Dx Screening'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
 
             ret['n_introductions'] = 0
             ret['in_person_days'] = 0
@@ -79,6 +79,7 @@ class Analysis():
             ret['outbreak_size'] = []
             for stype in stypes:
                 ret[f'introductions_{stype}'] = []
+                ret[f'introductions_postscreen_{stype}'] = []
                 ret[f'susceptible_person_days_{stype}'] = []
 
             for grp in ['Student', 'Teacher', 'Staff']:
@@ -138,13 +139,14 @@ class Analysis():
                 ret[f'susceptible_person_days_{stype}'].append( stats['susceptible_person_days'] )
                 ret['introductions_per_100_students'].append( len(stats['outbreaks']) / stats['num']['students'] * 100 )
                 intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
+                ret[f'introductions_postscreen_{stype}'].append( intr_postscreen )
                 ret['introductions_postscreen'].append(intr_postscreen)
                 ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
                 ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
                 for ob in stats['outbreaks']:
                     for origin_type, lay in zip(ob['Origin type'], ob['Origin layer']):
-                        #self.origin.append([sid, stats['type'], ret['scen_lbl'], ret['dxscrn_lbl'], ret['prev_tgt'], origin_type, lay])
+                        #self.origin.append([sid, stats['type'], ret['scen_lbl'], ret['Dx Screening'], ret['Prevalence Target'], origin_type, lay])
                         ret[f'introduction_origin_{origin_type}'] += 1
 
                         uids = [int(u) for u in ob['Tree'].nodes]
@@ -152,7 +154,7 @@ class Analysis():
                         was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
                         if any(was_detected):
                             first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
-                            #self.detected.append([sid, stats['type'], ret['scen_lbl'], ret['dxscrn_lbl'], ret['prev_tgt'], first[1]['type'], 'Unknown'])
+                            #self.detected.append([sid, stats['type'], ret['scen_lbl'], ret['Dx Screening'], ret['Prevalence Target'], first[1]['type'], 'Unknown'])
                             detected_origin_type = first[1]['type']
                             ret[f'detected_origin_{detected_origin_type}'] += 1
 
@@ -163,6 +165,7 @@ class Analysis():
                 ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
                 # Sums, won't allow for full bootstrap resampling!
                 ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
+                ret[f'introductions_postscreen_sum_{stype}'] = np.sum(ret[f'introductions_postscreen_{stype}'])
                 ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
 
             # Deciding between district and school perspective here
@@ -182,6 +185,7 @@ class Analysis():
         if outputs == None:
             outputs = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
             outputs += [f'introductions_{stype}' for stype in stypes]
+            outputs += [f'introductions_postscreen_{stype}' for stype in stypes]
             outputs += [f'susceptible_person_days_{stype}' for stype in stypes]
 
         self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
@@ -194,8 +198,6 @@ class Analysis():
 
 
     def source_pie(self):
-
-        print(self.raw.columns)
         groups = ['Student', 'Teacher', 'Staff']
         cols = [f'introduction_origin_{origin_type}' for origin_type in groups]
         intro_by_origin = self.raw[cols]
@@ -235,15 +237,15 @@ class Analysis():
         d = []
         factor = 100_000
         for i, stype in enumerate(stypes):
-            num = factor * self.raw.groupby([huevar, xvar])[f'introductions_sum_{stype}'].sum() # without 'eidx' in index, summing over replicates
+            num = factor * self.raw.groupby([huevar, xvar])[f'introductions_postscreen_sum_{stype}'].sum() # without 'eidx' in index, summing over replicates
             den = self.raw.groupby([huevar, xvar])[f'susceptible_person_days_sum_{stype}'].sum()
             tmp = num/den
-            tmp.name=f'Introduction Rate per {factor}'
+            tmp.name=f'Introduction Rate (post-screening) per {factor}'
             d.append(tmp.to_frame())
             d[i]['stype'] = stype
         D = pd.concat(d)
 
-        g = sns.lmplot(data=D.reset_index(), col='stype', x=xvar, y=f'Introduction Rate per {factor}', hue=huevar, height=10)
+        g = sns.lmplot(data=D.reset_index(), col='stype', x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10)
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRateStype.png'), dpi=300)
 
     def introductions_rate(self, xvar, huevar, order=2):
@@ -256,16 +258,16 @@ class Analysis():
 
         # Just plotting the mean:
         stypes = ['es', 'ms', 'hs']
-        num_cols = [f'introductions_sum_{stype}' for stype in stypes]
+        num_cols = [f'introductions_postscreen_sum_{stype}' for stype in stypes]
         den_cols = [f'susceptible_person_days_sum_{stype}' for stype in stypes]
 
         factor = 100_000
         num = factor * self.raw.groupby([huevar, xvar])[num_cols].sum().sum(axis=1) # without 'eidx' in index, summing over replicates
         den = self.raw.groupby([huevar, xvar])[den_cols].sum().sum(axis=1)
         d = num/den
-        d.name=f'Introduction Rate per {factor}'
+        d.name=f'Introduction Rate (post-screening) per {factor}'
 
-        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction Rate per {factor}', hue=huevar, height=10)
+        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10)
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRate.png'), dpi=300)
 
 
@@ -296,16 +298,16 @@ class Analysis():
             if normalize:
                 y /= sim.pars['pop_size']
             d = pd.DataFrame({label: y}, index=pd.Index(data=t, name='Date'))
-            d['prev_tgt'] = ut.p2f(sim.tags['prev'])
+            d['Prevalence Target'] = ut.p2f(sim.tags['prev'])
             d['Scenario'] = f'{sim.tags["scen_key"]} + {sim.tags["dxscrn_key"]}'
             d['Rep'] = sim.tags['eidx']
             l.append( d )
         d = pd.concat(l).reset_index()
 
         fig, ax = plt.subplots(figsize=(16,10))
-        sns.lineplot(data=d, x='Date', y=label, hue='prev_tgt', style='Scenario', palette='cool', ax=ax, legend=False)
+        sns.lineplot(data=d, x='Date', y=label, hue='Prevalence Target', style='Scenario', palette='cool', ax=ax, legend=False)
         # Y-axis gets messed up when I introduce horizontal lines!
-        #for prev in d['prev_tgt'].unique():
+        #for prev in d['Prevalence Target'].unique():
         #    ax.axhline(y=prev, ls='--')
         if normalize:
             ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))

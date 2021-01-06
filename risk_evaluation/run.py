@@ -87,10 +87,6 @@ class Run:
         prev_levels = {f'{100*p:.1f}%':p for p in self.sweep_pars['prev']}
         self.builder.add_level('prev', prev_levels, self.builder.prevctr_func)
 
-        # Configure alternate sus
-        rep_levels = {'Yes' if p else 'No':p for p in [True]}
-        self.builder.add_level('AltSus', rep_levels, ut.alternate_symptomaticity)
-
         # Add reps
         rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(self.sweep_pars['n_reps'])}
         self.builder.add_level('eidx', rep_levels, self.builder.simpars_func)

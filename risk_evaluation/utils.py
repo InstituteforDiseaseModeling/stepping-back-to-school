@@ -19,26 +19,43 @@ def alternate_symptomaticity(config, key, value):
     ages = prog['age_cutoffs']
     symp_probs = prog['symp_probs']
 
-    if False:
-        # Source: table 1 from https://arxiv.org/pdf/2006.08471.pdf
-        symp_probs[:] = 0.6456
-        symp_probs[ages<80] = 0.3546
-        symp_probs[ages<60] = 0.3054
-        symp_probs[ages<40] = 0.2241
-        symp_probs[ages<20] = 0.1809
-        prog['symp_probs'] = symp_probs
-    else:
-        print('WARNING: DAN MADE THIS UP!!!')
-        #prog['symp_probs'] = 0.10 + (0.9-0.15) * (ages - min(ages)) / (max(ages)-min(ages))
-        symp_probs[:] = 0.8
-        symp_probs[ages<20] = 0.20
-        symp_probs[ages<10] = 0.15
-
-        prog['symp_probs'] = symp_probs
+    # Source: table 1 from https://arxiv.org/pdf/2006.08471.pdf
+    symp_probs[:] = 0.6456
+    symp_probs[ages<80] = 0.3546
+    symp_probs[ages<60] = 0.3054
+    symp_probs[ages<40] = 0.2241
+    symp_probs[ages<20] = 0.1809
+    prog['symp_probs'] = symp_probs
 
     config.sim_pars['prognoses'] = sc.dcp(prog) # Ugh
 
     return config
+
+def alternate_symptomaticity_djk(config, key, value):
+    print(f'Building alternate symptomaticity {key}={value}')
+    if not value: # Only build if value is True
+        return config
+    if 'prognoses' in config.sim_pars:
+        prog = config.sim_pars['prognoses']
+    else:
+        pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **config.sim_pars)
+        prog = pars['prognoses']
+
+    ages = prog['age_cutoffs']
+    symp_probs = prog['symp_probs']
+
+    print('WARNING: DAN MADE THIS UP!!!')
+    #prog['symp_probs'] = 0.10 + (0.9-0.15) * (ages - min(ages)) / (max(ages)-min(ages))
+    symp_probs[:] = 0.8
+    symp_probs[ages<20] = 0.20
+    symp_probs[ages<10] = 0.15
+
+    prog['symp_probs'] = symp_probs
+
+    config.sim_pars['prognoses'] = sc.dcp(prog) # Ugh
+
+    return config
+
 
 
 def children_equally_sus(config, key, value):
