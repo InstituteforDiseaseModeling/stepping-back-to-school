@@ -33,7 +33,7 @@ class Builder:
 
         all_scen = scn.generate_scenarios(school_start_date) # Can potentially select a subset of scenarios
         scens = {k:v for k,v in all_scen.items() if k in schcfg_keys}
-        self.add_level('skey', scens, self.scen_func)
+        self.add_level('scen_key', scens, self.scen_func)
 
         all_screenings = scn.generate_screening(school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in screen_keys}
@@ -45,7 +45,7 @@ class Builder:
                     spec['testing'] = sc.dcp(test) # dcp probably not needed because deep copied in new_schools
             return config
 
-        self.add_level('tkey', screens, screen_func)
+        self.add_level('dxscrn_key', screens, screen_func)
 
     @staticmethod
     def scen_func(config, key, school_config):

@@ -33,6 +33,7 @@ def alternate_symptomaticity(config, key, value):
         symp_probs[:] = 0.8
         symp_probs[ages<20] = 0.20
         symp_probs[ages<10] = 0.15
+
         prog['symp_probs'] = symp_probs
 
     config.sim_pars['prognoses'] = sc.dcp(prog) # Ugh

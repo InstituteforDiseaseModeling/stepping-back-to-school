@@ -14,7 +14,7 @@ import sciris as sc
 import synthpops as sp
 import covasim_schools as cvsch
 import builder as bld
-import plotting as pt
+import analysis as an
 import utils as ut
 
 class Run:
@@ -43,7 +43,7 @@ class Run:
             self.sim_pars.update(sim_pars)
 
         self.sweep_pars = {
-            'folder':            'v2020-12-16',
+            'folder':            'v2021-January',
             'schcfg_keys':       ['with_countermeasures'],
             'screen_keys':       ['None'],
             'school_start_date': '2021-02-01', # first day of school
@@ -103,8 +103,10 @@ class Run:
 
 
     def plot(self, xvar, huevar, ts_plots=None, order=2):
-        p = pt.Plotting(self.sims, self.imgdir)
+        p = an.Analysis(self.sims, self.imgdir)
 
+        p.introductions_rate(xvar, huevar, order=order)
+        p.introductions_rate_by_stype(xvar, huevar, order=order)
         p.introductions_reg(xvar, huevar, order=order)
         p.outbreak_reg(xvar, huevar, order=order)
 

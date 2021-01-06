@@ -24,4 +24,4 @@ if __name__ == '__main__':
 
     runner = Screening(sweep_pars=sweep_pars, sim_pars=dict(pop_size=100_000), run_pars=dict(n_cpus=15))
     runner.run(args.force)
-    runner.plot(xvar='prev_tgt', huevar='tkey', ts_plots=True)
+    runner.plot(xvar='prev_tgt', huevar='dxscrn_lbl', ts_plots=True)
