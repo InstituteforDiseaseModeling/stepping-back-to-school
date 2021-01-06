@@ -22,10 +22,10 @@ if __name__ == '__main__':
 
     sweep_pars = {
         'n_reps':       10,
-        'n_prev':       5,
+        'n_prev':       10,
         'screen_keys':  ['None'],
     }
 
-    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000), run_pars=dict(n_cpus=15))
+    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))#, run_pars=dict(n_cpus=15))
     runner.run(args.force)
     runner.plot(xvar='Prevalence Target', huevar='Dx Screening', ts_plots=True)

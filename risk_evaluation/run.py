@@ -67,8 +67,8 @@ class Run:
         self.run_pars = {
             'folder':       self.sweep_pars['folder'],
             'n_cpus':       None, # Manually set the number of CPUs -- otherwise calculated automatically
-            'cpu_thresh':   0.75, # Don't use more than this amount of available CPUs, if number of CPUs is not set
-            'mem_thresh':   0.75, # Don't use more than this amount of available RAM, if number of CPUs is not set
+            'cpu_thresh':   0.95, # Don't use more than this amount of available CPUs, if number of CPUs is not set
+            'mem_thresh':   0.80, # Don't use more than this amount of available RAM, if number of CPUs is not set
             'parallel':     True, # Only switch to False for debugging
             'shrink':       True, #
             'verbose':      0.1 # Print progress this fraction of simulated days (1 = every day, 0.1 = every 10 days, 0 = no output)
