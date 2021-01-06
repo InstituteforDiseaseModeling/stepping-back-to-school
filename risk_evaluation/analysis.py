@@ -41,7 +41,7 @@ class Analysis():
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
         self._process()
-        keys = list(sims[0].tags.keys()) + ['scen_lbl', 'Dx Screening', 'Prevalence Target']
+        keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening', 'Prevalence Target']
         self._wrangle(keys)
 
 
@@ -62,12 +62,12 @@ class Analysis():
             last_school_day = sim.day(last_date)
 
             ret = sc.dcp(sim.tags)
-            ret['Prevalence Target'] = ut.p2f(sim.tags['prev'])
+            ret['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
 
             # Map to friendly names
             skey = sim.tags['scen_key']
             tkey = sim.tags['dxscrn_key']
-            ret['scen_lbl'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
+            ret['Scenario'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
             ret['Dx Screening'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
 
             ret['n_introductions'] = 0
@@ -84,7 +84,7 @@ class Analysis():
 
             for grp in ['Student', 'Teacher', 'Staff']:
                 ret[f'introduction_origin_{grp}'] = 0
-                ret[f'detected_origin_{grp}'] = 0
+                ret[f'diagnosed_origin_{grp}'] = 0
 
             n_schools = {'es':0, 'ms':0, 'hs':0}
             n_schools_with_inf_d1 = {'es':0, 'ms':0, 'hs':0}
@@ -144,9 +144,13 @@ class Analysis():
                 ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
                 ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
+                # Origin analysis
                 for ob in stats['outbreaks']:
+                    if ob['Total infectious days at school']==0 or ob['Infected Students']+ob['Infected Teachers']+ob['Infected Staff']<2:
+                        # Only count outbreaks in which an infectious person was physically at school
+                        continue
                     for origin_type, lay in zip(ob['Origin type'], ob['Origin layer']):
-                        #self.origin.append([sid, stats['type'], ret['scen_lbl'], ret['Dx Screening'], ret['Prevalence Target'], origin_type, lay])
+                        #self.origin.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], origin_type, lay])
                         ret[f'introduction_origin_{origin_type}'] += 1
 
                         uids = [int(u) for u in ob['Tree'].nodes]
@@ -154,9 +158,9 @@ class Analysis():
                         was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
                         if any(was_detected):
                             first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
-                            #self.detected.append([sid, stats['type'], ret['scen_lbl'], ret['Dx Screening'], ret['Prevalence Target'], first[1]['type'], 'Unknown'])
+                            #self.detected.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], first[1]['type'], 'Unknown'])
                             detected_origin_type = first[1]['type']
-                            ret[f'detected_origin_{detected_origin_type}'] += 1
+                            ret[f'diagnosed_origin_{detected_origin_type}'] += 1
 
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #    pt.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
@@ -204,10 +208,10 @@ class Analysis():
         intro_by_origin.rename(columns={f'introduction_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
         intro_by_origin.loc[:, 'Introductions'] = 'All'
 
-        cols = [f'detected_origin_{origin_type}' for origin_type in groups]
+        cols = [f'diagnosed_origin_{origin_type}' for origin_type in groups]
         detected_intro_by_origin = self.raw[cols]
-        detected_intro_by_origin.rename(columns={f'detected_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
-        detected_intro_by_origin.loc[:, 'Introductions'] = 'Detected'
+        detected_intro_by_origin.rename(columns={f'diagnosed_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
+        detected_intro_by_origin.loc[:, 'Introductions'] = 'Diagnosed'
 
         df = pd.concat([intro_by_origin, detected_intro_by_origin], ignore_index=True)
         df = df.set_index('Introductions').rename_axis('Source', axis=1).stack()
@@ -237,7 +241,7 @@ class Analysis():
         d = []
         factor = 100_000
         for i, stype in enumerate(stypes):
-            num = factor * self.raw.groupby([huevar, xvar])[f'introductions_postscreen_sum_{stype}'].sum() # without 'eidx' in index, summing over replicates
+            num = factor * self.raw.groupby([huevar, xvar])[f'introductions_postscreen_sum_{stype}'].sum() # without 'Replicate' in index, summing over replicates
             den = self.raw.groupby([huevar, xvar])[f'susceptible_person_days_sum_{stype}'].sum()
             tmp = num/den
             tmp.name=f'Introduction Rate (post-screening) per {factor}'
@@ -246,6 +250,7 @@ class Analysis():
         D = pd.concat(d)
 
         g = sns.lmplot(data=D.reset_index(), col='stype', x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10)
+        g.set(ylim=(0,None))
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRateStype.png'), dpi=300)
 
     def introductions_rate(self, xvar, huevar, order=2):
@@ -262,22 +267,24 @@ class Analysis():
         den_cols = [f'susceptible_person_days_sum_{stype}' for stype in stypes]
 
         factor = 100_000
-        num = factor * self.raw.groupby([huevar, xvar])[num_cols].sum().sum(axis=1) # without 'eidx' in index, summing over replicates
+        num = factor * self.raw.groupby([huevar, xvar])[num_cols].sum().sum(axis=1) # without 'Replicate' in index, summing over replicates
         den = self.raw.groupby([huevar, xvar])[den_cols].sum().sum(axis=1)
         d = num/den
         d.name=f'Introduction Rate (post-screening) per {factor}'
 
-        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10)
+        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10, legend_out=False)
+        g.set(ylim=(0,None))
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRate.png'), dpi=300)
 
 
     def introductions_reg(self, xvar, huevar, order=2):
         ##### Introductions
         d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
-        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order)
+        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order, legend_out=False)
         #ax = g.axes.flat[0]
         #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
         #g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
+        g.set(ylim=(0,None))
         g.set_ylabels('Introductions (post-screening) per 100 students')
         cv.savefig(os.path.join(self.imgdir, f'IntroductionsRegression.png'), dpi=300)
 
@@ -285,8 +292,9 @@ class Analysis():
     def outbreak_reg(self, xvar, huevar, order=2):
         ##### Outbreak size
         d = self.results.loc['outbreak_size'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
-        sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=2, legend_out=False)
+        g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=2, legend_out=False)
         #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
+        g.set(ylim=(0,None))
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeRegression.png'), dpi=300)
 
     def timeseries(self, channel, label, normalize):
@@ -298,9 +306,9 @@ class Analysis():
             if normalize:
                 y /= sim.pars['pop_size']
             d = pd.DataFrame({label: y}, index=pd.Index(data=t, name='Date'))
-            d['Prevalence Target'] = ut.p2f(sim.tags['prev'])
+            d['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
             d['Scenario'] = f'{sim.tags["scen_key"]} + {sim.tags["dxscrn_key"]}'
-            d['Rep'] = sim.tags['eidx']
+            d['Replicate'] = sim.tags['Replicate']
             l.append( d )
         d = pd.concat(l).reset_index()
 

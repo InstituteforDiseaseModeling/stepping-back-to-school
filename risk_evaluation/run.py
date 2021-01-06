@@ -18,11 +18,11 @@ import analysis as an
 import utils as ut
 
 class Run:
-    def __init__(self, name, sim_pars=None, sweep_pars=None, run_pars=None):
+    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None):
         # Check that versions are correct
         cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
 
-        self.name = name
+        self.name = self.__class__.__name__ if name is None else name
         self.sims = None  # To be run or loaded by calling run()
 
         # TODO: move to defaults
@@ -59,7 +59,7 @@ class Run:
         if sweep_pars is not None:
             self.sweep_pars.update(sweep_pars)
 
-        self.stem = f'{name}_{self.sim_pars["pop_size"]}_{self.sweep_pars["n_reps"]}reps'
+        self.stem = f'{self.name}_{self.sim_pars["pop_size"]}_{self.sweep_pars["n_reps"]}reps'
         self.cachefn = os.path.join(self.sweep_pars['folder'], 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
         self.imgdir = os.path.join(self.sweep_pars['folder'], 'img_'+self.stem)
 
@@ -85,11 +85,11 @@ class Run:
 
         # Add prevalence levels
         prev_levels = {f'{100*p:.1f}%':p for p in self.sweep_pars['prev']}
-        self.builder.add_level('prev', prev_levels, self.builder.prevctr_func)
+        self.builder.add_level('Prevalence', prev_levels, self.builder.prevctr_func)
 
         # Add reps
         rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(self.sweep_pars['n_reps'])}
-        self.builder.add_level('eidx', rep_levels, self.builder.simpars_func)
+        self.builder.add_level('Replicate', rep_levels, self.builder.simpars_func)
 
         # Add school intervention
         for config in self.builder.configs:

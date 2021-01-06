@@ -5,16 +5,13 @@ Run a varitey of sceening scenarios at a few prevalence levels
 import argparse
 from run import Run
 import numpy as np
+import utils as ut
 
 class Baseline(Run):
-    def __init__(self, sim_pars=None, sweep_pars=None, run_pars=None):
-        name = self.__class__.__name__
-        super().__init__(name, sim_pars, sweep_pars, run_pars)
-
     def build_configs(self):
         # Configure alternate sus
-        value_labels = {'Yes' if p else 'No':p for p in [True]}
-        self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
+        #value_labels = {'Yes' if p else 'No':p for p in [True]}
+        #self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
 
         return super().build_configs()
 
@@ -24,7 +21,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       3,
+        'n_reps':       10,
         'n_prev':       5,
         'screen_keys':  ['None'],
     }
