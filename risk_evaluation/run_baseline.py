@@ -21,8 +21,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       10,
-        'n_prev':       10,
+        'n_reps':       5,
+        'n_prev':       20,
         'screen_keys':  ['None'],
     }
 
