@@ -35,7 +35,7 @@ class Run:
             'symp_prob':    0.08,
             'asymp_factor': 0.8,
             'start_day':    '2020-12-15', # First day of sim
-            'end_day':      '2021-03-31', #2021-04-30', # Last day of sim
+            'end_day':      '2021-02-26', #2021-04-30', # Last day of sim
             'pop_scale':    1,
             'pop_type':     'synthpops',
             'rescale':      False, # True causes problems

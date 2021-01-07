@@ -21,16 +21,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       1,
-        'n_prev':       3,
+        'n_reps':       5,
+        'n_prev':       10,
         'screen_keys':  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, no f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
     }
 
-    runner = Screening(sweep_pars=sweep_pars, sim_pars=dict(pop_size=100_000))#, run_pars=dict(n_cpus=15))
+    runner = Screening(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))
     runner.run(args.force)
     analyzer = runner.analyze()
 
     runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
+
+    analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', height=5, aspect=2, ext='_wide')
+
 
     analyzer.cum_incidence(colvar='Prevalence Target')
     analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)

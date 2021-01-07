@@ -76,6 +76,7 @@ class Analysis():
             #ret['introductions'] = []
             ret['introductions_per_100_students'] = []
             ret['introductions_postscreen'] = []
+            ret['first_infectious_day_at_school'] = []
             ret['introductions_postscreen_per_100_students'] = []
             ret['outbreak_size'] = []
             ret['introduction_first_symptomatic_date'] = []
@@ -145,6 +146,7 @@ class Analysis():
                 intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
                 ret[f'introductions_postscreen_{stype}'].append( intr_postscreen )
                 ret['introductions_postscreen'].append(intr_postscreen)
+                ret['first_infectious_day_at_school'].append([o['First infectious day at school'] for o in stats['outbreaks'] if o['First infectious day at school'] is not None])
                 ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
                 ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
 
@@ -210,7 +212,7 @@ class Analysis():
         self.results.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
         # Separate because different datatype (ndarray vs float)
-        outputs_ts = ['cum_incidence']
+        outputs_ts = ['cum_incidence', 'first_infectious_day_at_school']
         self.restuls_ts = pd.melt(self.raw, id_vars=keys, value_vars=outputs_ts, var_name='indicator', value_name='value') \
             .set_index(['indicator']+keys)['value'] \
             .apply(func=lambda x: pd.Series(x)) \
@@ -232,6 +234,7 @@ class Analysis():
         g.map_dataframe(draw_cum_inc, vmax=vmax)
         g.set(xlim=(40,None)) # TODO determine from school opening day
         cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=300)
+        return g
 
     def outbreak_size_over_time(self, rowvar=None, colvar=None, huevar=None):
         #if 'introduction_first_symptomatic_date' not in self.results:
@@ -240,8 +243,19 @@ class Analysis():
         d = self.results \
             .loc[['introduction_first_symptomatic_date', 'introduction_first_symptomatic_size']] \
             .unstack('indicator')['value']
-        sns.lmplot(data=d.reset_index(), x='introduction_first_symptomatic_date', y='introduction_first_symptomatic_size', hue=huevar, row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
+        g = sns.lmplot(data=d.reset_index(), x='introduction_first_symptomatic_date', y='introduction_first_symptomatic_size', hue=huevar, row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
+        return g
+
+    def source_dow(self, figsize=(6,6)):
+        fig, ax = plt.subplots(1,1,figsize=figsize)
+        sns.histplot(np.hstack(self.restuls_ts.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
+        ax.set_xlabel('Simulation Day')
+        ax.set_ylabel('Importations (%)')
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+        fig.tight_layout()
+        cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=300)
+        return fig
 
     def source_pie(self):
         groups = ['Student', 'Teacher', 'Staff']
@@ -253,7 +267,7 @@ class Analysis():
         cols = [f'diagnosed_origin_{origin_type}' for origin_type in groups]
         detected_intro_by_origin = self.raw[cols]
         detected_intro_by_origin.rename(columns={f'diagnosed_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
-        detected_intro_by_origin.loc[:, 'Introductions'] = 'Diagnosed'
+        detected_intro_by_origin.loc[:, 'Introductions'] = 'First Symptomatic'
 
         df = pd.concat([intro_by_origin, detected_intro_by_origin], ignore_index=True)
         df = df.set_index('Introductions').rename_axis('Source', axis=1).stack()
@@ -261,12 +275,13 @@ class Analysis():
         intr_src = df.reset_index().groupby(['Introductions', 'Source'])['Count'].sum().unstack('Source')
 
 
-        fig, axv = plt.subplots(1, intr_src.shape[0], figsize=(10,5))
+        fig, axv = plt.subplots(intr_src.shape[0], 1, figsize=(6,10))
         for ax, (idx, row) in zip(axv, intr_src.iterrows()):
             pie = ax.pie(row.values, explode=[0.05]*len(row), autopct='%.0f%%')
             ax.set_title(idx)
         axv[1].legend(pie[0], intr_src.columns, bbox_to_anchor=(0.0,-0.2), loc='lower center', ncol=intr_src.shape[1], frameon=True)
         cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=300)
+        return fig
 
 
     def introductions_rate_by_stype(self, xvar, huevar, colvar='stype', order=2):
@@ -297,8 +312,9 @@ class Analysis():
         g = sns.lmplot(data=D.reset_index(), col=colvar, x=xvar, y=f'Introduction rate (per {factor} person-days)', hue=huevar, height=10)
         g.set(ylim=(0,None))
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRateStype.png'), dpi=300)
+        return g
 
-    def introductions_rate(self, xvar, huevar, order=2):
+    def introductions_rate(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
         '''
         num = self.results.loc['introductions_es'] # Sum over school types...
         den = self.results.loc['susceptible_person_days_es']
@@ -317,14 +333,15 @@ class Analysis():
         d = num/den
         d.name=f'Introduction rate (per {factor:,} person-days)'
 
-        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction rate (per {factor:,} person-days)', hue=huevar, height=10, legend_out=False)
+        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction rate (per {factor:,} person-days)', hue=huevar, height=height, aspect=aspect, legend_out=False)
         g.set(ylim=(0,None))
         if xvar == 'Prevalence Target':
-            import matplotlib.ticker as mtick
             for ax in g.axes.flat:
                 ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'IntroductionRate.png'), dpi=300)
+        fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        return g
 
 
     def introductions_reg(self, xvar, huevar, order=2):
@@ -338,6 +355,7 @@ class Analysis():
         g.set_ylabels('Introductions (per 100 students over 2mo)')
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'IntroductionsRegression.png'), dpi=300)
+        return g
 
 
     def outbreak_reg(self, xvar, huevar, order=2):
@@ -347,9 +365,10 @@ class Analysis():
         #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(0,None))
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeRegression.png'), dpi=300)
+        return g
+
 
     def timeseries(self, channel, label, normalize):
-        fig, ax = plt.subplots(figsize=((10,6)))
         l = []
         for sim in self.sims:
             t = sim.results['t'] #pd.to_datetime(sim.results['date'])
