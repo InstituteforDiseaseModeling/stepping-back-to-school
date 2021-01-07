@@ -28,4 +28,13 @@ if __name__ == '__main__':
 
     runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))#, run_pars=dict(n_cpus=15))
     runner.run(args.force)
-    runner.plot(xvar='Prevalence Target', huevar='Dx Screening', ts_plots=True)
+    analyzer = runner.analyze()
+
+    runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
+
+    analyzer.cum_incidence(colvar='Prevalence Target')
+    analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
+    analyzer.outbreak_size_over_time()
+    analyzer.source_pie()
+
+    runner.tsplots()

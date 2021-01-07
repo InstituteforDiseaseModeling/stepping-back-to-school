@@ -220,7 +220,7 @@ class Analysis():
         self.restuls_ts.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
 
-    def cum_incidence(self):
+    def cum_incidence(self, rowvar=None, colvar=None):
         def draw_cum_inc(**kwargs):
             data = kwargs['data']
             mat = np.vstack(data['value'])
@@ -228,22 +228,19 @@ class Analysis():
             sns.heatmap(mat, vmax=kwargs['vmax'])
         d = self.restuls_ts.loc['cum_incidence']
         vmax = np.vstack(d['value']).max().max()
-        g = sns.FacetGrid(data=d.reset_index(), row='In-school transmission multiplier', col='Prevalence', height=5, aspect=1.4)
+        g = sns.FacetGrid(data=d.reset_index(), row=rowvar, col=colvar, height=5, aspect=1.4)
         g.map_dataframe(draw_cum_inc, vmax=vmax)
         g.set(xlim=(40,None)) # TODO determine from school opening day
         cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=300)
 
-    def outbreak_size_over_time(self):
+    def outbreak_size_over_time(self, rowvar=None, colvar=None, huevar=None):
         #if 'introduction_first_symptomatic_date' not in self.results:
         #    return
 
         d = self.results \
             .loc[['introduction_first_symptomatic_date', 'introduction_first_symptomatic_size']] \
             .unstack('indicator')['value']
-        print(d.dtypes)
-        print(d['introduction_first_symptomatic_date'].unique())
-        print(d['introduction_first_symptomatic_size'].unique())
-        sns.lmplot(data=d.reset_index(), x='introduction_first_symptomatic_date', y='introduction_first_symptomatic_size', hue='Prevalence', row='In-school transmission multiplier', col='Prevalence', scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
+        sns.lmplot(data=d.reset_index(), x='introduction_first_symptomatic_date', y='introduction_first_symptomatic_size', hue=huevar, row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
 
     def source_pie(self):
@@ -272,7 +269,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=300)
 
 
-    def introductions_rate_by_stype(self, xvar, huevar, order=2):
+    def introductions_rate_by_stype(self, xvar, huevar, colvar='stype', order=2):
         '''
         # E.g. for bootstrap resampling, if desired (LATER)
         num = self.results.loc['introductions_es']
@@ -285,16 +282,19 @@ class Analysis():
         stypes = ['es', 'ms', 'hs']
         d = []
         factor = 100_000
+        cols = [xvar]
+        if huevar is not None and huevar != 'stype':
+            cols.append(huevar)
         for i, stype in enumerate(stypes):
-            num = factor * self.raw.groupby([huevar, xvar])[f'introductions_postscreen_sum_{stype}'].sum() # without 'Replicate' in index, summing over replicates
-            den = self.raw.groupby([huevar, xvar])[f'susceptible_person_days_sum_{stype}'].sum()
+            num = factor * self.raw.groupby(cols)[f'introductions_postscreen_sum_{stype}'].sum() # without 'Replicate' in index, summing over replicates
+            den = self.raw.groupby(cols)[f'susceptible_person_days_sum_{stype}'].sum()
             tmp = num/den
-            tmp.name=f'Introduction Rate (post-screening) per {factor}'
+            tmp.name=f'Introduction rate (per {factor} person-days)'
             d.append(tmp.to_frame())
             d[i]['stype'] = stype
         D = pd.concat(d)
 
-        g = sns.lmplot(data=D.reset_index(), col='stype', x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10)
+        g = sns.lmplot(data=D.reset_index(), col=colvar, x=xvar, y=f'Introduction rate (per {factor} person-days)', hue=huevar, height=10)
         g.set(ylim=(0,None))
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRateStype.png'), dpi=300)
 
@@ -315,17 +315,19 @@ class Analysis():
         num = factor * self.raw.groupby([huevar, xvar])[num_cols].sum().sum(axis=1) # without 'Replicate' in index, summing over replicates
         den = self.raw.groupby([huevar, xvar])[den_cols].sum().sum(axis=1)
         d = num/den
-        d.name=f'Introduction Rate (post-screening) per {factor}'
+        d.name=f'Introduction rate (per {factor:,} person-days)'
 
-        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction Rate (post-screening) per {factor}', hue=huevar, height=10, legend_out=False)
+        g = sns.lmplot(data=d.reset_index(), x=xvar, y=f'Introduction rate (per {factor:,} person-days)', hue=huevar, height=10, legend_out=False)
         g.set(ylim=(0,None))
+        if xvar == 'Prevalence Target':
+            import matplotlib.ticker as mtick
+            for ax in g.axes.flat:
+                ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRate.png'), dpi=300)
 
 
     def introductions_reg(self, xvar, huevar, order=2):
-        #if 'introductions_postscreen_per_100_students' not in self.results:
-        #    return
-
         ##### Introductions
         d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order, legend_out=False)
@@ -333,14 +335,12 @@ class Analysis():
         #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
         #g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(0,None))
-        g.set_ylabels('Introductions (post-screening) per 100 students')
+        g.set_ylabels('Introductions (per 100 students over 2mo)')
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'IntroductionsRegression.png'), dpi=300)
 
 
     def outbreak_reg(self, xvar, huevar, order=2):
-        #if 'outbreak_size' not in self.results:
-        #    return
-
         ##### Outbreak size
         d = self.results.loc['outbreak_size'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
         g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=2, legend_out=False)
@@ -373,7 +373,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=300)
         return fig
 
-    def several_timeseries(self, config):
+    def plot_several_timeseries(self, config):
         for config in config:
             self.timeseries(config['channel'], config['label'], config['normalize'])
 

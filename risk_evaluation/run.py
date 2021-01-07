@@ -24,6 +24,7 @@ class Run:
 
         self.name = self.__class__.__name__ if name is None else name
         self.sims = None  # To be run or loaded by calling run()
+        self.analyzer=None
 
         # TODO: move to defaults
         self.sim_pars = {
@@ -98,29 +99,32 @@ class Run:
         return self.builder.get()
 
 
-    def plot(self, xvar, huevar, ts_plots=None, order=2):
-        p = an.Analysis(self.sims, self.imgdir)
+    def analyze(self):
+        self.analyzer = an.Analysis(self.sims, self.imgdir)
+        return self.analyzer
 
-        p.cum_incidence()
-        p.outbreak_size_over_time()
-        p.source_pie()
-        p.introductions_rate(xvar, huevar, order=order)
-        p.introductions_rate_by_stype(xvar, huevar, order=order)
-        p.introductions_reg(xvar, huevar, order=order)
-        p.outbreak_reg(xvar, huevar, order=order)
+    def regplots(self, xvar, huevar, ts_plots=None, order=2):
+        if self.analyzer is None:
+            self.analyze()
 
-        if ts_plots is None or ts_plots==False:
-            return
+        self.analyzer.introductions_rate(xvar, huevar, order=order)
+        self.analyzer.introductions_rate_by_stype(xvar, huevar, order=order)
+        self.analyzer.introductions_reg(xvar, huevar, order=order)
+        self.analyzer.outbreak_reg(xvar, huevar, order=order)
 
-        if ts_plots == True:
+
+    def tsplots(self, ts_plots=None):
+        if self.analyzer is None:
+            self.analyze()
+
+        if ts_plots is None:
             ts_plots = [
                 dict(label='Prevalence',      channel='n_exposed',      normalize=True),
                 dict(label='CumInfections',   channel='cum_infections', normalize=True),
                 dict(label='Quarantined',     channel='n_quarantined',  normalize=True),
                 dict(label='Newly Diagnosed', channel='new_diagnoses',  normalize=False),
             ]
-        p.several_timeseries(ts_plots)
-
+        self.analyzer.plot_several_timeseries(ts_plots)
 
     def run(self, force):
         if force or not os.path.isfile(self.cachefn):
