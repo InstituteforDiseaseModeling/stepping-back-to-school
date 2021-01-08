@@ -275,7 +275,7 @@ class Analysis():
         intr_src = df.reset_index().groupby(['Introductions', 'Source'])['Count'].sum().unstack('Source')
 
 
-        fig, axv = plt.subplots(intr_src.shape[0], 1, figsize=(6,10))
+        fig, axv = plt.subplots(1, intr_src.shape[0], figsize=(10,6))
         for ax, (idx, row) in zip(axv, intr_src.iterrows()):
             pie = ax.pie(row.values, explode=[0.05]*len(row), autopct='%.0f%%')
             ax.set_title(idx)
@@ -358,13 +358,15 @@ class Analysis():
         return g
 
 
-    def outbreak_reg(self, xvar, huevar, order=2):
+    def outbreak_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
         ##### Outbreak size
         d = self.results.loc['outbreak_size'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
-        g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=2, legend_out=False)
+        g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=2, legend_out=False)
         #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
-        g.set(ylim=(0,None))
-        cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeRegression.png'), dpi=300)
+        g.set(ylim=(1,None))
+        g.set_ylabels('Outbreak size, including source')
+        fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
 

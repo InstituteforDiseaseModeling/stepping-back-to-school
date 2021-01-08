@@ -21,6 +21,20 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
 
-    runner = BetaSchool(sweep_pars=dict(n_reps=5, n_prev=10), sim_pars=dict(pop_size=223_000))#, run_pars=dict(n_cpus=15))
+    sim_pars = dict(pop_size=223_000, end_day='2021-04-30')
+
+    runner = BetaSchool(sweep_pars=dict(n_reps=10, prev=[0.002, 0.007, 0.014]), sim_pars=sim_pars)
     runner.run(args.force)
-    runner.plot(xvar='In-school transmission multiplier', huevar='Prevalence', ts_plots=True, order=3)
+    analyzer = runner.analyze()
+    #runner.plot(xvar='In-school transmission multiplier', huevar='Prevalence', ts_plots=True, order=3)
+
+    runner.regplots(xvar='In-school transmission multiplier', huevar=None)
+
+    analyzer.outbreak_reg(xvar='In-school transmission multiplier', huevar=None, height=10, aspect=2, ext='_wide')
+
+    analyzer.cum_incidence(colvar='In-school transmission multiplier')
+    analyzer.introductions_rate_by_stype(xvar='In-school transmission multiplier', colvar=None, huevar='stype', order=3)
+    analyzer.outbreak_size_over_time()
+    analyzer.source_pie()
+
+    runner.tsplots()
