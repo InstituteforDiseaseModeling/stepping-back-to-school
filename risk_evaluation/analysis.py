@@ -332,8 +332,9 @@ class Analysis():
         den_cols = [f'susceptible_person_days_sum_{stype}' for stype in stypes]
 
         factor = 100_000
-        num = factor * self.raw.groupby([huevar, xvar])[num_cols].sum().sum(axis=1) # without 'Replicate' in index, summing over replicates
-        den = self.raw.groupby([huevar, xvar])[den_cols].sum().sum(axis=1)
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        num = factor * self.raw.groupby(cols)[num_cols].sum().sum(axis=1) # without 'Replicate' in index, summing over replicates
+        den = self.raw.groupby(cols)[den_cols].sum().sum(axis=1)
         d = num/den
         d.name=f'Introduction rate (per {factor:,} person-days)'
 
@@ -350,7 +351,8 @@ class Analysis():
 
     def introductions_reg(self, xvar, huevar, order=2):
         ##### Introductions
-        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index(cols)#.loc[:,[cols]+['value']]
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order, legend_out=False)
         #ax = g.axes.flat[0]
         #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
@@ -364,7 +366,8 @@ class Analysis():
 
     def outbreak_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
         ##### Outbreak size
-        d = self.results.loc['outbreak_size'].reset_index([xvar, huevar])[[xvar, huevar, 'value']]
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        d = self.results.loc['outbreak_size'].reset_index(cols)#[[xvar, huevar, 'value']]
         g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=2, legend_out=False)
         #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(1,None))
