@@ -26,7 +26,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       1,
+        'n_reps':       20,
         'n_prev':       0, # No controller
         'schcfg_keys':  ['with_countermeasures'],
         'school_start_date': '2021-02-01',
@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     sim_pars = {
         'pop_infected': 0,
-        'pop_size': 100_000,
+        'pop_size': 223_000,
         'start_day': '2021-01-31',
         'end_day': '2021-07-31',
         'beta_layer': dict(h=0, s=0, w=0, c=0), # Turn off non-school transmission
