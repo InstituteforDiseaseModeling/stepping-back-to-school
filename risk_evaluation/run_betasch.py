@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     runner.regplots(xvar='In-school transmission multiplier', huevar=None)
 
-    analyzer.outbreak_reg(xvar='In-school transmission multiplier', huevar=None, height=10, aspect=2, ext='_wide')
+    analyzer.outbreak_reg(xvar='In-school transmission multiplier', huevar=None, height=5, aspect=2, ext='_wide')
 
     analyzer.cum_incidence(colvar='In-school transmission multiplier')
     analyzer.introductions_rate_by_stype(xvar='In-school transmission multiplier', colvar=None, huevar='stype', order=3)
