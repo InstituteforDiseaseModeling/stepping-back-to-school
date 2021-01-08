@@ -235,7 +235,10 @@ class Analysis():
             sns.heatmap(mat, vmax=kwargs['vmax'])
         d = self.restuls_ts.loc['cum_incidence']
         vmax = np.vstack(d['value']).max().max()
-        g = sns.FacetGrid(data=d.reset_index(), row=rowvar, col=colvar, height=5, aspect=1.4)
+        colwrap=None
+        if rowvar is None:
+            colwrap=4
+        g = sns.FacetGrid(data=d.reset_index(), row=rowvar, col=colvar, col_wrap=colwrap, height=5, aspect=1.4)
         g.map_dataframe(draw_cum_inc, vmax=vmax)
 
         sch = next(iter(self.sims[0].school_stats))

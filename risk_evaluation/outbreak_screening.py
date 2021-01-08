@@ -10,7 +10,7 @@ import utils as ut
 class Outbreak(Run):
     def build_configs(self):
         # Sweep over NPI multipliers
-        npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
+        npi_scens = {x:{'beta_s': 1.5*x} for x in [0.75, 0.75*1.6]}
         self.builder.add_level('In-school transmission multiplier', npi_scens, self.builder.screenpars_func)
 
         return super().build_configs()
@@ -28,7 +28,9 @@ if __name__ == '__main__':
         'schcfg_keys':  ['with_countermeasures'],
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
+        'screen_keys':  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, no f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
     }
+
 
     sim_pars = {
         'pop_infected': 0,
