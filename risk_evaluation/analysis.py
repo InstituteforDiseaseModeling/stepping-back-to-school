@@ -375,7 +375,7 @@ class Analysis():
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         d = self.results.loc['outbreak_size'].reset_index(cols)#[[xvar, huevar, 'value']]
-        g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=2, legend_out=False)
+        g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
         #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(1,None))
         g.set_ylabels('Outbreak size, including source')
