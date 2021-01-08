@@ -28,6 +28,18 @@ if __name__ == '__main__':
         'schcfg_keys':  ['k5']
     }
 
-    runner = Debug(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))
+    sim_pars = dict(pop_size=223_000, end_day='2021-04-30')
+    runner = Debug(sweep_pars=sweep_pars, sim_pars=sim_pars)
     runner.run(args.force)
-    runner.plot(xvar='In-school transmission multiplier', huevar='Prevalence', ts_plots=True, order=3)
+    analyzer = runner.analyze()
+
+    xvar='In-school transmission multiplier'
+    huevar='Prevalence'
+
+    runner.regplots(xvar=xvar, huevar=huevar)
+
+    analyzer.cum_incidence(colvar=xvar)
+    analyzer.outbreak_size_over_time()
+    analyzer.source_pie()
+
+    runner.tsplots()
