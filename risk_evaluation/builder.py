@@ -24,14 +24,14 @@ class Config:
 
 
 class Builder:
-    def __init__(self, sim_pars, schcfg_keys, screen_keys, school_start_date):
+    def __init__(self, sim_pars, schcfg_keys, screen_keys, school_start_date, school_seed_date=None):
         self.configs = [Config(sim_pars=sim_pars)]
 
         # These come from fit_transmats - don't like loading multiple times
         self.ei = sc.loadobj('EI.obj')
         self.ir = sc.loadobj('IR.obj')
 
-        all_scen = scn.generate_scenarios(school_start_date) # Can potentially select a subset of scenarios
+        all_scen = scn.generate_scenarios(start_date=school_start_date, seed_date=school_seed_date) # Can potentially select a subset of scenarios
         scens = {k:v for k,v in all_scen.items() if k in schcfg_keys}
         self.add_level('scen_key', scens, self.scen_func)
 

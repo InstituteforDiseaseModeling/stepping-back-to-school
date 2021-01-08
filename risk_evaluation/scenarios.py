@@ -15,7 +15,7 @@ def scenario(es, ms, hs):
         'uv': None,
     }
 
-def generate_scenarios(start_day='2020-11-02', base_beta_s=1.5):
+def generate_scenarios(start_date='2020-11-02', base_beta_s=1.5, seed_date=None):
     ''' Generate scenarios (dictionaries of parameters) for the school intervention '''
 
     # Increase beta (multiplier) in schools from covasim layer default of 0.6 to 1.5.  This achieves a R0 in schools of approximately 1.6, a modeling assumption that is consistent with global outbreaks in schools that have had limited countermeasures such as Israel (after masks were removed due to heat).
@@ -23,7 +23,8 @@ def generate_scenarios(start_day='2020-11-02', base_beta_s=1.5):
     scns = sc.odict()
 
     normal = {
-        'start_day': start_day,
+        'start_date': start_date,
+        'seed_date': seed_date,
         'schedule': 'Full',
         'screen_prob': 0,
         'test_prob': 0, # Amongst those who screen positive
@@ -39,7 +40,8 @@ def generate_scenarios(start_day='2020-11-02', base_beta_s=1.5):
 
     # UPDATED: was screen prob 0.5 and 3 day screen2pcr
     full_with_countermeasures = {
-        'start_day': start_day,
+        'start_date': start_date,
+        'seed_date': seed_date,
         'schedule': 'Full',
         'screen_prob': 0.5,
         'test_prob': 0.5, # Amongst those who screen positive
@@ -62,7 +64,8 @@ def generate_scenarios(start_day='2020-11-02', base_beta_s=1.5):
 
     # All remote
     remote = {
-        'start_day': start_day,
+        'start_date': start_date,
+        'seed_date': seed_date,
         'schedule': 'Remote',
         'screen_prob': 0,
         'test_prob': 0,
@@ -81,9 +84,9 @@ def generate_scenarios(start_day='2020-11-02', base_beta_s=1.5):
 
     return scns
 
-def generate_screening(start_day='2020-11-02'):
+def generate_screening(start_date='2020-11-02'):
 
-    one_week_ahead = (dt.datetime.strptime(start_day, '%Y-%m-%d') - dt.timedelta(days=7)).strftime('%Y-%m-%d')
+    one_week_ahead = (dt.datetime.strptime(start_date, '%Y-%m-%d') - dt.timedelta(days=7)).strftime('%Y-%m-%d')
 
     # Testing interventions to add
     PCR_1w_prior = [{

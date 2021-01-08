@@ -77,7 +77,7 @@ class Run:
         if run_pars is not None:
             self.run_pars.update(run_pars)
 
-        self.builder = bld.Builder(self.sim_pars, self.sweep_pars['schcfg_keys'], self.sweep_pars['screen_keys'], self.sweep_pars['school_start_date']) # Just pass in sweep_pars?
+        self.builder = bld.Builder(self.sim_pars, self.sweep_pars['schcfg_keys'], self.sweep_pars['screen_keys'], self.sweep_pars['school_start_date'], self.sweep_pars['school_seed_date']) # Just pass in sweep_pars?
 
 
     def build_configs(self):
@@ -85,8 +85,9 @@ class Run:
         sc.heading('Creating sim configurations...')
 
         # Add prevalence levels
-        prev_levels = {f'{100*p:.1f}%':p for p in self.sweep_pars['prev']}
-        self.builder.add_level('Prevalence', prev_levels, self.builder.prevctr_func)
+        if len(self.sweep_pars['prev']) > 0:
+            prev_levels = {f'{100*p:.1f}%':p for p in self.sweep_pars['prev']}
+            self.builder.add_level('Prevalence', prev_levels, self.builder.prevctr_func)
 
         # Add reps
         rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(self.sweep_pars['n_reps'])}

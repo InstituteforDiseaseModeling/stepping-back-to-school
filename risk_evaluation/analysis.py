@@ -41,7 +41,9 @@ class Analysis():
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
         self._process()
-        keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening', 'Prevalence Target']
+        keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening']
+        if 'Prevalence' in sims[0].tags.keys():
+            keys.append['Prevalence Target']
         self._wrangle(keys)
 
 
@@ -62,7 +64,8 @@ class Analysis():
             last_school_day = sim.day(last_date)
 
             ret = sc.dcp(sim.tags)
-            ret['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
+            if 'Prevalence' in sim.tags:
+                ret['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
 
             # Map to friendly names
             skey = sim.tags['scen_key']
@@ -79,8 +82,8 @@ class Analysis():
             ret['first_infectious_day_at_school'] = []
             ret['introductions_postscreen_per_100_students'] = []
             ret['outbreak_size'] = []
-            ret['introduction_first_symptomatic_date'] = []
-            ret['introduction_first_symptomatic_size'] = []
+            ret['introduction_first_day_at_school'] = []
+            ret['introduction_size'] = []
             ret['complete'] = []
             for stype in stypes:
                 ret[f'introductions_{stype}'] = []
@@ -153,6 +156,10 @@ class Analysis():
 
                 # Origin analysis
                 for ob in stats['outbreaks']:
+                    #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
+                    if not ob['Complete']:
+                        self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
+
                     if ob['Total infectious days at school']==0:# or ob['Infected Students']+ob['Infected Teachers']+ob['Infected Staff']<2:
                         # Only count outbreaks in which an infectious person was physically at school
                         continue
@@ -161,22 +168,17 @@ class Analysis():
                         #self.origin.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], origin_type, lay])
                         ret[f'introduction_origin_{origin_type}'] += 1
 
-                        uids = [int(u) for u in ob['Tree'].nodes]
+                        uids = [int(u) for u in ob['Tree'].nodes if np.isfinite(u)]
                         data = [v for u,v in ob['Tree'].nodes.data()]
-                        was_detected = [(u,d) for u,d in zip(uids, data) if not np.isnan(d['date_diagnosed']) and d['type'] != 'Other']
-                        #if any(was_detected):
+                        was_detected = [(u,d) for u,d in zip(uids, data) if d['type'] not in ['Seed', 'Other'] and np.isfinite(d['date_diagnosed'])]
                         if len(was_detected) > 0:
                             first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
                             #self.detected.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], first[1]['type'], 'Unknown'])
                             detected_origin_type = first[1]['type']
                             ret[f'diagnosed_origin_{detected_origin_type}'] += 1
-                            #ret['introduction_first_symptomatic_date'].append(first[1]['date_symptomatic'])
-                            ret['introduction_first_symptomatic_date'].append(ob['First infectious day at school'])
-                            ret['introduction_first_symptomatic_size'].append(ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'])
+                            ret['introduction_first_day_at_school'].append(ob['First infectious day at school'])
+                            ret['introduction_size'].append(ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'])
                             ret['complete'].append(float(ob['Complete']))
-
-                    #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
-                    #    pt.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
 
             for stype in stypes:
                 ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
@@ -204,7 +206,7 @@ class Analysis():
             outputs += [f'introductions_{stype}' for stype in stypes]
             outputs += [f'introductions_postscreen_{stype}' for stype in stypes]
             outputs += [f'susceptible_person_days_{stype}' for stype in stypes]
-            outputs += ['introduction_first_symptomatic_date', 'introduction_first_symptomatic_size', 'complete']
+            outputs += ['introduction_first_day_at_school', 'introduction_size', 'complete']
 
         self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
             .set_index(['indicator']+keys)['value'] \
@@ -235,19 +237,21 @@ class Analysis():
         vmax = np.vstack(d['value']).max().max()
         g = sns.FacetGrid(data=d.reset_index(), row=rowvar, col=colvar, height=5, aspect=1.4)
         g.map_dataframe(draw_cum_inc, vmax=vmax)
-        g.set(xlim=(40,None)) # TODO determine from school opening day
+
+        sch = next(iter(self.sims[0].school_stats))
+        start_date = self.sims[0].school_stats[sch]['scenario']['start_date']
+        start_day = self.sims[0].day(start_date)
+        g.set(xlim=(start_day, None))
+
         cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=300)
         return g
 
-    def outbreak_size_over_time(self, rowvar=None, colvar=None, huevar=None):
+    def outbreak_size_over_time(self, rowvar=None, colvar=None):
         d = self.results \
-            .loc[['introduction_first_symptomatic_date', 'introduction_first_symptomatic_size', 'complete']] \
+            .loc[['introduction_first_day_at_school', 'introduction_size', 'complete']] \
             .unstack('indicator')['value']
 
-        markers = '.' #d['complete'].values.tolist()
-        huevar = 'complete'
-
-        g = sns.lmplot(data=d.reset_index(), x='introduction_first_symptomatic_date', y='introduction_first_symptomatic_size', hue=huevar, row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers=markers, height=10, aspect=1)#, discrete=True, multiple='dodge')
+        g = sns.lmplot(data=d.reset_index(), x='introduction_first_day_at_school', y='introduction_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
         return g
 
@@ -385,14 +389,17 @@ class Analysis():
             if normalize:
                 y /= sim.pars['pop_size']
             d = pd.DataFrame({label: y}, index=pd.Index(data=t, name='Date'))
-            d['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
+            huevar=None
+            if 'Prevalence' in sim.tags:
+                d['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
+                huevar='Prevalence Target'
             d['Scenario'] = f'{sim.tags["scen_key"]} + {sim.tags["dxscrn_key"]}'
             d['Replicate'] = sim.tags['Replicate']
             l.append( d )
         d = pd.concat(l).reset_index()
 
         fig, ax = plt.subplots(figsize=(16,10))
-        sns.lineplot(data=d, x='Date', y=label, hue='Prevalence Target', style='Scenario', palette='cool', ax=ax, legend=False)
+        sns.lineplot(data=d, x='Date', y=label, hue=huevar, style='Scenario', palette='cool', ax=ax, legend=False)
         # Y-axis gets messed up when I introduce horizontal lines!
         #for prev in d['Prevalence Target'].unique():
         #    ax.axhline(y=prev, ls='--')
@@ -406,46 +413,52 @@ class Analysis():
             self.timeseries(config['channel'], config['label'], config['normalize'])
 
 
-# Tree plotting
-def plot_tree(tree, stats, n_days, do_show=False):
-    fig, ax = plt.subplots(figsize=(16,10))
-    date_range = [n_days, 0]
+    # Tree plotting
+    def plot_tree(self, tree, stats, n_days, do_show=False):
+        fig, ax = plt.subplots(figsize=(16,10))
+        date_range = [n_days, 0]
 
-    # TODO: move tree plotting to a function
-    #print(f'Tree {i}', sid, sim.key1, sim.key2, sim.key2)
-    #for u,v,w in tree.edges.data():
-        #print('\tEDGE', u,v,w)
-    #print(f'N{i}', sid, sim.key1, sim.key2, sim.key2, tree.nodes.data())
-    for j, (u,v) in enumerate(tree.nodes.data()):
-        #print('\tNODE', u,v)
-        recovered = n_days if np.isnan(v['date_recovered']) else v['date_recovered']
-        col = 'gray' if v['type'] == 'Other' else 'black'
-        date_range[0] = min(date_range[0], v['date_exposed']-1)
-        date_range[1] = max(date_range[1], recovered+1)
-        ax.plot( [v['date_exposed'], recovered], [j,j], '-', marker='o', color=col)
-        ax.plot( v['date_diagnosed'], j, marker='d', color='b')
-        ax.plot( v['date_infectious'], j, marker='|', color='r', mew=3, ms=10)
-        ax.plot( v['date_symptomatic'], j, marker='s', color='orange')
-        for day in range(int(v['date_exposed']), int(recovered)):
-            if day in stats['uids_at_home'] and int(u) in stats['uids_at_home'][day]:
-                plt.plot([day,day+1], [j,j], '-', color='lightgray')
+        # TODO: move tree plotting to a function
+        #print(f'Tree {i}', sid, sim.key1, sim.key2, sim.key2)
+        #for u,v,w in tree.edges.data():
+            #print('\tEDGE', u,v,w)
+        #print(f'N{i}', sid, sim.key1, sim.key2, sim.key2, tree.nodes.data())
+        for j, (u,v) in enumerate(tree.nodes.data()):
+            print('\tNODE', u,v)
+            if v['type'] == 'Seed':
+                continue
+            recovered = n_days if np.isnan(v['date_recovered']) else v['date_recovered']
+            dead = n_days if np.isnan(v['date_dead']) else v['date_dead']
+            col = 'gray' if v['type'] == 'Other' else 'black'
+            date_range[0] = min(date_range[0], v['date_exposed']-1)
+            right = np.nanmin([recovered, dead])
+            date_range[1] = max(date_range[1], right+1)
+            ax.plot( [v['date_exposed'], right], [j,j], '-', marker='o', color=col)
+            ax.plot( v['date_diagnosed'], j, marker='d', color='b')
+            ax.plot( v['date_infectious'], j, marker='|', color='r', mew=3, ms=10)
+            ax.plot( v['date_symptomatic'], j, marker='s', color='orange')
+            if np.isfinite(v['date_dead']):
+                ax.plot( v['date_dead'], j, marker='x', color='black',  ms=10)
+            for day in range(int(v['date_exposed']), int(recovered)):
+                if day in stats['uids_at_home'] and int(u) in stats['uids_at_home'][day]:
+                    plt.plot([day,day+1], [j,j], '-', color='lightgray')
+            for t, r in stats['testing'].items():
+                for kind, outcomes in r.items():
+                    if int(u) in outcomes['Positive']:
+                        plt.plot(t, j, marker='x', color='red', ms=10, lw=2)
+                    elif int(u) in outcomes['Negative']:
+                        plt.plot(t, j, marker='x', color='green', ms=10, lw=2)
+
         for t, r in stats['testing'].items():
-            for kind, outcomes in r.items():
-                if int(u) in outcomes['Positive']:
-                    plt.plot(t, j, marker='x', color='red', ms=10, lw=2)
-                elif int(u) in outcomes['Negative']:
-                    plt.plot(t, j, marker='x', color='green', ms=10, lw=2)
+            ax.axvline(x=t, zorder=-100)
+        date_range[1] = min(date_range[1], n_days)
+        ax.set_xlim(date_range)
+        ax.set_xticks(range(int(date_range[0]), int(date_range[1])))
+        ax.set_yticks(range(0, len(tree.nodes)))
+        ax.set_yticklabels([f'{int(u) if np.isfinite(u) else -1}: {v["type"]}, age {v["age"] if "age" in v else -1}' for u,v in tree.nodes.data()])
+        #ax.set_title(f'School {sid}, Tree {i}')
 
-    for t, r in stats['testing'].items():
-        ax.axvline(x=t, zorder=-100)
-    date_range[1] = min(date_range[1], n_days)
-    ax.set_xlim(date_range)
-    ax.set_xticks(range(int(date_range[0]), int(date_range[1])))
-    ax.set_yticks(range(0, len(tree.nodes)))
-    ax.set_yticklabels([f'{int(u)}: {v["type"]}, age {v["age"]}' for u,v in tree.nodes.data()])
-    #ax.set_title(f'School {sid}, Tree {i}')
-
-    if do_show:
-        plt.show()
-    else:
-        return fig
+        if do_show:
+            plt.show()
+        else:
+            return fig
