@@ -11,6 +11,9 @@ import covasim as cv
 import scenarios as scn
 import utils as ut
 
+import warnings
+warnings.simplefilter('ignore', np.RankWarning)
+
 # Global plotting styles
 font_size = 18
 font_style = 'Roboto Condensed'
@@ -85,6 +88,7 @@ class Analysis():
             ret['introduction_first_day_at_school'] = []
             ret['introduction_size'] = []
             ret['complete'] = []
+            ret['n_infected_by_seed'] = []
             for stype in stypes:
                 ret[f'introductions_{stype}'] = []
                 ret[f'introductions_postscreen_{stype}'] = []
@@ -153,12 +157,13 @@ class Analysis():
                 ret['first_infectious_day_at_school'].append([o['First infectious day at school'] for o in stats['outbreaks'] if o['First infectious day at school'] is not None])
                 ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
                 ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
+                ret['n_infected_by_seed'] += [ob['Num infected by seed'] for ob in stats['outbreaks'] if 'Num infected by seed' in ob]
 
                 # Origin analysis
                 for ob in stats['outbreaks']:
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
-                    if not ob['Complete']:
-                        self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
+                    #if not ob['Complete']:
+                    #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
 
                     if ob['Total infectious days at school']==0:# or ob['Infected Students']+ob['Infected Teachers']+ob['Infected Staff']<2:
                         # Only count outbreaks in which an infectious person was physically at school
@@ -217,14 +222,14 @@ class Analysis():
         self.results.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
         # Separate because different datatype (ndarray vs float)
-        outputs_ts = ['cum_incidence', 'first_infectious_day_at_school']
-        self.restuls_ts = pd.melt(self.raw, id_vars=keys, value_vars=outputs_ts, var_name='indicator', value_name='value') \
+        outputs_ts = ['cum_incidence', 'first_infectious_day_at_school', 'n_infected_by_seed']
+        self.results_ts = pd.melt(self.raw, id_vars=keys, value_vars=outputs_ts, var_name='indicator', value_name='value') \
             .set_index(['indicator']+keys)['value'] \
             .apply(func=lambda x: pd.Series(x)) \
             .stack() \
             .dropna() \
             .to_frame(name='value')
-        self.restuls_ts.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
+        self.results_ts.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
 
     def cum_incidence(self, rowvar=None, colvar=None):
@@ -233,7 +238,7 @@ class Analysis():
             mat = np.vstack(data['value'])
             #plt.plot(mat.T, lw=0.2)
             sns.heatmap(mat, vmax=kwargs['vmax'])
-        d = self.restuls_ts.loc['cum_incidence']
+        d = self.results_ts.loc['cum_incidence']
         vmax = np.vstack(d['value']).max().max()
         colwrap=None
         if rowvar is None:
@@ -260,7 +265,7 @@ class Analysis():
 
     def source_dow(self, figsize=(6,6)):
         fig, ax = plt.subplots(1,1,figsize=figsize)
-        sns.histplot(np.hstack(self.restuls_ts.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
+        sns.histplot(np.hstack(self.results_ts.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
         ax.set_xlabel('Simulation Day')
         ax.set_ylabel('Importations (%)')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
@@ -375,13 +380,27 @@ class Analysis():
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         d = self.results.loc['outbreak_size'].reset_index(cols)#[[xvar, huevar, 'value']]
-        g =sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
+        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
         #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(1,None))
         g.set_ylabels('Outbreak size, including source')
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
+
+    def outbreak_R0(self, figsize=(8,6)):
+        d = self.results_ts.loc['n_infected_by_seed'].reset_index()
+        d['value'] = d['value'].astype(int)
+        #sns.lmplot(data=d, x='In-school transmission multiplier', y='value', hue=None)
+        #fig, ax = plt.subplots(1,1,figsize=figsize)
+        g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25")
+        for ax in g.axes.flat:
+            ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
+        g.set_ylabels('Basic reproduction number in school')
+        plt.tight_layout()
+
+        plt.show()
+        exit()
 
 
     def timeseries(self, channel, label, normalize):

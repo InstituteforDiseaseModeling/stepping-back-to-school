@@ -1,5 +1,5 @@
 '''
-First try at new outbreak analysis
+Sweeping in-school transmissibility
 '''
 
 import argparse
@@ -7,7 +7,7 @@ from run import Run
 import numpy as np
 import utils as ut
 
-class Outbreak(Run):
+class OutbreakBetaSchool(Run):
     def build_configs(self):
         # Sweep over NPI multipliers
         npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
@@ -34,15 +34,15 @@ if __name__ == '__main__':
         'pop_infected': 0,
         'pop_size': 223_000,
         'start_day': '2021-01-31',
-        'end_day': '2021-07-31',
+        'end_day': '2021-08-31',
         'beta_layer': dict(h=0, s=0, w=0, c=0), # Turn off non-school transmission
     }
 
-    runner = Outbreak(sweep_pars=sweep_pars, sim_pars=sim_pars)
+    runner = OutbreakBetaSchool(sweep_pars=sweep_pars, sim_pars=sim_pars)
     runner.run(args.force)
     analyzer = runner.analyze()
 
-    print(analyzer.raw['n_introductions'])
+    analyzer.outbreak_R0()
 
     xvar='In-school transmission multiplier'
     huevar=None

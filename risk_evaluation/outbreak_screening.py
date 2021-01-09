@@ -23,22 +23,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       10,
-        'n_prev':       0, # No controller
-        'schcfg_keys':  ['with_countermeasures'],
+        'n_reps': 10,
+        'n_prev': 0, # No controller
+        'schcfg_keys': ['with_countermeasures'],
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        'screen_keys':  [
-            'None', 
-            'Antigen every 1w teach&staff, PCR f/u', 
-            'PCR every 4w', 
-            'Antigen every 4w, PCR f/u', 
-            'PCR every 2w', 
-            'Antigen every 2w, PCR f/u', 
-            'PCR every 1w', 
+        'screen_keys': [
+            'None',
+            'Antigen every 1w teach&staff, PCR f/u',
+            'PCR every 4w',
+            'Antigen every 4w, PCR f/u',
+            'PCR every 2w',
+            'Antigen every 2w, PCR f/u',
+            'PCR every 1w',
             'Antigen every 1w, PCR f/u',
         ],
-    } 
+    }
 
     sim_pars = {
         'pop_infected': 0,
@@ -56,6 +56,7 @@ if __name__ == '__main__':
     huevar='Dx Screening'
 
     #runner.regplots(xvar=xvar, huevar=huevar)
+
     analyzer.outbreak_reg(xvar, huevar, order=4)
 
     analyzer.cum_incidence(colvar=xvar, rowvar=huevar)
