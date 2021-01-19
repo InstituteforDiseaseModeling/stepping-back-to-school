@@ -26,11 +26,24 @@ if __name__ == '__main__':
         'screen_keys':  ['None'],
     }
 
-    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))#, run_pars=dict(n_cpus=15))
+    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))
     runner.run(args.force)
     analyzer = runner.analyze()
 
     runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
+
+    ext='sm'
+    g = analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', order=2, height=6, aspect=1, ext=ext)
+    g.set_xlabels('Prevalence')
+    g._legend.remove()
+    fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
+    import covasim as cv
+    import os
+    import matplotlib.pyplot as plt
+    plt.grid()
+    print(os.path.join(analyzer.imgdir, fn))
+    cv.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
+    exit()
 
     analyzer.cum_incidence(colvar='Prevalence Target')
     analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)

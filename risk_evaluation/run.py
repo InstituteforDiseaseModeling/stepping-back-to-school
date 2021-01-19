@@ -48,6 +48,7 @@ class Run:
             'schcfg_keys':       ['with_countermeasures'],
             'screen_keys':       ['None'],
             'school_start_date': '2021-02-01', # first day of school
+            'school_seed_date':  None,
             'n_reps':            1,
             #'n_prev':           4,
             'prev':              [0.01],

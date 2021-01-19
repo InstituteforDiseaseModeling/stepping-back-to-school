@@ -46,7 +46,7 @@ class Analysis():
         self._process()
         keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening']
         if 'Prevalence' in sims[0].tags.keys():
-            keys.append['Prevalence Target']
+            keys.append('Prevalence Target')
         self._wrangle(keys)
 
 
