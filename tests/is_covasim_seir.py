@@ -13,7 +13,7 @@ plt.rcParams['font.family'] = 'Roboto Condensed'
 plt.rcParams['lines.linewidth'] = 0.7
 
 cachefn = 'sim_100k.obj'
-force_run = False
+force_run = True
 
 pop_size = 100_000
 params = {
@@ -41,7 +41,7 @@ else:
     sim = cv.load(cachefn)
 
 seeds = sim.results['n_exposed'][0]
-seir = cvc.SEIR(pop_size, EI, IR, beta=0.365, Ipow=0.925) # 0.365, 0.94
+seir = cvc.SEIR(pop_size, EI, IR, ERR=1, beta=0.365, Ipow=0.925) # 0.365, 0.94
 seir_results = seir.run(seeds, sim.pars['n_days'])
 
 N = sim.scaled_pop_size # don't really care about N vs alive...

@@ -8,7 +8,7 @@ import sciris as sc
 import covasim_schools as cvsch
 import covasim_controller as cvc
 from risk_evaluation import create_sim as cs
-from risk_evaluation.testing_scenarios import generate_scenarios, generate_testing
+from risk_evaluation.scenarios import generate_scenarios, generate_screening
 #import matplotlib as mplt
 import matplotlib.pyplot as plt
 import covasim as cv
@@ -25,7 +25,7 @@ pop_size = 2.25e5 #50e3
 
 def test_controller(do_plot=False):
     scen = generate_scenarios()['with_countermeasures']#['all_remote']#['all_hybrid']
-    testing = generate_testing()['None']#['Antigen every 1w, PCR f/u']
+    testing = generate_screening()['None']#['Antigen every 1w, PCR f/u']
     for stype, spec in scen.items():
         if spec is not None:
             spec['testing'] = testing

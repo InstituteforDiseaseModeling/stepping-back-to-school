@@ -151,7 +151,7 @@ class SEIR:
         for i in range(1, nEIR):
             Omats.append(Omats[-1]*A)
         obs_mat = np.vstack(Omats)
-        assert(np.linalg.matrix_rank(obs_mat) == nEIR)
+        #assert(np.linalg.matrix_rank(obs_mat) == nEIR)
 
         return obs_mat
 
@@ -169,7 +169,7 @@ class SEIR:
         ctb_mat[:,0] = B
         for i in range(self.nEI+self.nIR-1):
             ctb_mat[:,i+1] = A*ctb_mat[:,i] # columns of controllability matrix
-        assert(np.linalg.matrix_rank(ctb_mat) == self.nEI+self.nIR)
+        #assert(np.linalg.matrix_rank(ctb_mat) == self.nEI+self.nIR)
 
 
     def plot(self):
