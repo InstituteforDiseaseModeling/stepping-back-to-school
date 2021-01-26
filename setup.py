@@ -23,11 +23,11 @@ CLASSIFIERS = [
 ]
 
 setup(
-    name="covasim_controller",
+    name="inside_schools",
     version=version,
-    author="Jamie Cohen, Dina Mistry, Cliff Kerr, Daniel Klein",
+    author="Daniel Klein, Jamie Cohen, Dina Mistry, Cliff Kerr",
     author_email="covasim@idmod.org",
-    description="Controller for Covasim",
+    description="Repository for 'Inside Schools' report",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='http://covasim.org',
@@ -41,9 +41,9 @@ setup(
         "pandas",
         "matplotlib",
         "seaborn",
-        "sciris",
-        "covasim",
-        "synthpops",
+        "sciris>=1.0.0",
+        "covasim>=2.0.0",
+        "synthpops>=1.2.1",
         "optuna",
     ],
 )
