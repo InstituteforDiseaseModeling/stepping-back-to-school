@@ -1,6 +1,6 @@
 '''
 Pre-generate the synthpops population including school types. Takes ~10s per seed
-if running with 20,000 people; or roughly 10 times longer for 225,000 people.
+if running with 20,000 people; or roughly 10 times longer for 223,000 people.
 
 After running this script, you will need to manually move the files generated in 
 the inputs folder into the main results folder (v20201009).
@@ -9,9 +9,11 @@ Warning: this script is quite memory intensive. If you do not have much RAM, you
 wish to turn off parallelization.
 '''
 
+import sys
 import psutil
-import sciris  as sc
+import sciris as sc
 import covasim_schools as cvsch
+import config as cfg
 
 
 # This must be in a main block for parallelization to work on Windows
