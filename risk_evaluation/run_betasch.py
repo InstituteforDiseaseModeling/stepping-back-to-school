@@ -1,5 +1,5 @@
 '''
-Dense sweep of beta_s at a few fixed prevalence levels.
+Dense sweep of in-school transmissibility (beta_s) at a few fixed prevalence levels.
 '''
 
 import argparse

@@ -1,3 +1,7 @@
+'''
+Analyze covasim simulation results and produce plots
+'''
+
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -28,13 +32,6 @@ class Analysis():
         self.imgdir = imgdir
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
 
-        #for_presentation = False # Choose between report style and presentation style (different aspect ratio)
-        #figsize = (12,8) if for_presentation else (12,9.5)
-        #aspect = 3 if for_presentation else 2.5
-
-        #inferno_black_bad = copy.copy(mplt.cm.get_cmap('inferno'))
-        #inferno_black_bad.set_bad((0,0,0))
-
         sim_scenario_names = list(set([sim.tags['scen_key'] for sim in sims]))
         self.scenario_map = scn.scenario_map()
         self.scenario_order = [v[0] for k,v in self.scenario_map.items() if k in sim_scenario_names]
@@ -56,10 +53,6 @@ class Analysis():
         groups = ['students', 'teachers', 'staff']
         stypes = ['es', 'ms', 'hs']
 
-        # For introduction source analysis
-        #self.origin = []
-        #self.detected = []
-
         for sim in self.sims:
             first_date = '2021-02-01' # TODO: Read from sim
             last_date = '2021-04-30'
@@ -79,7 +72,6 @@ class Analysis():
             ret['n_introductions'] = 0
             ret['cum_incidence'] = []
             ret['in_person_days'] = 0
-            #ret['introductions'] = []
             ret['introductions_per_100_students'] = []
             ret['introductions_postscreen'] = []
             ret['first_infectious_day_at_school'] = []
@@ -236,7 +228,6 @@ class Analysis():
         def draw_cum_inc(**kwargs):
             data = kwargs['data']
             mat = np.vstack(data['value'])
-            #plt.plot(mat.T, lw=0.2)
             sns.heatmap(mat, vmax=kwargs['vmax'])
         d = self.results_ts.loc['cum_incidence']
         vmax = np.vstack(d['value']).max().max()
@@ -366,9 +357,6 @@ class Analysis():
         cols = [xvar] if huevar is None else [xvar, huevar]
         d = self.results.loc['introductions_postscreen_per_100_students'].reset_index(cols)#.loc[:,[cols]+['value']]
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order, legend_out=False)
-        #ax = g.axes.flat[0]
-        #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
-        #g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(0,None))
         g.set_ylabels('Introductions (per 100 students over 2mo)')
         plt.tight_layout()
@@ -381,7 +369,6 @@ class Analysis():
         cols = [xvar] if huevar is None else [xvar, huevar]
         d = self.results.loc['outbreak_size'].reset_index(cols)#[[xvar, huevar, 'value']]
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
-        #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
         g.set(ylim=(1,None))
         g.set_ylabels('Outbreak size, including source')
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
@@ -391,8 +378,6 @@ class Analysis():
     def outbreak_R0(self, figsize=(8,6)):
         d = self.results_ts.loc['n_infected_by_seed'].reset_index()
         d['value'] = d['value'].astype(int)
-        #sns.lmplot(data=d, x='In-school transmission multiplier', y='value', hue=None)
-        #fig, ax = plt.subplots(1,1,figsize=figsize)
         g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25")
         for ax in g.axes.flat:
             ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
@@ -422,7 +407,7 @@ class Analysis():
 
         fig, ax = plt.subplots(figsize=(16,10))
         sns.lineplot(data=d, x='Date', y=label, hue=huevar, style='Scenario', palette='cool', ax=ax, legend=False)
-        # Y-axis gets messed up when I introduce horizontal lines!
+        # Y-axis gets messed up when I introduce horizontal lines
         #for prev in d['Prevalence Target'].unique():
         #    ax.axhline(y=prev, ls='--')
         if normalize:
@@ -440,7 +425,6 @@ class Analysis():
         fig, ax = plt.subplots(figsize=(16,10))
         date_range = [n_days, 0]
 
-        # TODO: move tree plotting to a function
         #print(f'Tree {i}', sid, sim.key1, sim.key2, sim.key2)
         #for u,v,w in tree.edges.data():
             #print('\tEDGE', u,v,w)
@@ -478,7 +462,6 @@ class Analysis():
         ax.set_xticks(range(int(date_range[0]), int(date_range[1])))
         ax.set_yticks(range(0, len(tree.nodes)))
         ax.set_yticklabels([f'{int(u) if np.isfinite(u) else -1}: {v["type"]}, age {v["age"] if "age" in v else -1}' for u,v in tree.nodes.data()])
-        #ax.set_title(f'School {sid}, Tree {i}')
 
         if do_show:
             plt.show()
