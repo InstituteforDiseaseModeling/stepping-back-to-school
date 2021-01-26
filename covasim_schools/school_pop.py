@@ -35,6 +35,15 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
         average_LTCF_degree = 20,
         ltcf_staff_age_min = 20,
         ltcf_staff_age_max = 60,
+        
+        country_location = 'usa',
+        state_location = 'Washington',
+        location = 'seattle_metro',
+        use_default = True,
+
+        smooth_ages = True,  # use smooth_ages to smooth out the binned age distribution
+        window_length = 7,  # length of window to average age distribution over
+        household_method = 'fixed_ages',  # use fixed_ages to match different age distributions more closely
 
         with_school_types = True,
         average_class_size = 20,
