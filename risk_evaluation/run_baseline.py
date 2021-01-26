@@ -26,7 +26,7 @@ if __name__ == '__main__':
         'screen_keys':  ['None'],
     }
 
-    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=100_000))
+    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))
     runner.run(args.force)
     analyzer = runner.analyze()
 
