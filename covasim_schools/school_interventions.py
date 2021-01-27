@@ -709,6 +709,7 @@ class SchoolStats(sc.prettyobj):
                 tt = sim.make_transtree()
             except:
                 # No transmissions! (make_transtree failed)
+                # And yet a school person was infected, assume it was seeded in the school
                 uid = int(school.seed_uid) #int(cv.ifalsei(ppl.susceptible, school.uids)) # There can only be one
                 if uid is None:
                     print('No seeds or transmissions in this school')
@@ -716,11 +717,15 @@ class SchoolStats(sc.prettyobj):
 
                 outbreak = {}
                 if uid in student_uids:
-                    outbreak['Origin type'] = ['Student']
+                    obt = 'Student'
                 elif uid in teacher_uids:
-                    outbreak['Origin type'] = ['Teacher']
+                    obt = 'Teacher'
                 elif uid in staff_uids:
-                    outbreak['Origin type'] = ['Staff']
+                    obt = 'Staff'
+                else:
+                    obt = 'Other'
+
+                outbreak['Origin type'] = [obt]
                 outbreak['Origin layer'] = ['Seed']
                 outbreak['Importations'] = 1
                 outbreak['Exports to household'] = 0
@@ -732,11 +737,10 @@ class SchoolStats(sc.prettyobj):
                 outbreak['Complete'] = sim.people.date_recovered[uid]
                 outbreak['Num infected by seed'] = 0
 
-
                 if self.save_trees:
                     G = nx.Graph()
                     attrs = {}
-                    attrs[uid] = {'type': 'Seed'}
+                    attrs[uid] = {'type': obt}
                     attrs['age'] = sim.people.age[uid]
                     attrs['date_exposed'] = sim.people.date_exposed[uid]
                     attrs['date_infectious'] = sim.people.date_infectious[uid]
