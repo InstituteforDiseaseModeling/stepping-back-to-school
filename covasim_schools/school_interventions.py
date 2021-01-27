@@ -850,8 +850,11 @@ class SchoolStats(sc.prettyobj):
                 outbreak['Last infectious day at school'] = last_infectious_day_at_school
                 outbreak['Complete'] = all([sim.people.date_recovered[int(uid)] < sim.pars['n_days'] or sim.people.date_dead[int(uid)] < sim.pars['n_days'] for uid in S.nodes if uid in school.uids and np.isfinite(uid)])
 
-                if school.seed_uid is not None:
+                if school.seed_uid is not None and S.has_node(float(school.seed_uid)):
                     outbreak['Num infected by seed'] = S.out_degree(float(school.seed_uid))
+                    outbreak['Seeded'] = True
+                else:
+                    outbreak['Seeded'] = False
 
                 if self.save_trees:
                     outbreak['Tree'] = S

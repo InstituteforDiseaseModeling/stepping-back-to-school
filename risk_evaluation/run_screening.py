@@ -6,11 +6,14 @@ import argparse
 from run import Run
 
 
+alt_sus = False
+
 class Screening(Run):
     def build_configs(self):
         # Configure alternate sus
-        #value_labels = {'Yes' if p else 'No':p for p in [True]}
-        #self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
+        if alt_sus:
+            value_labels = {'Yes' if p else 'No':p for p in [True]}
+            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
 
         return super().build_configs()
 

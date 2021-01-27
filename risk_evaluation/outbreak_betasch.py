@@ -1,5 +1,5 @@
 '''
-Sweeping in-school transmissibility
+Outbreak analysis to sweep in-school transmissibility
 '''
 
 import argparse

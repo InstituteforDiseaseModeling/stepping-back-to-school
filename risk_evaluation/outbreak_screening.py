@@ -1,5 +1,5 @@
 '''
-First try at new outbreak analysis
+Outbreak analysis to sweep in-school transbissibility while also exploring several diagnostic screening scenarios.
 '''
 
 import argparse

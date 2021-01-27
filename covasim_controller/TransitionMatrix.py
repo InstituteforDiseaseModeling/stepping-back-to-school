@@ -100,8 +100,6 @@ class TransitionMatrix:
         Fit the transition matrix to the data by constrained optimization
         '''
 
-        x0 = guess*np.random.rand(self.num_pars)
-
         lc = [np.eye(self.num_pars)]
         inds = [0]
         for col in range(self.n-1):
@@ -119,10 +117,13 @@ class TransitionMatrix:
 
         A = np.vstack(lc)
         lc = spo.LinearConstraint(A, np.zeros(A.shape[0]), np.ones(A.shape[0]))
-        self.opt_result = spo.minimize(self.err, x0, constraints=lc, method='SLSQP')
 
-        # Make sure optimization was successful
-        assert(self.opt_result['success'])
+        self.opt_result = dict(fun=1e6)
+        for i in range(10): # 10 repeats should avoid an unlucky seed
+            x0 = guess*np.random.rand(self.num_pars)
+            ret = spo.minimize(self.err, x0, constraints=lc, method='SLSQP')
+            if ret['success'] and ret['fun'] < self.opt_result['fun']:
+                self.opt_result.update(ret)
 
         # Store the optimal transition matrix
         self.Mopt = self.method(self.opt_result['x'])
