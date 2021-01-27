@@ -51,8 +51,8 @@ class Analysis():
     def _process(self):
         ## Process the simulations
         results = []
-        groups = ['students', 'teachers', 'staff']
         stypes = ['es', 'ms', 'hs']
+        grp_dict = {'Students': ['students'], 'Teachers & Staff': ['teachers', 'staff'], 'Students, Teachers, and Staff': ['students', 'teachers', 'staff']}
 
         # Loop over each simulation and accumulate stats
         for sim in self.sims:
@@ -91,58 +91,21 @@ class Analysis():
 
             for grp in ['Student', 'Teacher', 'Staff']:
                 ret[f'introduction_origin_{grp}'] = 0 # Introduction origin by group
-                ret[f'diagnosed_origin_{grp}'] = 0 # First diagnosed origin by group, intended to model the "observation" process
-
-            n_schools = {'es':0, 'ms':0, 'hs':0}
-            n_schools_with_inf_d1 = {'es':0, 'ms':0, 'hs':0}
-
-            grp_dict = {'Students': ['students'], 'Teachers & Staff': ['teachers', 'staff'], 'Students, Teachers, and Staff': ['students', 'teachers', 'staff']}
-            perc_inperson_days_lost = {k:[] for k in grp_dict.keys()}
-            count = {k:0 for k in grp_dict.keys()}
-            exposed = {k:0 for k in grp_dict.keys()}
-            inperson_days = {k:0 for k in grp_dict.keys()}
-            possible_days = {k:0 for k in grp_dict.keys()}
+                ret[f'observed_origin_{grp}'] = 0 # First diagnosed origin by group, intended to model the "observation" process
 
             if sim.results['n_exposed'][first_school_day] == 0:
                 print(f'Sim has zero exposed, skipping: {ret}\n')
                 continue
 
+            # Now loop over each school and collect outbreak stats
             for sid,stats in sim.school_stats.items():
                 stype = stats['type']
                 if stype not in stypes:
                     continue
 
-                inf_first = stats['infectious_first_day_school'] # Post-screening
-                in_person = stats['in_person']
-                n_exp = stats['newly_exposed']
-                num_school_days = stats['num_school_days']
-                possible_school_days = np.busday_count(first_school_date, last_school_date)
-
-                for gkey, grps in grp_dict.items():
-                    in_person_days = scheduled_person_days = num_exposed = num_people = 0
-                    for grp in grps:
-                        in_person_days += in_person[grp]
-                        scheduled_person_days += num_school_days * stats['num'][grp]
-                        num_exposed += n_exp[grp]
-                        num_people += stats['num'][grp]
-                        exposed[gkey] += n_exp[grp]
-                        count[gkey] += stats['num'][grp]
-
-                    perc_inperson_days_lost[gkey].append(
-                        100*(scheduled_person_days - in_person_days)/scheduled_person_days if scheduled_person_days > 0 else 100
-                    )
-
-                    inperson_days[gkey] += in_person_days
-                    possible_days[gkey] += possible_school_days*num_people
-
-                n_schools[stats['type']] += 1
-                if sum([inf_first[g] for g in groups]) > 0:
-                    n_schools_with_inf_d1[stats['type']] += 1
-
                 # Only count outbreaks in which total infectious days at school is > 0
                 outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
 
-                # TODO: By school type and student/staff
                 ret['n_introductions'] += len(outbreaks)
                 ret['cum_incidence'].append(100 * stats['cum_incidence'] / (stats['num']['students'] + stats['num']['teachers'] + stats['num']['staff']))
                 ret['in_person_days'] += np.sum([v for v in stats['in_person'].values()])
@@ -153,42 +116,30 @@ class Analysis():
                 # Insert at beginning for efficiency
                 ret['first_infectious_day_at_school'][0:0] = [o['First infectious day at school'] for o in outbreaks]
                 ret['outbreak_size'][0:0] = [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in outbreaks]
-                ret['n_infected_by_seed'] += [ob['Num infected by seed'] for ob in outbreaks if ob['Seeded']]
+                ret['complete'][0:0] = [float(ob['Complete']) for ob in outbreaks]
+                ret['n_infected_by_seed'][0:0] = [ob['Num infected by seed'] for ob in outbreaks if ob['Seeded']]
+                ret['exports_to_hh'][0:0] = [ob['Exports to household'] for ob in outbreaks]
 
-                ret['exports_to_hh'] += [ob['Exports to household'] for ob in outbreaks]
+                for grp in ['Student', 'Teacher', 'Staff']:
+                    ret[f'introduction_origin_{grp}'] += len([o for o in outbreaks if grp in o['Origin type']])
 
-                # Origin analysis
+                # Determine the type of the first "observed" case, here using the first diagnosed
                 for ob in outbreaks:
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #if not ob['Complete']:
                     #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
 
-                    for origin_type, lay in zip(ob['Origin type'], ob['Origin layer']):
-                        #self.origin.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], origin_type, lay])
-                        ret[f'introduction_origin_{origin_type}'] += 1
-
-                        uids = [int(u) for u in ob['Tree'].nodes if np.isfinite(u)]
-                        data = [v for u,v in ob['Tree'].nodes.data()]
-                        was_detected = [(u,d) for u,d in zip(uids, data) if d['type'] not in ['Seed', 'Other'] and np.isfinite(d['date_diagnosed'])]
-                        if len(was_detected) > 0:
-                            first = sorted(was_detected, key=lambda x:x[1]['date_symptomatic'])[0]
-                            #self.detected.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], first[1]['type'], 'Unknown'])
-                            detected_origin_type = first[1]['type']
-                            ret[f'diagnosed_origin_{detected_origin_type}'] += 1
-                            #ret['introduction_size'].append(ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'])
-                            ret['complete'].append(float(ob['Complete']))
+                    date = 'date_diagnosed' # 'date_symptomatic'
+                    was_detected = [(int(u),d) for u,d in ob['Tree'].nodes.data() if np.isfinite(u) and d['type'] not in ['Other'] and np.isfinite(d[date])]
+                    if len(was_detected) > 0:
+                        first = sorted(was_detected, key=lambda x:x[1][date])[0]
+                        detected_origin_type = first[1]['type']
+                        ret[f'observed_origin_{detected_origin_type}'] += 1
 
             for stype in stypes:
-                ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
                 # Sums, won't allow for full bootstrap resampling!
                 ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
                 ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
-
-            # Deciding between district and school perspective here
-            for gkey in grp_dict.keys():
-                ret[f'perc_inperson_days_lost_{gkey}'] = 100*(possible_days[gkey]-inperson_days[gkey])/possible_days[gkey] #np.mean(perc_inperson_days_lost[gkey])
-                ret[f'attackrate_{gkey}'] = 100*exposed[gkey] / count[gkey]
-                ret[f'count_{gkey}'] = np.sum(count[gkey])
 
             results.append(ret)
 
@@ -270,9 +221,9 @@ class Analysis():
         intro_by_origin.rename(columns={f'introduction_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
         intro_by_origin.loc[:, 'Introductions'] = 'All'
 
-        cols = [f'diagnosed_origin_{origin_type}' for origin_type in groups]
+        cols = [f'observed_origin_{origin_type}' for origin_type in groups]
         detected_intro_by_origin = self.raw[cols]
-        detected_intro_by_origin.rename(columns={f'diagnosed_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
+        detected_intro_by_origin.rename(columns={f'observed_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
         detected_intro_by_origin.loc[:, 'Introductions'] = 'First Symptomatic'
 
         df = pd.concat([intro_by_origin, detected_intro_by_origin], ignore_index=True)
@@ -379,7 +330,6 @@ class Analysis():
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         d = self.results.loc['exports_to_hh'].reset_index(cols)#[[xvar, huevar, 'value']]
-        print(d.dtypes)
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
         g.set(ylim=(0,None))
         g.set_ylabels('Exports to HH')
