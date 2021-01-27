@@ -1,3 +1,7 @@
+'''
+Build simulations
+'''
+
 import covasim_schools as cvsch
 import covasim_controller as cvc
 import covasim as cv

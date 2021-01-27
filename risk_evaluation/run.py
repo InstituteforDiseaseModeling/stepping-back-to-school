@@ -116,6 +116,7 @@ class Run:
 
 
     def tsplots(self, ts_plots=None):
+        print('Generating timeseries plots, these take a few minutes...')
         if self.analyzer is None:
             self.analyze()
 

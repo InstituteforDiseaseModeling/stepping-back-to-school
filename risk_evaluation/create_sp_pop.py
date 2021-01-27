@@ -17,7 +17,7 @@ import covasim_schools as cvsch
 # This must be in a main block for parallelization to work on Windows
 if __name__ == '__main__':
 
-    pop_size = 100_000
+    pop_size = 100_000 # Set the population size here
     seeds = range(20)
     parallelize = True
 
