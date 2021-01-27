@@ -224,7 +224,7 @@ class Analysis():
         cols = [f'observed_origin_{origin_type}' for origin_type in groups]
         detected_intro_by_origin = self.raw[cols]
         detected_intro_by_origin.rename(columns={f'observed_origin_{origin_type}':origin_type for origin_type in ['Student', 'Teacher', 'Staff']}, inplace=True)
-        detected_intro_by_origin.loc[:, 'Introductions'] = 'First Symptomatic'
+        detected_intro_by_origin.loc[:, 'Introductions'] = 'First Diagnosed'
 
         df = pd.concat([intro_by_origin, detected_intro_by_origin], ignore_index=True)
         df = df.set_index('Introductions').rename_axis('Source', axis=1).stack()
