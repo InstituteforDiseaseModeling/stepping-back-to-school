@@ -28,12 +28,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       5,
-        'n_prev':       20,
+        'n_reps':       1, # 5
+        'n_prev':       4, # 20
         'screen_keys':  ['None'],
     }
 
-    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=223_000))
+    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=100_000)) # 223_000
     runner.run(args.force)
     analyzer = runner.analyze()
 

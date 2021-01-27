@@ -206,7 +206,7 @@ class Analysis():
 
     def source_dow(self, figsize=(6,6)):
         fig, ax = plt.subplots(1,1,figsize=figsize)
-        sns.histplot(np.hstack(self.results_ts.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
+        sns.histplot(np.hstack(self.results.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
         ax.set_xlabel('Simulation Day')
         ax.set_ylabel('Importations (%)')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
