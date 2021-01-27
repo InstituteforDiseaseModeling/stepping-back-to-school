@@ -49,7 +49,7 @@ paths = sc.objdict(
     outputs = 'v2021-January', # Folder for outputs
     ei     = 'fit_EI.obj',
     ir     = 'fit_IR.obj',
-    )
+)
 
 
 def process_inputs(argv):
