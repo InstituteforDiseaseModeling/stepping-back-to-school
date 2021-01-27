@@ -39,6 +39,7 @@
       <div class="controls">
         <h1>Schools reopening webapp</h1>
         Enter beta: <input v-model='beta'><br>
+        Enter number of days: <input v-model='n_days'><br>
         <button @click="run">Run</button>
         <div id="graph"></div>
       </div>
@@ -53,13 +54,14 @@
     data() {
       return {
         beta: 0.016,
+        n_days: 90,
         }
       },
 
     methods: {
 
       run: function () {
-        sciris.rpcs.rpc('run', [vm.beta])
+        sciris.rpcs.rpc('run', [{'beta':vm.beta, 'n_days':vm.n_days}])
         .then(function (response) {
             document.getElementById('graph').innerHTML = ''; // Clear the DOM before redrawing
             mpld3.draw_figure('graph', response.data);

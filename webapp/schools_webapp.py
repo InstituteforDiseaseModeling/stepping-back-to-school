@@ -24,9 +24,11 @@ app.config['SERVER_PORT'] = port
 
 # Define the RPCs
 @app.register_RPC()
-def run(beta):
+def run(pars):
     print('Running...')
-    sim = cv.Sim(beta=beta)
+    pars['beta'] = float(pars['beta'])
+    pars['n_days'] = int(pars['n_days'])
+    sim = cv.Sim(pars=pars)
     sim.run()
     fig = sim.plot()
 
