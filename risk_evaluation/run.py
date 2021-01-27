@@ -50,8 +50,8 @@ class Run:
 
         self.paths = sc.dcp(cfg.paths)
         self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
-        self.cachefn = os.path.join(self.paths.outputs, 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
-        self.imgdir = os.path.join(self.paths.outputs, 'img_'+self.stem)
+        self.dir = os.path.join(self.paths.outputs, self.stem)
+        self.cachefn = os.path.join(self.dir, 'results.sims') # Might need to change the extension here, depending if combine.py was used
 
         self.builder = bld.Builder(self.sim_pars, self.sweep_pars, self.paths)
 
@@ -81,7 +81,7 @@ class Run:
 
     def analyze(self):
         ''' Create (and run) the analysis '''
-        self.analyzer = an.Analysis(self.sims, self.imgdir)
+        self.analyzer = an.Analysis(self.sims, self.dir)
         return self.analyzer
 
     def regplots(self, xvar, huevar, ts_plots=None, order=2):

@@ -42,7 +42,7 @@ run_pars = sc.objdict(
 )
 
 paths = sc.objdict(
-    outputs = 'v2021-January', # Folder for outputs
+    outputs = 'Results', # Folder for outputs
     ei     = 'fit_EI.obj',
     ir     = 'fit_IR.obj',
 )
