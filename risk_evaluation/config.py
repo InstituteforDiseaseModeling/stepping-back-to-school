@@ -6,12 +6,6 @@ import argparse
 import sciris as sc
 
 # Default settings are for debug runs
-config = sc.objdict(
-    inputs = 'inputs',
-    results = 'results',
-    n_reps = 3,
-    n_seeds = 5,
-)
 
 sim_pars = sc.objdict(
     pop_size     = 50_000,
@@ -34,7 +28,8 @@ sweep_pars = sc.objdict(
     school_seed_date  = None,
     n_reps            = 3,
     n_seeds           = 5,
-    prev              = [0.01],
+    n_prev            = 5,
+    prev              = None, # Computed in run.py
 )
 
 run_pars = sc.objdict(
@@ -60,7 +55,9 @@ def process_inputs(argv):
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--full', action='store_true')
     parser.add_argument('--pop_size', type=int, default=0)
+    parser.add_argument('--n_reps', type=int, default=0)
     parser.add_argument('--n_seeds', type=int, default=0)
+    parser.add_argument('--n_prev', type=int, default=0)
     args = parser.parse_args(argv[1:])
 
     if args.debug:
@@ -69,9 +66,15 @@ def process_inputs(argv):
         set_full()
 
     if args.pop_size:
-        sim_pars.pop_size = 1000*args.pop_size
+        if args.pop_size < 1000: # Allow e.g. 223 or 223000
+            args.pop_size *= 1000
+        sim_pars.pop_size = args.pop_size
+    if args.n_reps:
+        sweep_pars.n_reps = args.n_reps
     if args.n_seeds:
         sweep_pars.n_seeds = args.n_seeds
+    if args.n_prev:
+        sweep_pars.n_prev = args.n_prev
 
     return args
 

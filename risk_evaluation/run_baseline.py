@@ -1,10 +1,14 @@
 '''
-Introduction analysis sweeping over several prevalence levels
+Introduction analysis sweeping over several prevalence levels.
+
+Example usage, forcing new results and using a 4 different seeds:
+
+    python run_baseline.py --force --n_reps=4
+
 '''
 
 import sys
 import os
-import argparse
 import matplotlib.pyplot as plt
 import utils as ut
 import config as cfg
@@ -53,10 +57,13 @@ if __name__ == '__main__':
     print(os.path.join(analyzer.imgdir, fn))
     plt.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
 
-    analyzer.cum_incidence(colvar='Prevalence Target')
-    analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
-    analyzer.outbreak_size_over_time()
-    analyzer.source_pie()
-    analyzer.source_dow(figsize=(6.5,5))
+    try:
+        analyzer.cum_incidence(colvar='Prevalence Target')
+        analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
+        analyzer.outbreak_size_over_time()
+        analyzer.source_pie()
+        analyzer.source_dow(figsize=(6.5,5))
+        runner.tsplots()
+    except Exception as E:
+        print(f'Could not run some plots: {str(E)}')
 
-    runner.tsplots()

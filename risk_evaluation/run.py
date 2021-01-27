@@ -38,10 +38,10 @@ class Run:
             self.sim_pars.update(sim_pars)
 
         self.sweep_pars = sc.dcp(cfg.sweep_pars)
-        if isinstance(sweep_pars, dict) and 'n_prev' in sweep_pars and 'prev' not in sweep_pars:
-            sweep_pars['prev'] = np.linspace(0.002, 0.02, sweep_pars['n_prev']) # NB, this might create subtle bugs
         if sweep_pars is not None:
             self.sweep_pars.update(sweep_pars)
+        if self.sweep_pars.prev is None:
+            self.sweep_pars.prev = np.linspace(0.002, 0.02, self.sweep_pars.n_prev) # TODO: this might create subtle bugs and shouldn't be hard-coded
 
         # TODO: make default config`, update with user config
         self.run_pars = sc.dcp(cfg.run_pars)
