@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<!-- Load core scripts -->
+<head>
+  <title>School reopening webapp</title>
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/sciris-js/dist/sciris-js.js"></script>
+  <script src="assets/d3.v5.min.js"></script>
+  <script src="assets/mpld3.v0.5.2.min.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet"> 
+  <style>
+  body {
+      font-family: 'Marcellus';
+      font-size: 0.8em;
+  }
+
+  .app {
+    padding: 20px;
+    justify-content: center;
+    display: flex;
+  }
+
+  .controls {
+    display: block;
+    background-color: #f3f3f3;
+    padding: 20px;
+    border: solid 2px #aaa;
+  }
+  </style>
+</head>
+
+
+<!-- Define the layout -->
+<body>
+  <div id="app" class="app">
+      <div class="controls">
+        <h1>Schools reopening webapp</h1>
+        Enter beta: <input v-model='beta'><br>
+        Enter number of days: <input v-model='n_days'><br>
+        <button @click="run">Run</button>
+        <div id="graph"></div>
+      </div>
+    </div>
+</body>
+
+<!-- Define the functionality -->
+<script>
+  var vm = new Vue({
+    el: '#app',
+
+    data() {
+      return {
+        beta: 0.016,
+        n_days: 90,
+        }
+      },
+
+    methods: {
+
+      run: function () {
+        sciris.rpcs.rpc('run', [{'beta':vm.beta, 'n_days':vm.n_days}])
+        .then(function (response) {
+            document.getElementById('graph').innerHTML = ''; // Clear the DOM before redrawing
+            mpld3.draw_figure('graph', response.data);
+        })
+      },
+
+    }
+  })
+</script>
+
+</html>
