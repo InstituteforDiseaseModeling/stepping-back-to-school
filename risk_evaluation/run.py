@@ -33,7 +33,7 @@ class Run:
         self.analyzer=None
 
         # TODO: move to defaults
-        self.sim_pars = sc.dcp(cfg.config.sim_pars)
+        self.sim_pars = sc.dcp(cfg.sim_pars)
         if sim_pars is not None:
             self.sim_pars.update(sim_pars)
 
@@ -43,16 +43,18 @@ class Run:
         if sweep_pars is not None:
             self.sweep_pars.update(sweep_pars)
 
-        self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
-        self.cachefn = os.path.join(self.sweep_pars.folder, 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
-        self.imgdir = os.path.join(self.sweep_pars.folder, 'img_'+self.stem)
-
         # TODO: make default config`, update with user config
         self.run_pars = sc.dcp(cfg.run_pars)
         if run_pars is not None:
             self.run_pars.update(run_pars)
 
+        self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
+        self.cachefn = os.path.join(self.run_pars.folder, 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
+        self.imgdir = os.path.join(self.run_pars.folder, 'img_'+self.stem)
+
         self.builder = bld.Builder(self.sim_pars, self.sweep_pars['schcfg_keys'], self.sweep_pars['screen_keys'], self.sweep_pars['school_start_date'], self.sweep_pars['school_seed_date']) # Just pass in sweep_pars?
+
+        return
 
 
     def build_configs(self):
@@ -92,6 +94,8 @@ class Run:
         self.analyzer.introductions_reg(xvar, huevar, order=order)
         self.analyzer.outbreak_reg(xvar, huevar, order=order)
 
+        return
+
 
     def tsplots(self, ts_plots=None):
         ''' Generate time series plots '''
@@ -107,7 +111,9 @@ class Run:
                 dict(label='Quarantined',     channel='n_quarantined',  normalize=True),
                 dict(label='Newly Diagnosed', channel='new_diagnoses',  normalize=False),
             ]
-        self.analyzer.plot_several_timeseries(ts_plots)
+
+        return self.analyzer.plot_several_timeseries(ts_plots)
+
 
     def run(self, force=False):
         ''' Run the sims, or load them from disk '''
@@ -117,3 +123,4 @@ class Run:
         else:
             print(f'Loading {self.cachefn}')
             self.sims = cv.load(self.cachefn) # Use for *.sims
+        return

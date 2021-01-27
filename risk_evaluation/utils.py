@@ -83,7 +83,7 @@ def create_run_sim(sconf, n_sims, run_config):
     print(f'Creating and running sim {sconf.count} of {n_sims}...')
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, folder=run_config['folder'], max_pop_seeds=20)
+    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=20)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
