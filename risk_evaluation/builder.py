@@ -5,9 +5,11 @@ import sciris as sc
 import scenarios as scn
 
 class Config:
-    def __init__(self, sim_pars=None, label=None):
+    def __init__(self, sim_pars=None, label=None, tags=None):
         self.label = label # TODO: From tags?
         self.tags = {}
+        if tags is not None:
+            self.tags.update(tags)
 
         # TODO: Seems necessary to have access to e.g. prognosis parameters, but can work around
         self.sim_pars = sim_pars #cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
@@ -25,7 +27,7 @@ class Config:
 
 class Builder:
     def __init__(self, sim_pars, schcfg_keys, screen_keys, school_start_date, school_seed_date=None):
-        self.configs = [Config(sim_pars=sim_pars)]
+        self.configs = [Config(sim_pars=sim_pars, tags=dict(school_start_date=school_start_date))]
 
         # These come from fit_transmats - don't like loading multiple times
         self.ei = sc.loadobj('EI.obj')

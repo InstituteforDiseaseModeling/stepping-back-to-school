@@ -45,6 +45,7 @@ class Analysis():
 
         self._process()
         keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening']
+        keys.remove('school_start_date')
         if 'Prevalence' in sims[0].tags.keys():
             keys.append('Prevalence Target')
         self._wrangle(keys)
@@ -56,47 +57,44 @@ class Analysis():
         groups = ['students', 'teachers', 'staff']
         stypes = ['es', 'ms', 'hs']
 
-        # For introduction source analysis
-        #self.origin = []
-        #self.detected = []
-
+        # Loop over each simulation and accumulate stats
         for sim in self.sims:
-            first_date = '2021-02-01' # TODO: Read from sim
-            last_date = '2021-04-30'
-            first_school_day = sim.day(first_date)
-            last_school_day = sim.day(last_date)
+            first_school_date = sim.tags['school_start_date']
+            last_school_date = sim.pars['end_day'].strftime('%Y-%m-%d')
+            first_school_day = sim.day(first_school_date)
 
-            ret = sc.dcp(sim.tags)
-            if 'Prevalence' in sim.tags:
-                ret['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
-
-            # Map to friendly names
+            # Map the scenario name and type of diagnostic screening, if any, to friendly names
             skey = sim.tags['scen_key']
             tkey = sim.tags['dxscrn_key']
+
+            # Tags usually contain the relevant sweep dimensions
+            ret = sc.dcp(sim.tags)
             ret['Scenario'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
             ret['Dx Screening'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
 
-            ret['n_introductions'] = 0
-            ret['cum_incidence'] = []
-            ret['in_person_days'] = 0
-            #ret['introductions'] = []
-            ret['introductions_per_100_students'] = []
-            ret['introductions_postscreen'] = []
-            ret['first_infectious_day_at_school'] = []
-            ret['introductions_postscreen_per_100_students'] = []
-            ret['outbreak_size'] = []
-            ret['introduction_first_day_at_school'] = []
-            ret['introduction_size'] = []
-            ret['complete'] = []
-            ret['n_infected_by_seed'] = []
+            if 'Prevalence' in sim.tags:
+                # Prevalence appears as a string, e.g. 1%, so convert to a float for plotting
+                ret['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
+
+            # Initialize a dictionary that will be later transformed into a dataframe.
+            # Each simulation will get one value for each key, but not that sometimes the value is a list of values
+            ret['n_introductions'] = 0 # Number of times covid was introduced, cumulative across all schools
+            ret['cum_incidence'] = [] # List of timeseries of cumulative incidences, one per school
+            ret['in_person_days'] = 0 # Total number of in-person days
+            ret['introductions_per_100_students'] = [] # Number of introductions per 100 students
+            ret['first_infectious_day_at_school'] = [] # List of simulation days, e.g. 56 on which an infectious individual first was in-person, one per outbreak.
+            ret['outbreak_size'] = [] # A list, each entry is the sum of num students, teachers, and staff who got infected, including the source
+            ret['complete'] = [] # Boolean, 1 if the outbreak completed and 0 if it was still ongoing when the simulation ended
+            ret['n_infected_by_seed'] = [] # If the outbreak was seeded, the number of secondary infectious caused by the seed
+            ret['exports_to_hh'] = [] # The number of direct exports from a member of the school community to households. Exclused further spread within HHs and indirect routes to HHs e.g. via the community.
+
             for stype in stypes:
-                ret[f'introductions_{stype}'] = []
-                ret[f'introductions_postscreen_{stype}'] = []
-                ret[f'susceptible_person_days_{stype}'] = []
+                ret[f'introductions_{stype}'] = [] # Introductions by school type
+                ret[f'susceptible_person_days_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
 
             for grp in ['Student', 'Teacher', 'Staff']:
-                ret[f'introduction_origin_{grp}'] = 0
-                ret[f'diagnosed_origin_{grp}'] = 0
+                ret[f'introduction_origin_{grp}'] = 0 # Introduction origin by group
+                ret[f'diagnosed_origin_{grp}'] = 0 # First diagnosed origin by group, intended to model the "observation" process
 
             n_schools = {'es':0, 'ms':0, 'hs':0}
             n_schools_with_inf_d1 = {'es':0, 'ms':0, 'hs':0}
@@ -121,7 +119,7 @@ class Analysis():
                 in_person = stats['in_person']
                 n_exp = stats['newly_exposed']
                 num_school_days = stats['num_school_days']
-                possible_school_days = np.busday_count(first_date, last_date)
+                possible_school_days = np.busday_count(first_school_date, last_school_date)
 
                 for gkey, grps in grp_dict.items():
                     in_person_days = scheduled_person_days = num_exposed = num_people = 0
@@ -144,30 +142,29 @@ class Analysis():
                 if sum([inf_first[g] for g in groups]) > 0:
                     n_schools_with_inf_d1[stats['type']] += 1
 
+                # Only count outbreaks in which total infectious days at school is > 0
+                outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
+
                 # TODO: By school type and student/staff
-                ret['n_introductions'] += len(stats['outbreaks'])
+                ret['n_introductions'] += len(outbreaks)
                 ret['cum_incidence'].append(100 * stats['cum_incidence'] / (stats['num']['students'] + stats['num']['teachers'] + stats['num']['staff']))
                 ret['in_person_days'] += np.sum([v for v in stats['in_person'].values()])
-                ret[f'introductions_{stype}'].append( len(stats['outbreaks']) )
                 ret[f'susceptible_person_days_{stype}'].append( stats['susceptible_person_days'] )
-                ret['introductions_per_100_students'].append( len(stats['outbreaks']) / stats['num']['students'] * 100 )
-                intr_postscreen = len([o for o in stats['outbreaks'] if o['Total infectious days at school']>0]) # len(stats['outbreaks'])
-                ret[f'introductions_postscreen_{stype}'].append( intr_postscreen )
-                ret['introductions_postscreen'].append(intr_postscreen)
-                ret['first_infectious_day_at_school'].append([o['First infectious day at school'] for o in stats['outbreaks'] if o['First infectious day at school'] is not None])
-                ret['introductions_postscreen_per_100_students'].append( intr_postscreen / stats['num']['students'] * 100 )
-                ret['outbreak_size'] += [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in stats['outbreaks']]
-                ret['n_infected_by_seed'] += [ob['Num infected by seed'] for ob in stats['outbreaks'] if 'Num infected by seed' in ob]
+                ret[f'introductions_{stype}'].append( len(outbreaks) )
+                ret['introductions_per_100_students'].append( len(outbreaks) / stats['num']['students'] * 100 )
+
+                # Insert at beginning for efficiency
+                ret['first_infectious_day_at_school'][0:0] = [o['First infectious day at school'] for o in outbreaks]
+                ret['outbreak_size'][0:0] = [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in outbreaks]
+                ret['n_infected_by_seed'] += [ob['Num infected by seed'] for ob in outbreaks if ob['Seeded']]
+
+                ret['exports_to_hh'] += [ob['Exports to household'] for ob in outbreaks]
 
                 # Origin analysis
-                for ob in stats['outbreaks']:
+                for ob in outbreaks:
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #if not ob['Complete']:
                     #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
-
-                    if ob['Total infectious days at school']==0:# or ob['Infected Students']+ob['Infected Teachers']+ob['Infected Staff']<2:
-                        # Only count outbreaks in which an infectious person was physically at school
-                        continue
 
                     for origin_type, lay in zip(ob['Origin type'], ob['Origin layer']):
                         #self.origin.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], origin_type, lay])
@@ -181,15 +178,13 @@ class Analysis():
                             #self.detected.append([sid, stats['type'], ret['Scenario'], ret['Dx Screening'], ret['Prevalence Target'], first[1]['type'], 'Unknown'])
                             detected_origin_type = first[1]['type']
                             ret[f'diagnosed_origin_{detected_origin_type}'] += 1
-                            ret['introduction_first_day_at_school'].append(ob['First infectious day at school'])
-                            ret['introduction_size'].append(ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'])
+                            #ret['introduction_size'].append(ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'])
                             ret['complete'].append(float(ob['Complete']))
 
             for stype in stypes:
                 ret[f'{stype}_perc_d1'] = 100 * n_schools_with_inf_d1[stype] / n_schools[stype]
                 # Sums, won't allow for full bootstrap resampling!
                 ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
-                ret[f'introductions_postscreen_sum_{stype}'] = np.sum(ret[f'introductions_postscreen_{stype}'])
                 ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
 
             # Deciding between district and school perspective here
@@ -207,11 +202,10 @@ class Analysis():
         # Wrangling - build self.results from self.raw
         stypes = ['es', 'ms', 'hs']
         if outputs == None:
-            outputs = ['outbreak_size', 'introductions_postscreen_per_100_students', 'introductions_per_100_students']
+            outputs = ['outbreak_size', 'introductions_per_100_students', 'exports_to_hh']
             outputs += [f'introductions_{stype}' for stype in stypes]
-            outputs += [f'introductions_postscreen_{stype}' for stype in stypes]
             outputs += [f'susceptible_person_days_{stype}' for stype in stypes]
-            outputs += ['introduction_first_day_at_school', 'introduction_size', 'complete']
+            outputs += ['first_infectious_day_at_school', 'complete']
 
         self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
             .set_index(['indicator']+keys)['value'] \
@@ -222,7 +216,7 @@ class Analysis():
         self.results.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
 
         # Separate because different datatype (ndarray vs float)
-        outputs_ts = ['cum_incidence', 'first_infectious_day_at_school', 'n_infected_by_seed']
+        outputs_ts = ['cum_incidence', 'n_infected_by_seed']
         self.results_ts = pd.melt(self.raw, id_vars=keys, value_vars=outputs_ts, var_name='indicator', value_name='value') \
             .set_index(['indicator']+keys)['value'] \
             .apply(func=lambda x: pd.Series(x)) \
@@ -256,10 +250,10 @@ class Analysis():
 
     def outbreak_size_over_time(self, rowvar=None, colvar=None):
         d = self.results \
-            .loc[['introduction_first_day_at_school', 'introduction_size', 'complete']] \
+            .loc[['first_infectious_day_at_school', 'outbreak_size', 'complete']] \
             .unstack('indicator')['value']
 
-        g = sns.lmplot(data=d.reset_index(), x='introduction_first_day_at_school', y='introduction_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
+        g = sns.lmplot(data=d.reset_index(), x='first_infectious_day_at_school', y='outbreak_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
         return g
 
@@ -317,7 +311,7 @@ class Analysis():
         if huevar is not None and huevar != 'stype':
             cols.append(huevar)
         for i, stype in enumerate(stypes):
-            num = factor * self.raw.groupby(cols)[f'introductions_postscreen_sum_{stype}'].sum() # without 'Replicate' in index, summing over replicates
+            num = factor * self.raw.groupby(cols)[f'introductions_sum_{stype}'].sum() # without 'Replicate' in index, summing over replicates
             den = self.raw.groupby(cols)[f'susceptible_person_days_sum_{stype}'].sum()
             tmp = num/den
             tmp.name=f'Introduction rate (per {factor} person-days)'
@@ -340,7 +334,7 @@ class Analysis():
 
         # Just plotting the mean:
         stypes = ['es', 'ms', 'hs']
-        num_cols = [f'introductions_postscreen_sum_{stype}' for stype in stypes]
+        num_cols = [f'introductions_sum_{stype}' for stype in stypes]
         den_cols = [f'susceptible_person_days_sum_{stype}' for stype in stypes]
 
         factor = 100_000
@@ -364,7 +358,7 @@ class Analysis():
     def introductions_reg(self, xvar, huevar, order=2):
         ##### Introductions
         cols = [xvar] if huevar is None else [xvar, huevar]
-        d = self.results.loc['introductions_postscreen_per_100_students'].reset_index(cols)#.loc[:,[cols]+['value']]
+        d = self.results.loc['introductions_per_100_students'].reset_index(cols)#.loc[:,[cols]+['value']]
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=10, x_estimator=np.mean, order=order, legend_out=False)
         #ax = g.axes.flat[0]
         #sns.relplot(data=d, x=xvar, y='value', hue=huevar, ax=ax)
@@ -381,10 +375,24 @@ class Analysis():
         cols = [xvar] if huevar is None else [xvar, huevar]
         d = self.results.loc['outbreak_size'].reset_index(cols)#[[xvar, huevar, 'value']]
         g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
-        #sns.lmplot(data=d, x=xvar, y='value', hue=huevar, markers='.', x_jitter=0.02, height=10, order=order, legend_out=False)
-        g.set(ylim=(1,None))
+        g.set(ylim=(0,None))
         g.set_ylabels('Outbreak size, including source')
+
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        return g
+
+    def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
+        ##### Outbreak size
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        d = self.results.loc['exports_to_hh'].reset_index(cols)#[[xvar, huevar, 'value']]
+        print(d.dtypes)
+        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
+        g.set(ylim=(0,None))
+        g.set_ylabels('Exports to HH')
+        plt.tight_layout()
+
+        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
@@ -399,8 +407,9 @@ class Analysis():
         g.set_ylabels('Basic reproduction number in school')
         plt.tight_layout()
 
-        plt.show()
-        exit()
+        fn = 'OutbreakR0.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        return g
 
 
     def timeseries(self, channel, label, normalize):
