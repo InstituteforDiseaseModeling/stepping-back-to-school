@@ -2,12 +2,16 @@
 Introduction analysis sweeping over several prevalence levels
 '''
 
+import sys
+import os
 import argparse
-from run import Run
-import numpy as np
+import matplotlib.pyplot as plt
 import utils as ut
+import config as cfg
+from run import Run
 
 alt_sus = False
+
 
 class Baseline(Run):
     def build_configs(self):
@@ -18,6 +22,7 @@ class Baseline(Run):
 
         return super().build_configs()
 
+
 if __name__ == '__main__':
 
     cfg.process_inputs(sys.argv)
@@ -26,12 +31,13 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
 
+    # Optional overrides
     sweep_pars = dict(
-        n_reps = cfg.config.n_reps, # 5,
-        n_prev = cfg.config.n_seeds, # 20,
-        screen_keys = ['None'],
+        # n_reps = 5,
+        # n_prev = 20,
+        # screen_keys = ['None'],
     )
-    pop_size = cfg.config.pop_size
+    pop_size = cfg.sim_pars.pop_size
 
     runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
     runner.run(args.force)
@@ -49,7 +55,7 @@ if __name__ == '__main__':
 
     plt.grid()
     print(os.path.join(analyzer.imgdir, fn))
-    cv.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
+    plt.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
 
     analyzer.cum_incidence(colvar='Prevalence Target')
     analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)

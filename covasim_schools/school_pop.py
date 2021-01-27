@@ -8,7 +8,16 @@ import sciris as sc
 import covasim as cv
 import synthpops as sp
 
-def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, popfile=None, cohorting=True, n_brackets=20, community_contacts=20,**kwargs):
+
+def pop_path(popfile=None, folder=None, strategy=None, n=None, rand_seed=None):
+    ''' Define the path for the population '''
+    if popfile is None:
+        name = f'seattle_{strategy}_{int(n)}_seed{rand_seed}.ppl'
+        popfile = os.path.join(folder, name)
+    return popfile
+
+
+def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, folder='inputs', popfile=None, cohorting=True, n_brackets=20, community_contacts=20,**kwargs):
     '''
     Generate the synthpops population.
 
@@ -17,6 +26,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
         rand_seed (int): random seed to use for generating the population
         max_pop_seeds (int): if supplied, take the random seed as modulus of this to limit number of populations generated
         do_save (bool): whether to save the population
+        folder (str): if so, the root folder
         popfile (str): if so, where to save it to
         cohorting (bool): whether to use cohorting
         n_brackets (int): whether to use 16- or 20-bracket age bins
@@ -35,7 +45,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
         average_LTCF_degree = 20,
         ltcf_staff_age_min = 20,
         ltcf_staff_age_max = 60,
-        
+
         country_location = 'usa',
         state_location = 'Washington',
         location = 'seattle_metro',
@@ -80,8 +90,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
         pars.school_mixing_type = {'pk': 'age_clustered', 'es': 'age_clustered', 'ms': 'age_clustered',
                               'hs': 'random', 'uv': 'random'}
 
-    if popfile is None:
-        popfile = os.path.join('inputs', f'kc_{strategy}_{int(pars.n)}_seed{pars.rand_seed}.ppl')
+    popfile = pop_path(popfile, folder, strategy, pars.n, pars.rand_seed)
 
     T = sc.tic()
     print('Making population...')
@@ -116,28 +125,21 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
             elif person['sc_staff'] is not None:
                 staff_flag[uid] = True
 
-    popdict['school_id'] = np.array(school_ids)
-    popdict['schools'] = schools
-    popdict['teacher_flag'] = teacher_flag
-    popdict['student_flag'] = student_flag
-    popdict['staff_flag'] = staff_flag
-    popdict['school_types'] = school_types
-    popdict['school_type_by_person'] = school_type_by_person
-
-    assert sum(popdict['teacher_flag']), 'Uh-oh, no teachers were found: as a school analysis this is treated as an error'
-    assert sum(popdict['student_flag']), 'Uh-oh, no students were found: as a school analysis this is treated as an error'
+    assert sum(teacher_flag), 'Uh-oh, no teachers were found: as a school analysis this is treated as an error'
+    assert sum(student_flag), 'Uh-oh, no students were found: as a school analysis this is treated as an error'
 
     # Actually create the people
     people_pars = dict(
         pop_size = pars.n,
-        beta_layer = {k:1.0 for k in 'hswcl'}, # Since this is used to define hat layers exist
+        beta_layer = {k:1.0 for k in 'hswcl'}, # Since this is used to define what layers exist
         beta = 1.0, # TODO: this is required for plotting (people.plot()), but shouldn't be
     )
+
     people = cv.People(people_pars, strict=False, uid=popdict['uid'], age=popdict['age'], sex=popdict['sex'],
-                          contacts=popdict['contacts'], school_id=popdict['school_id'],
-                          schools=popdict['schools'], school_types=popdict['school_types'],
-                          student_flag=popdict['student_flag'], teacher_flag=popdict['teacher_flag'],
-                          staff_flag=popdict['staff_flag'], school_type_by_person=popdict['school_type_by_person'])
+                          contacts=popdict['contacts'], school_id=np.array(school_ids),
+                          schools=schools, school_types=school_types,
+                          student_flag=student_flag, teacher_flag=teacher_flag,
+                          staff_flag=staff_flag, school_type_by_person=school_type_by_person)
 
     if do_save:
         print(f'Saving to "{popfile}"...')

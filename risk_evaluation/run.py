@@ -1,11 +1,3 @@
-'''
-This is the main script used for commissioning the different testing scenarios
-(defined in testing_scenarios.py) for the paper results. Run this script first
-(preferably on an HPC!), then run the different plotting scripts. Each sim takes
-about 1 minute to run. With full settings, there are about 1300 scripts to run;
-the test run uses 8.
-'''
-
 import os
 import numpy as np
 import covasim as cv
@@ -18,51 +10,45 @@ import utils as ut
 import config as cfg
 
 class Run:
+    '''
+    This is the main class used for commissioning the different testing scenarios
+    (defined in testing_scenarios.py) for the paper results. Run this script first
+    (preferably on an HPC!), then run the different plotting scripts. Each sim takes
+    about 1 minute to run. With full settings, there are about 1300 scripts to run;
+    the test run uses 8.
+    '''
+
     def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None):
         # Check that versions are correct
-        cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sc.gitinfo(sp.__file__)})
+        sp_gitinfo = sc.gitinfo(sp.__file__)
+        sp_ver = sp.__version__
+        sp_expected = '1.4.0'
+        if sc.compareversions(sp_ver, sp_expected) < 0:
+            errormsg = f'This code is designed to work with SynthPops >= {sp_expected}, but you have {sp_ver}'
+            raise ImportError(errormsg)
+        cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sp_gitinfo})
 
         self.name = self.__class__.__name__ if name is None else name
         self.sims = None  # To be run or loaded by calling run()
         self.analyzer=None
 
         # TODO: move to defaults
-        self.sim_pars = cfg.config.sim_pars
+        self.sim_pars = sc.dcp(cfg.config.sim_pars)
         if sim_pars is not None:
             self.sim_pars.update(sim_pars)
 
-        self.sweep_pars = {
-            'folder':            'v2021-January',
-            'schcfg_keys':       ['with_countermeasures'],
-            'screen_keys':       ['None'],
-            'school_start_date': '2021-02-01', # first day of school
-            'school_seed_date':  None,
-            'n_reps':            1,
-            #'n_prev':           4,
-            'prev':              [0.01],
-            'pop_size':          self.sim_pars['pop_size'],
-        }
-
-        if 'n_prev' in sweep_pars and 'prev' not in sweep_pars:
-            sweep_pars['prev'] = np.linspace(0.002, 0.02, sweep_pars['n_prev'])
-
+        self.sweep_pars = sc.dcp(cfg.sweep_pars)
+        if isinstance(sweep_pars, dict) and 'n_prev' in sweep_pars and 'prev' not in sweep_pars:
+            sweep_pars['prev'] = np.linspace(0.002, 0.02, sweep_pars['n_prev']) # NB, this might create subtle bugs
         if sweep_pars is not None:
             self.sweep_pars.update(sweep_pars)
 
-        self.stem = f'{self.name}_{self.sim_pars["pop_size"]}_{self.sweep_pars["n_reps"]}reps'
-        self.cachefn = os.path.join(self.sweep_pars['folder'], 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
-        self.imgdir = os.path.join(self.sweep_pars['folder'], 'img_'+self.stem)
+        self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
+        self.cachefn = os.path.join(self.sweep_pars.folder, 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
+        self.imgdir = os.path.join(self.sweep_pars.folder, 'img_'+self.stem)
 
         # TODO: make default config`, update with user config
-        self.run_pars = {
-            'folder':       self.sweep_pars['folder'],
-            'n_cpus':       None, # Manually set the number of CPUs -- otherwise calculated automatically
-            'cpu_thresh':   0.95, # Don't use more than this amount of available CPUs, if number of CPUs is not set
-            'mem_thresh':   0.80, # Don't use more than this amount of available RAM, if number of CPUs is not set
-            'parallel':     True, # Only switch to False for debugging
-            'shrink':       True, #
-            'verbose':      0.1 # Print progress this fraction of simulated days (1 = every day, 0.1 = every 10 days, 0 = no output)
-        }
+        self.run_pars = sc.dcp(cfg.run_pars)
         if run_pars is not None:
             self.run_pars.update(run_pars)
 
@@ -70,7 +56,8 @@ class Run:
 
 
     def build_configs(self):
-        # Build simulation configuration
+        ''' Build simulation configuration '''
+
         sc.heading('Creating sim configurations...')
 
         # Add prevalence levels
@@ -90,10 +77,13 @@ class Run:
 
 
     def analyze(self):
+        ''' Create (and run) the analysis '''
         self.analyzer = an.Analysis(self.sims, self.imgdir)
         return self.analyzer
 
     def regplots(self, xvar, huevar, ts_plots=None, order=2):
+        ''' Generate regular plots '''
+
         if self.analyzer is None:
             self.analyze()
 
@@ -104,6 +94,8 @@ class Run:
 
 
     def tsplots(self, ts_plots=None):
+        ''' Generate time series plots '''
+
         print('Generating timeseries plots, these take a few minutes...')
         if self.analyzer is None:
             self.analyze()
@@ -117,7 +109,8 @@ class Run:
             ]
         self.analyzer.plot_several_timeseries(ts_plots)
 
-    def run(self, force):
+    def run(self, force=False):
+        ''' Run the sims, or load them from disk '''
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
             self.sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?

@@ -21,8 +21,8 @@ if __name__ == '__main__':
 
     cfg.process_inputs(sys.argv)
 
-    pop_size = cfg.config.pop_size
-    n_seeds = cfg.config.n_seeds
+    pop_size = cfg.sim_pars.pop_size
+    n_seeds = cfg.sweep_pars.n_seeds
     seeds = range(n_seeds)
     parallelize = True
 
