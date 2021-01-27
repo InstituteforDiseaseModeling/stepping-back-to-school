@@ -1,12 +1,9 @@
 '''
-Pre-generate the synthpops population including school types. Takes ~10s per seed
-if running with 20,000 people; or roughly 10 times longer for 223,000 people.
+Pre-generate the synthpops population including school types. Takes ~15s per seed
+if running with 50,000 people; or roughly 5 times longer for 223,000 people.
 
-After running this script, you will need to manually move the files generated in
-the inputs folder into the main results folder (v20201009).
-
-Warning: this script is quite memory intensive. If you do not have much RAM, you may
-wish to turn off parallelization.
+Warning: this script is quite memory intensive. It should pick the right degree
+of parallelization so you do not run out of RAM, but be warned.
 '''
 
 import sys
@@ -32,7 +29,7 @@ if __name__ == '__main__':
         ram = psutil.virtual_memory().available/1e9
         max_cpus = psutil.cpu_count()
         max_parallel = min(max_cpus, n_seeds)
-        required = 2.0*pop_size/225e3 # 1 GB per 225e3 people
+        required = 1.5*pop_size/223e3 # 1.5 GB per 223e3 people
         max_required = max_parallel*required
         if max_required < ram:
             print(f'You have {ram:0.1f} GB of RAM, and this is estimated to require {max_required:0.1f} GB: you should be fine')
