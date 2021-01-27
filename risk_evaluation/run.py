@@ -48,11 +48,12 @@ class Run:
         if run_pars is not None:
             self.run_pars.update(run_pars)
 
+        self.paths = sc.dcp(cfg.paths)
         self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
-        self.cachefn = os.path.join(self.run_pars.folder, 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
-        self.imgdir = os.path.join(self.run_pars.folder, 'img_'+self.stem)
+        self.cachefn = os.path.join(self.paths.outputs, 'sims', f'{self.stem}.sims') # Might need to change the extension here, depending in combine.py was used
+        self.imgdir = os.path.join(self.paths.outputs, 'img_'+self.stem)
 
-        self.builder = bld.Builder(self.sim_pars, self.sweep_pars['schcfg_keys'], self.sweep_pars['screen_keys'], self.sweep_pars['school_start_date'], self.sweep_pars['school_seed_date']) # Just pass in sweep_pars?
+        self.builder = bld.Builder(self.sim_pars, self.sweep_pars, self.paths)
 
         return
 

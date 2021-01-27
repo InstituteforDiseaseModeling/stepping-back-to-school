@@ -37,7 +37,6 @@ sweep_pars = sc.objdict(
 )
 
 run_pars = sc.objdict(
-    folder     = 'v2021-January', # Folder for outputs
     n_cpus     = None, # Manually set the number of CPUs -- otherwise calculated automatically
     cpu_thresh = 0.95, # Don't use more than this amount of available CPUs, if number of CPUs is not set
     mem_thresh = 0.80, # Don't use more than this amount of available RAM, if number of CPUs is not set
@@ -45,6 +44,12 @@ run_pars = sc.objdict(
     shrink     = True, # Whether to remove the people from the sim objects (makes for smaller files)
     verbose    = 0.1 # Print progress this fraction of simulated days
 )
+
+paths = sc.objdict(
+    outputs = 'v2021-January', # Folder for outputs
+    ei     = 'fit_EI.obj',
+    ir     = 'fit_IR.obj',
+    )
 
 
 def process_inputs(argv):
