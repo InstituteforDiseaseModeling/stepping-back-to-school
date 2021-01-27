@@ -22,13 +22,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     sweep_pars = {
-        'n_reps':       5,
-        'n_prev':       2,
+        'n_reps':       1,
+        'n_prev':       3,
         'screen_keys':  ['None'],
         'schcfg_keys':  ['k5']
     }
 
-    sim_pars = dict(pop_size=223_000, end_day='2021-04-30')
+    sim_pars = dict(pop_size=100_000, end_day='2021-04-30')
     runner = Debug(sweep_pars=sweep_pars, sim_pars=sim_pars)
     runner.run(args.force)
     analyzer = runner.analyze()
