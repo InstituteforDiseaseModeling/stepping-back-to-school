@@ -35,6 +35,15 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
         average_LTCF_degree = 20,
         ltcf_staff_age_min = 20,
         ltcf_staff_age_max = 60,
+        
+        country_location = 'usa',
+        state_location = 'Washington',
+        location = 'seattle_metro',
+        use_default = True,
+
+        smooth_ages = True,  # use smooth_ages to smooth out the binned age distribution
+        window_length = 7,  # length of window in units of years to average binned age distribution over
+        household_method = 'fixed_ages',  # use fixed_ages to match different age distributions more closely
 
         with_school_types = True,
         average_class_size = 20,
@@ -44,8 +53,11 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, pop
         teacher_age_min = 25,
         teacher_age_max = 75,
 
+        # If True, the average_all_staff_ratio must be lower than the
+        # average_student_teacher_ratio since all staff includes both teachers
+        # and non teaching staff and so the ratio should be lower. If False, no
+        # non teaching staff will be created in schools.
         with_non_teaching_staff = True,
-        # if with_non_teaching_staff is False, but generate is True, then ,average_all_staff_ratio should be average_student_teacher_ratio or 0
         average_student_all_staff_ratio = 11,
         average_additional_staff_degree = 20,
         staff_age_min = 20,
