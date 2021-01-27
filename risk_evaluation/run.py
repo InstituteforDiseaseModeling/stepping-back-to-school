@@ -7,7 +7,6 @@ the test run uses 8.
 '''
 
 import os
-import argparse
 import numpy as np
 import covasim as cv
 import sciris as sc
@@ -16,6 +15,7 @@ import covasim_schools as cvsch
 import builder as bld
 import analysis as an
 import utils as ut
+import config as cfg
 
 class Run:
     def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None):
@@ -27,19 +27,7 @@ class Run:
         self.analyzer=None
 
         # TODO: move to defaults
-        self.sim_pars = {
-            'pop_size':     100_000,
-            'verbose':      0.1,
-            'pop_infected': 100,
-            'change_beta':  1,
-            'symp_prob':    0.08,
-            'asymp_factor': 0.8,
-            'start_day':    '2020-12-15', # First day of sim
-            'end_day':      '2021-02-26', #2021-04-30', # Last day of sim
-            'pop_scale':    1,
-            'pop_type':     'synthpops',
-            'rescale':      False, # True causes problems
-        }
+        self.sim_pars = cfg.config.sim_pars
         if sim_pars is not None:
             self.sim_pars.update(sim_pars)
 

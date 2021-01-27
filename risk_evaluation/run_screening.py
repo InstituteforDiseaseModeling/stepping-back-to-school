@@ -4,8 +4,7 @@ Run a varitey of sceening scenarios at a few prevalence levels
 
 import argparse
 from run import Run
-import numpy as np
-import utils as ut
+
 
 class Screening(Run):
     def build_configs(self):
