@@ -3,6 +3,7 @@ Main script to create a simulation, the base on which analysis is conducted.
 Used in calibration and other downstream activities.
 '''
 
+import os
 import covasim as cv
 import sciris as sc
 import covasim_schools as cvsch
@@ -113,7 +114,11 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, loa
     if load_pop: # Load from disk -- normal usage
         pop_seed = p.rand_seed % max_pop_seeds
         popfile = cvsch.pop_path(popfile=None, folder='inputs', strategy='clustered', n=pop_size, rand_seed=pop_seed)
-        print(f'Note: loading population from {popfile}')
+        if os.path.exists(popfile):
+            print(f'Loading population from {popfile}')
+        else:
+            errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
+            raise FileNotFoundError(errormsg)
     elif people is not None: # People is supplied; use that
         popfile = people
         print('Note: using supplied people')
