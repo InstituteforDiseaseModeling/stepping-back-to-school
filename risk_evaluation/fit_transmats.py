@@ -3,12 +3,11 @@ The covasim_controller relies on a SEIR representation of the system.  The laten
 '''
 
 import argparse
-import scipy.optimize as spo
 import os
 import sciris as sc
-import covasim as cv
-from risk_evaluation import create_sim as cs
 import covasim_controller as cvc
+from risk_evaluation import create_sim as cs
+import config as cfg
 
 cachefn = 'sim.obj'
 pop_size = 500_000
@@ -21,7 +20,8 @@ params = {
 }
 
 
-def fit(force_run):
+def fit(force_run=False):
+
     if force_run or not os.path.isfile(cachefn):
         sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
         sim.pars['interventions'] = [] # Remove interventions
@@ -30,7 +30,7 @@ def fit(force_run):
         sim.save(cachefn, keep_people=True)
         print(f'Saving a rather large cache file, feel free to delete: {cachefn}')
     else:
-        sim = cv.load(cachefn)
+        sim = sc.loadobj(cachefn)
 
     inds = ~sim.people.susceptible
     print(f'There were {sum(inds)} exposures')
@@ -39,19 +39,18 @@ def fit(force_run):
     e_to_i = sim.people.date_infectious[inds] - sim.people.date_exposed[inds]
     ei = cvc.TransitionMatrix(e_to_i, 3)
     ei.fit()
-    sc.saveobj('EI.obj', ei)
+    sc.saveobj(cfg.paths.ei, ei)
     fig = ei.plot()
 
     etoi_fn = 'EtoI.png'
     print(f'Saving E-->I figure to {etoi_fn}')
     fig.savefig(etoi_fn, dpi=300)
 
-
     print('Evaluating I-->R')
     i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
     ir = cvc.TransitionMatrix(i_to_r, 7)
     ir.fit()
-    sc.saveobj('IR.obj', ir)
+    sc.saveobj(cfg.paths.ir, ir)
     fig = ir.plot()
 
     itor_fn = 'ItoR.png'

@@ -41,7 +41,7 @@ Python >=3.6 (64-bit). (Note: Python 2 is not supported, and only Python >=3.8 h
    python setup.py develop
    ```
 
-3. Install this package, CovasimSchools (which will also install [Covasim](https://covasim.org) and [Optuna](https://optuna.org)):
+3. Install this package (which will also install [Covasim](https://covasim.org)):
 
    ```
    git clone https://github.com/InstituteforDiseaseModeling/inside-schools
@@ -61,7 +61,7 @@ Python >=3.6 (64-bit). (Note: Python 2 is not supported, and only Python >=3.8 h
 
 ## Usage
 
-TBC -- deprecated
+**TBC -- deprecated**
 
 Scripts in the `testing_the_waters` folder produce the results presented in the [Testing the waters: time to go back to school?](https://covid.idmod.org/data/Testing_the_waters_time_to_go_back_to_school.pdf) modeling report.  Results come from the following high-level steps:
 

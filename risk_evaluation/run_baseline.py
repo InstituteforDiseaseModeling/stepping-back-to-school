@@ -1,17 +1,21 @@
 '''
-Introduction analysis sweeping over several prevalence levels
+Introduction analysis sweeping over several prevalence levels.
+
+Example usage, forcing new results and using a 4 different seeds:
+
+    python run_baseline.py --force --n_reps=4
+
 '''
 
-import argparse
-from run import Run
-import numpy as np
-import utils as ut
-
-import covasim as cv
+import sys
 import os
 import matplotlib.pyplot as plt
+import utils as ut
+import config as cfg
+from run import Run
 
 alt_sus = False
+
 
 class Baseline(Run):
     def build_configs(self):
@@ -22,18 +26,20 @@ class Baseline(Run):
 
         return super().build_configs()
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--force', action='store_true')
-    args = parser.parse_args()
 
-    sweep_pars = {
-        'n_reps':       1, # 5
-        'n_prev':       4, # 20
-        'screen_keys':  ['None'],
-    }
+    args = cfg.process_inputs(sys.argv)
 
-    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=100_000)) # 223_000
+    # Optional overrides
+    sweep_pars = dict(
+        # n_reps = 5,
+        # n_prev = 20,
+        # screen_keys = ['None'],
+    )
+    pop_size = cfg.sim_pars.pop_size
+
+    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
     runner.run(args.force)
     analyzer = runner.analyze()
 
@@ -49,13 +55,15 @@ if __name__ == '__main__':
 
     plt.grid()
     print(os.path.join(analyzer.imgdir, fn))
-    cv.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
-    ###
+    plt.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
 
-    analyzer.cum_incidence(colvar='Prevalence Target')
-    analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
-    analyzer.outbreak_size_over_time()
-    analyzer.source_pie()
-    analyzer.source_dow(figsize=(6.5,5))
+    try:
+        analyzer.cum_incidence(colvar='Prevalence Target')
+        analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
+        analyzer.outbreak_size_over_time()
+        analyzer.source_pie()
+        analyzer.source_dow(figsize=(6.5,5))
+        runner.tsplots()
+    except Exception as E:
+        print(f'Could not run some plots: {str(E)}')
 
-    runner.tsplots()

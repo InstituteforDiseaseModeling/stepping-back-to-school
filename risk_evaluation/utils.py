@@ -1,4 +1,7 @@
-import os
+'''
+Utility functions for adjusting symptomaticity, running the sims, etc.
+'''
+
 import psutil
 import sciris as sc
 import covasim as cv
@@ -31,6 +34,7 @@ def alternate_symptomaticity(config, key, value):
 
     return config
 
+
 def alternate_symptomaticity_djk(config, key, value):
     print(f'Building alternate symptomaticity {key}={value}')
     if not value: # Only build if value is True
@@ -57,7 +61,6 @@ def alternate_symptomaticity_djk(config, key, value):
     return config
 
 
-
 def children_equally_sus(config, key, value):
     print(f'Building children equally susceptibility {key}={value}')
     if not value: # Only build if value is True
@@ -73,13 +76,14 @@ def children_equally_sus(config, key, value):
 def p2f(x):
     return float(x.strip('%'))/100
 
+
 #%% Running
 def create_run_sim(sconf, n_sims, run_config):
     ''' Create and run the actual simulations '''
     print(f'Creating and running sim {sconf.count} of {n_sims}...')
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, folder=run_config['folder'], max_pop_seeds=20)
+    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=20)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
@@ -98,7 +102,7 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
-    sc.heading('Choosing correct number of CPUs...')
+    sc.heading('Choosing correct number of CPUs...') # TODO: merge with create_pops.py
     if n_cpus is None:
         cpu_limit = int(mp.cpu_count()*run_cfg['cpu_thresh']) # Don't use more than 75% of available CPUs
         ram_available = psutil.virtual_memory().available/1e9

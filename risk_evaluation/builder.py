@@ -2,10 +2,8 @@
 Build simulations
 '''
 
-import covasim_schools as cvsch
-import covasim_controller as cvc
-import covasim as cv
 import sciris as sc
+import covasim_controller as cvc
 import scenarios as scn
 
 class Config:
@@ -22,27 +20,31 @@ class Config:
         self.count = 0
 
     def __repr__(self):
-        return '\n' + '-'*80 + '\n'+ f'Configuration {self.label}:\n\
- * Tags: {self.tags}\n\
- * Pars: {self.sim_pars}\n\
- * School config: {self.school_config}\n\
- * Num interventions: {len(self.interventions)}'
+        return f'''
+{'-'*80}
+Configuration {self.label}:
+ * Tags: {self.tags}
+ * Pars: {self.sim_pars}
+ * School config: {self.school_config}
+ * Num interventions: {len(self.interventions)}
+ '''
 
 
 class Builder:
-    def __init__(self, sim_pars, schcfg_keys, screen_keys, school_start_date, school_seed_date=None):
-        self.configs = [Config(sim_pars=sim_pars, tags=dict(school_start_date=school_start_date))]
+    def __init__(self, sim_pars, sweep_pars, paths):
+
+        self.configs = [Config(sim_pars=sim_pars, tags=dict(school_start_date=sweep_pars.school_start_date))]
 
         # These come from fit_transmats - don't like loading multiple times
-        self.ei = sc.loadobj('EI.obj')
-        self.ir = sc.loadobj('IR.obj')
+        self.ei = sc.loadobj(paths.ei)
+        self.ir = sc.loadobj(paths.ir)
 
-        all_scen = scn.generate_scenarios(start_date=school_start_date, seed_date=school_seed_date) # Can potentially select a subset of scenarios
-        scens = {k:v for k,v in all_scen.items() if k in schcfg_keys}
+        all_scen = scn.generate_scenarios(start_date=sweep_pars.school_start_date, seed_date=sweep_pars.school_seed_date) # Can potentially select a subset of scenarios
+        scens = {k:v for k,v in all_scen.items() if k in sweep_pars.schcfg_keys}
         self.add_level('scen_key', scens, self.scen_func)
 
-        all_screenings = scn.generate_screening(school_start_date) # Potentially select a subset of diagnostic screenings
-        screens = {k:v for k,v in all_screenings.items() if k in screen_keys}
+        all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
+        screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
         # Would like to reuse screenpars_func here
         def screen_func(config, key, test):
             print(f'Building screening parameter {key}={test}')
