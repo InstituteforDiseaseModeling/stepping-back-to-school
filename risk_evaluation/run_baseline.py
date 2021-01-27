@@ -25,11 +25,7 @@ class Baseline(Run):
 
 if __name__ == '__main__':
 
-    cfg.process_inputs(sys.argv)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--force', action='store_true')
-    args = parser.parse_args()
+    args = cfg.process_inputs(sys.argv)
 
     # Optional overrides
     sweep_pars = dict(

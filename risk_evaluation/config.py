@@ -2,6 +2,7 @@
 Set global configurations for the runs
 '''
 
+import argparse
 import sciris as sc
 
 # Default settings are for debug runs
@@ -54,21 +55,30 @@ paths = sc.objdict(
 
 def process_inputs(argv):
     ''' Handle command-line input arguments '''
-    if len(argv)>1:
-        arg1 = argv[1]
-        if arg1 == 'debug':
-            return set_debug()
-        elif arg1 == 'full':
-            return set_full()
-        else:
-            sim_pars.pop_size = 1000*int(arg1)
-    if len(argv)>2:
-        sweep_pars.n_seeds = int(argv[2])
-    return
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--force', action='store_true')
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--full', action='store_true')
+    parser.add_argument('--pop_size', type=int, default=0)
+    parser.add_argument('--n_seeds', type=int, default=0)
+    args = parser.parse_args(argv[1:])
+
+    if args.debug:
+        set_debug()
+    elif args.full:
+        set_full()
+
+    if args.pop_size:
+        sim_pars.pop_size = 1000*args.pop_size
+    if args.n_seeds:
+        sweep_pars.n_seeds = args.n_seeds
+
+    return args
 
 
 def set_debug():
     ''' Reset the configuration for quick debugging runs '''
+    print('Setting run parameters for a small debugging run...')
     sweep_pars.n_reps = 3
     sweep_pars.n_seeds = 5
     sim_pars.pop_size = 50_000
@@ -77,6 +87,7 @@ def set_debug():
 
 def set_full():
     ''' Reset the configuration for the full run '''
+    print('Setting run parameters for a full run...')
     sweep_pars.n_reps = 5
     sweep_pars.n_seeds = 20
     sim_pars.pop_size = 223_000
