@@ -8,7 +8,6 @@ managers, which handle different cohorting options (and school days).
 
 import covasim as cv
 import numpy as np
-import sciris as sc
 from .controller import Controller as ct
 from .Kalman import Kalman as kf
 

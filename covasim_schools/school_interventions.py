@@ -11,7 +11,6 @@ import numpy as np
 import sciris as sc
 import pandas as pd
 import networkx as nx
-import datetime as dt
 
 
 __all__ = ['schools_manager', 'SchoolScenario', 'School', 'SchoolTesting', 'SchoolStats', 'int2key', 'groups']
