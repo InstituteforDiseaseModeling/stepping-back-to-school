@@ -17,7 +17,7 @@ from run import Run
 alt_sus = False
 
 
-class Screening(Run):
+class Scheduling(Run):
     def build_configs(self):
         # Configure alternate sus
         if alt_sus:
@@ -35,17 +35,17 @@ if __name__ == '__main__':
     sweep_pars = dict(
         # n_reps = 5,
         # n_prev = 20,
-        screen_keys =  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
+        schcfg_keys = ['as_normal', 'with_countermeasures', 'all_hybrid', 'k5'],
     )
     pop_size = cfg.sim_pars.pop_size
 
-    runner = Screening(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
+    runner = Scheduling(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
     runner.run(args.force)
     analyzer = runner.analyze()
 
-    runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
+    runner.regplots(xvar='Prevalence Target', huevar='Scenario')
 
-    analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', height=5, aspect=2, ext='_wide')
+    analyzer.introductions_rate(xvar='Prevalence Target', huevar='Scenario', height=5, aspect=2, ext='_wide')
 
 
     analyzer.cum_incidence(colvar='Prevalence Target')
