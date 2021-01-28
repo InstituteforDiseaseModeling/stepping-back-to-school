@@ -336,6 +336,7 @@ class School(sc.prettyobj):
         self.stats = SchoolStats(self, sim, save_trees)
         self.testing = SchoolTesting(self, testing, sim)
         self.empty_layer = cv.Layer() # Cache an empty layer
+
         return
 
 
@@ -770,6 +771,12 @@ class SchoolStats(sc.prettyobj):
             for cidx, c in enumerate(nx.weakly_connected_components(G)):
                 S = G.subgraph(c).copy()
                 #print('S:', S.edges.data())
+                if all([sim.people.date_recovered[int(uid)] < school.start_date for uid in S.nodes if uid in school.uids and np.isfinite(uid)]):
+                    #print(f'Skipping because all in-school nodes recovered before school started ({school.start_date})')
+                    #print(S.edges.data())
+                    assert school.sid not in [e[2]['layer'] for e in S.edges.data()]
+                    continue
+
                 total_infectious_days_at_school = 0
                 first_infectious_day_at_school = None
                 last_infectious_day_at_school = None
@@ -804,19 +811,14 @@ class SchoolStats(sc.prettyobj):
 
                 root = [n for n,d in S.in_degree() if d==0]
                 #print(f'ROOT: {root}')
-                src_edges = list(S.out_edges(root, data=True))
+                src_edges = list(S.out_edges(root, data=True)) # Could have more than one...
                 #print('SRC EDGES:', src_edges)
-
-                if all([sim.people.date_recovered[int(uid)] < school.start_date for uid in S.nodes if uid in school.uids and np.isfinite(uid)]):
-                    #print(f'Skipping because all in-school node recovered before school started ({school.start_date})')
-                    #print(S.edges.data())
-                    assert school.sid not in [e[2]['layer'] for e in S.edges.data()]
-                    continue
 
                 orig_types = []
                 #day_of_week = [] # Too slow, will compute in post
                 for e in src_edges:
                     uid = e[1] # First in-school node
+                    #print(f'First in-school node {uid}')
                     if uid in student_uids:
                         orig_types.append('Student')
                     elif uid in teacher_uids:
@@ -826,6 +828,7 @@ class SchoolStats(sc.prettyobj):
                     else:
                         # Source must be school and destination non-school?!  Skip.
                         pass
+                    #print(f'Origin type {orig_types[-1]}')
 
                     ''' TOO SLOW:
                     date_infectious = S.nodes[uid]['date_infectious']
