@@ -34,7 +34,7 @@ if __name__ == '__main__':
     sweep_pars = dict(
         # n_reps = 5,
         # n_prev = 20,
-        # screen_keys =  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
+        prev =  [0.005, 0.01],
     )
     pop_size = cfg.sim_pars.pop_size
 

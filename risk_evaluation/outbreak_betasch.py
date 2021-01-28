@@ -12,7 +12,7 @@ import numpy as np
 
 alt_sus = False
 
-class OutbreakBetaSchool(Run):
+class OutbreakBetaSchoolNoHome(Run):
     def build_configs(self):
         # Configure alternate sus
         if alt_sus:
@@ -35,7 +35,6 @@ if __name__ == '__main__':
         'n_prev':       0, # No controller
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        'n_reps':       10,
         'screen_keys':  ['None'],
         'schcfg_keys':  ['with_countermeasures'],
     }
@@ -46,10 +45,10 @@ if __name__ == '__main__':
         'pop_size': pop_size,
         'start_day': '2021-01-31',
         'end_day': '2021-08-31',
-        'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
+        'beta_layer': dict(h=0, w=0, c=0), # Turn off work and community transmission
     }
 
-    runner = OutbreakBetaSchool(sweep_pars=sweep_pars, sim_pars=sim_pars)
+    runner = OutbreakBetaSchoolNoHome(sweep_pars=sweep_pars, sim_pars=sim_pars)
     runner.run(args.force)
     analyzer = runner.analyze()
 
