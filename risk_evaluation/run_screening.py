@@ -3,7 +3,7 @@ Run a varitey of sceening scenarios at a few prevalence levels
 
 Example usage, forcing new results and using a 4 different seeds:
 
-    python run_baseline.py --force --n_reps=4
+    python run_screening.py --force --n_reps=4
 
 '''
 
@@ -15,7 +15,6 @@ import config as cfg
 from run import Run
 
 alt_sus = False
-
 
 class Screening(Run):
     def build_configs(self):

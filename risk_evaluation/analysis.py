@@ -192,6 +192,7 @@ class Analysis():
         start_day = self.sims[0].day(start_date)
         g.set(xlim=(start_day, None))
 
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=300)
         return g
 
@@ -201,6 +202,7 @@ class Analysis():
             .unstack('indicator')['value']
 
         g = sns.lmplot(data=d.reset_index(), x='first_infectious_day_at_school', y='outbreak_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
         return g
 
@@ -237,6 +239,7 @@ class Analysis():
             pie = ax.pie(row.values, explode=[0.05]*len(row), autopct='%.0f%%')
             ax.set_title(idx)
         axv[1].legend(pie[0], intr_src.columns, bbox_to_anchor=(0.0,-0.2), loc='lower center', ncol=intr_src.shape[1], frameon=True)
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=300)
         return fig
 
@@ -268,6 +271,7 @@ class Analysis():
 
         g = sns.lmplot(data=D.reset_index(), col=colvar, x=xvar, y=f'Introduction rate (per {factor} person-days)', hue=huevar, height=10)
         g.set(ylim=(0,None))
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'IntroductionRateStype.png'), dpi=300)
         return g
 
@@ -296,8 +300,8 @@ class Analysis():
         if xvar == 'Prevalence Target':
             for ax in g.axes.flat:
                 ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
-        plt.tight_layout()
         fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
@@ -323,6 +327,7 @@ class Analysis():
         g.set_ylabels('Outbreak size, including source')
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
@@ -377,6 +382,7 @@ class Analysis():
         #    ax.axhline(y=prev, ls='--')
         if normalize:
             ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=300)
         return fig
 

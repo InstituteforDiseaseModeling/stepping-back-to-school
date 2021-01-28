@@ -2,16 +2,23 @@
 Dense sweep of screen_prob at a few fixed prevalence levels.
 '''
 
-import argparse
+import sys
+import os
+import matplotlib.pyplot as plt
+import utils as ut
+import config as cfg
 from run import Run
 import numpy as np
 
-class ScreenProb(Run):
-    def __init__(self, sim_pars=None, sweep_pars=None, run_pars=None):
-        name = self.__class__.__name__
-        super().__init__(name, sim_pars, sweep_pars, run_pars)
+alt_sus = False
 
+class ScreenProb(Run):
     def build_configs(self):
+        # Configure alternate sus
+        if alt_sus:
+            value_labels = {'Yes' if p else 'No':p for p in [True]}
+            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
+
         # Sweep over symptom screening
         symp_screens = {p:{'screen_prob': p} for p in np.linspace(0, 1, 10)}
         self.builder.add_level('Screen prob', symp_screens, self.builder.screenpars_func)
@@ -20,11 +27,18 @@ class ScreenProb(Run):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--force', action='store_true')
-    args = parser.parse_args()
 
-    runner = ScreenProb(sweep_pars=dict(n_reps=3, prev=[0.005]), sim_pars=dict(pop_size=100_000), run_pars=dict(n_cpus=15))
+    args = cfg.process_inputs(sys.argv)
+
+    # Optional overrides
+    sweep_pars = dict(
+        # n_reps = 5,
+        # n_prev = 20,
+        # screen_keys =  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
+    )
+    pop_size = cfg.sim_pars.pop_size
+
+    runner = ScreenProb(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
     runner.run(args.force)
     analyzer = runner.analyze()
 
