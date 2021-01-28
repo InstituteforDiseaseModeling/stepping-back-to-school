@@ -737,6 +737,7 @@ class SchoolStats(sc.prettyobj):
                 outbreak['Last infectious day at school'] = self.infectious_days_in_school_by_uid[uid][-1] if tid > 0 else np.NaN
                 outbreak['Complete'] = sim.people.date_recovered[uid]
                 outbreak['Num infected by seed'] = 0
+                outbreak['Seeded'] = True
 
                 if self.save_trees:
                     G = nx.Graph()
