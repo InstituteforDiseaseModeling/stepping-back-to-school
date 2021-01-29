@@ -21,7 +21,7 @@ class OutbreakScreenProb(Run):
             self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
 
         # NPI / in-school transmissibility
-        npi_scens = {x:{'beta_s': 1.5*x} for x in [0.75, 0.75*1.6]}
+        npi_scens = {x:{'beta_s': 1.5*x} for x in [0.5, 0.75, 1.0, 1.25, 1.5]}
         self.builder.add_level('In-school transmission multiplier', npi_scens, self.builder.screenpars_func)
 
         # Sweep over symptom screening
