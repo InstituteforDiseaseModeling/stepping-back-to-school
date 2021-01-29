@@ -737,20 +737,22 @@ class SchoolStats(sc.prettyobj):
                 outbreak['Last infectious day at school'] = self.infectious_days_in_school_by_uid[uid][-1] if tid > 0 else np.NaN
                 outbreak['Complete'] = sim.people.date_recovered[uid]
                 outbreak['Num infected by seed'] = 0
+                outbreak['Num school people infected by seed'] = 0
+
                 outbreak['Seeded'] = True
 
                 if self.save_trees:
                     G = nx.Graph()
                     attrs = {}
                     attrs[uid] = {'type': obt}
-                    attrs['age'] = sim.people.age[uid]
-                    attrs['date_exposed'] = sim.people.date_exposed[uid]
-                    attrs['date_infectious'] = sim.people.date_infectious[uid]
-                    attrs['date_symptomatic'] = sim.people.date_symptomatic[uid]
-                    attrs['date_diagnosed'] = sim.people.date_diagnosed[uid]
-                    attrs['date_recovered'] = sim.people.date_recovered[uid]
-                    attrs['date_dead'] = sim.people.date_dead[uid]
-                    attrs['infectious_days_at_school'] = tid
+                    attrs[uid]['age'] = sim.people.age[uid]
+                    attrs[uid]['date_exposed'] = sim.people.date_exposed[uid]
+                    attrs[uid]['date_infectious'] = sim.people.date_infectious[uid]
+                    attrs[uid]['date_symptomatic'] = sim.people.date_symptomatic[uid]
+                    attrs[uid]['date_diagnosed'] = sim.people.date_diagnosed[uid]
+                    attrs[uid]['date_recovered'] = sim.people.date_recovered[uid]
+                    attrs[uid]['date_dead'] = sim.people.date_dead[uid]
+                    attrs[uid]['infectious_days_at_school'] = tid
                     G.add_node(uid)
                     nx.set_node_attributes(G, attrs)
                     outbreak['Tree'] = G
@@ -859,6 +861,8 @@ class SchoolStats(sc.prettyobj):
 
                 if school.seed_uid is not None and S.has_node(float(school.seed_uid)):
                     outbreak['Num infected by seed'] = S.out_degree(float(school.seed_uid))
+                    outbreak['Num school people infected by seed'] = len([e for e in S.edges.data() if e[0]==school.seed_uid and e[2]['layer']==school.sid])
+
                     outbreak['Seeded'] = True
                 else:
                     outbreak['Seeded'] = False

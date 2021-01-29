@@ -117,7 +117,7 @@ class Analysis():
                 ret['first_infectious_day_at_school'][0:0] = [o['First infectious day at school'] for o in outbreaks]
                 ret['outbreak_size'][0:0] = [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in outbreaks]
                 ret['complete'][0:0] = [float(ob['Complete']) for ob in outbreaks]
-                ret['n_infected_by_seed'][0:0] = [ob['Num infected by seed'] for ob in outbreaks if ob['Seeded']]
+                ret['n_infected_by_seed'][0:0] = [ob['Num school people infected by seed'] for ob in outbreaks if ob['Seeded']] # Also Num infected by seed
                 ret['exports_to_hh'][0:0] = [ob['Exports to household'] for ob in outbreaks]
 
                 for grp in ['Student', 'Teacher', 'Staff']:

@@ -12,7 +12,7 @@ import numpy as np
 
 alt_sus = False
 
-class OutbreakBetaSchoolNoHome(Run):
+class OutbreakBetaSchool(Run):
     def build_configs(self):
         # Configure alternate sus
         if alt_sus:
@@ -45,10 +45,10 @@ if __name__ == '__main__':
         'pop_size': pop_size,
         'start_day': '2021-01-31',
         'end_day': '2021-08-31',
-        'beta_layer': dict(h=0, w=0, c=0), # Turn off work and community transmission
+        'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    runner = OutbreakBetaSchoolNoHome(sweep_pars=sweep_pars, sim_pars=sim_pars)
+    runner = OutbreakBetaSchool(sweep_pars=sweep_pars, sim_pars=sim_pars)
     runner.run(args.force)
     analyzer = runner.analyze()
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     huevar=None
 
     #runner.regplots(xvar=xvar, huevar=huevar)
-    analyzer.outbreak_reg(xvar, huevar, order=5)
+    analyzer.outbreak_reg(xvar, huevar, order=2)
 
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
