@@ -2,13 +2,24 @@
 Outbreak analysis to sweep in-school transbissibility while also exploring several diagnostic screening scenarios.
 '''
 
-import argparse
+import sys
+import os
+import matplotlib.pyplot as plt
+import utils as ut
+import config as cfg
 from run import Run
 import numpy as np
-import utils as ut
+
+
+alt_sus = False
 
 class OutbreakScreening(Run):
     def build_configs(self):
+        # Configure alternate sus
+        if alt_sus:
+            value_labels = {'Yes' if p else 'No':p for p in [True]}
+            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
+
         # Sweep over NPI multipliers
         #npi_scens = {x:{'beta_s': 1.5*x} for x in [0.75, 0.75*1.6]}
         npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0.25, 2, 10)}
@@ -18,14 +29,11 @@ class OutbreakScreening(Run):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--force', action='store_true')
-    args = parser.parse_args()
+    args = cfg.process_inputs(sys.argv)
 
     sweep_pars = {
-        'n_reps': 10,
         'n_prev': 0, # No controller
-        'schcfg_keys': ['with_countermeasures'],
+        #'schcfg_keys': ['with_countermeasures'],
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
         'screen_keys': [
@@ -40,12 +48,13 @@ if __name__ == '__main__':
         ],
     }
 
+    pop_size = cfg.sim_pars.pop_size
     sim_pars = {
-        'pop_infected': 0,
-        'pop_size': 223_000,
+        'pop_infected': 0, # Do not seed
+        'pop_size': pop_size,
         'start_day': '2021-01-31',
-        'end_day': '2021-07-31',
-        'beta_layer': dict(h=0, s=0, w=0, c=0), # Turn off non-school transmission
+        'end_day': '2021-08-31',
+        'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
     runner = OutbreakScreening(sweep_pars=sweep_pars, sim_pars=sim_pars)
