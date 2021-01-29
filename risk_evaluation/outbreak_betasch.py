@@ -35,8 +35,8 @@ if __name__ == '__main__':
         'n_prev':       0, # No controller
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        'screen_keys':  ['None'],
-        'schcfg_keys':  ['with_countermeasures'],
+        #'screen_keys':  ['None'],
+        #'schcfg_keys':  ['with_countermeasures'],
     }
 
     pop_size = cfg.sim_pars.pop_size
