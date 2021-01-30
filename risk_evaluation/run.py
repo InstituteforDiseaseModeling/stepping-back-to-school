@@ -84,16 +84,15 @@ class Run:
         self.analyzer = an.Analysis(self.sims, self.dir)
         return self.analyzer
 
-    def regplots(self, xvar, huevar, ts_plots=None, order=2):
+    def regplots(self, xvar, huevar, ts_plots=None):
         ''' Generate regular plots '''
 
         if self.analyzer is None:
             self.analyze()
 
-        self.analyzer.introductions_rate(xvar, huevar, order=order)
-        self.analyzer.introductions_rate_by_stype(xvar, huevar, order=order)
-        self.analyzer.introductions_reg(xvar, huevar, order=order)
-        self.analyzer.outbreak_reg(xvar, huevar, order=order)
+        self.analyzer.introductions_rate(xvar, huevar)
+        self.analyzer.introductions_rate_by_stype(xvar)
+        self.analyzer.outbreak_reg(xvar, huevar)
 
         return
 

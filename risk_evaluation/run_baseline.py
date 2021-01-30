@@ -45,25 +45,17 @@ if __name__ == '__main__':
 
     runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
 
-    ###
-    # One-off plot for the introduction rate.
-    ext='sm'
-    g = analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', order=2, height=6, aspect=1, ext=ext)
-    g.set_xlabels('Prevalence')
-    g._legend.remove()
-    fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
+    # One-off plot for the introduction rate
+    #ext='sm'
+    #g = analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', height=6, aspect=1, ext=ext, legend=False)
+    #fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
+    #print(f'Saving introduction rate to {os.path.join(analyzer.imgdir, fn)}')
+    #plt.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
 
-    plt.grid()
-    print(os.path.join(analyzer.imgdir, fn))
-    plt.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
-
-    try:
-        analyzer.cum_incidence(colvar='Prevalence Target')
-        analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
-        analyzer.outbreak_size_over_time()
-        analyzer.source_pie()
-        analyzer.source_dow(figsize=(6.5,5))
-        runner.tsplots()
-    except Exception as E:
-        print(f'Could not run some plots: {str(E)}')
+    analyzer.cum_incidence(colvar='Prevalence Target')
+    #analyzer.introductions_rate_by_stype(xvar='Prevalence Target')
+    analyzer.outbreak_size_over_time()
+    analyzer.source_pie()
+    analyzer.source_dow(figsize=(6.5,5))
+    runner.tsplots()
 

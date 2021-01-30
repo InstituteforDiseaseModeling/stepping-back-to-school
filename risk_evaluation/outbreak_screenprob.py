@@ -59,7 +59,7 @@ if __name__ == '__main__':
     huevar='In-school transmission multiplier'
 
     #runner.regplots(xvar=xvar, huevar=huevar)
-    analyzer.outbreak_reg(xvar, huevar, order=4)
+    analyzer.outbreak_reg(xvar, huevar)
 
     analyzer.cum_incidence(colvar=xvar, rowvar=huevar)
     analyzer.outbreak_size_over_time(colvar=xvar, rowvar=huevar)

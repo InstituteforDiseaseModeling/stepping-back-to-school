@@ -33,7 +33,7 @@ if __name__ == '__main__':
     analyzer.outbreak_reg(xvar='In-school transmission multiplier', huevar=None, height=5, aspect=2, ext='_wide')
 
     analyzer.cum_incidence(colvar='In-school transmission multiplier')
-    analyzer.introductions_rate_by_stype(xvar='In-school transmission multiplier', colvar=None, huevar='stype', order=3)
+    analyzer.introductions_rate_by_stype(xvar='In-school transmission multiplier')
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
 
