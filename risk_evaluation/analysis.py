@@ -34,6 +34,7 @@ class Analysis():
 
     def __init__(self, sims, imgdir):
         self.sims = sims
+        self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
 
         self.imgdir = imgdir
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
@@ -325,7 +326,7 @@ class Analysis():
         elif xvar == 'Screen prob':
             g.set_xlabels('Daily probability of symptom screening')
 
-        labels = df.reset_index()[huevar].unique()
+        labels = df.reset_index()[huevar].unique() if huevar is not None else []
         if legend and len(labels)>1:
             #g.add_legend() # Ugh, not working due to seaborn bug
             if huevar in df.reset_index():
@@ -421,6 +422,13 @@ class Analysis():
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
 
+        if xvar == 'In-school transmission multiplier':
+            xlim = ax.get_xlim()
+            xt = np.linspace(xlim[0], xlim[1], 5)
+            ax.set_xticks( xt )
+            ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
@@ -439,12 +447,22 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
-    def outbreak_R0(self, figsize=(8,6)):
+    def outbreak_R0(self, figsize=(6*1.4,6)):
         d = self.results_ts.loc['n_infected_by_seed'].reset_index()
         d['value'] = d['value'].astype(int)
-        g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25")
+        xv = d['In-school transmission multiplier'].unique()
+        g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25", zorder=10)
         for ax in g.axes.flat:
             ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
+
+            xt = ax.get_xticks()
+            b = xv[0]
+            m = (xv[1]-xv[0]) / (xt[1]-xt[0])
+            ax.set_xticklabels( [f'{m*self.beta0*betamult + b:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+            ax.grid(color='lightgray', axis='y', zorder=-10)
+
+
         g.set_ylabels('Basic reproduction number in school')
         plt.tight_layout()
 
