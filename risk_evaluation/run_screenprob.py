@@ -42,9 +42,9 @@ if __name__ == '__main__':
     runner.run(args.force)
     analyzer = runner.analyze()
 
-    runner.regplots(xvar='Screen prob', huevar='Dx Screening')
+    runner.regplots(xvar='Screen prob', huevar='Prevalence Target')
 
-    analyzer.introductions_rate(xvar='Screen prob', huevar='Prevalence', height=5, aspect=1.4, ext='_wide')
+    #analyzer.introductions_rate(xvar='Screen prob', huevar='Prevalence', height=5, aspect=1.4, ext='_wide')
 
     analyzer.cum_incidence(colvar='Screen prob')
     analyzer.introductions_rate_by_stype(xvar='Screen prob')
