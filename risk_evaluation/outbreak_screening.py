@@ -36,16 +36,7 @@ if __name__ == '__main__':
         #'schcfg_keys': ['with_countermeasures'],
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        'screen_keys': [
-            'None',
-            'Antigen every 1w teach&staff, PCR f/u',
-            'PCR every 4w',
-            'Antigen every 4w, PCR f/u',
-            'PCR every 2w',
-            'Antigen every 2w, PCR f/u',
-            'PCR every 1w',
-            'Antigen every 1w, PCR f/u',
-        ],
+        'screen_keys':  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
     }
 
     pop_size = cfg.sim_pars.pop_size

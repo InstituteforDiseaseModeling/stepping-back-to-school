@@ -35,7 +35,8 @@ if __name__ == '__main__':
     sweep_pars = dict(
         # n_reps = 5,
         # n_prev = 20,
-        schcfg_keys = ['as_normal', 'with_countermeasures', 'all_hybrid', 'k5'],
+        #schcfg_keys = ['as_normal', 'with_countermeasures', 'all_hybrid', 'k5'],
+        schcfg_keys = ['with_countermeasures', 'all_hybrid', 'k5'],
     )
     pop_size = cfg.sim_pars.pop_size
 

@@ -35,7 +35,7 @@ if __name__ == '__main__':
         # n_reps = 5,
         # n_prev = 20,
         #screen_keys =  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
-        screen_keys =  ['None', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
+        screen_keys =  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
     )
     pop_size = cfg.sim_pars.pop_size
 
