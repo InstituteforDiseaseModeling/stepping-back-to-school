@@ -53,7 +53,7 @@ class Controller:
         last_row[:,-1] = 1
 
         # Ackermann's formula for pole placement
-        assert(ctrb.shape[0] == np.linalg.matrix_rank(ctrb))
+        #assert(ctrb.shape[0] == np.linalg.matrix_rank(ctrb))
 
         self.K = np.dot(last_row, np.dot(np.linalg.inv(ctrb), alpha_c_F)) # TODO: Solve
 

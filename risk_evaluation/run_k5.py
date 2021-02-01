@@ -1,9 +1,9 @@
 '''
-Run a varitey of sceening scenarios at a few prevalence levels
+Introduction analysis sweeping over several prevalence levels.  Similar to run_baseline.py, but this is just for K-5.
 
 Example usage, forcing new results and using a 4 different seeds:
 
-    python run_screening.py --force --n_reps=4
+    python run_k5.py --force --n_reps=4
 
 '''
 
@@ -16,7 +16,8 @@ from run import Run
 
 alt_sus = False
 
-class Screening(Run):
+
+class BaselineK5(Run):
     def build_configs(self):
         # Configure alternate sus
         if alt_sus:
@@ -34,23 +35,21 @@ if __name__ == '__main__':
     sweep_pars = dict(
         # n_reps = 5,
         # n_prev = 20,
-        #screen_keys =  ['None', 'PCR every 4w', 'Antigen every 1w teach&staff, PCR f/u', 'Antigen every 4w, PCR f/u', 'Antigen every 2w, PCR f/u', 'PCR every 2w', 'Antigen every 1w, PCR f/u', 'PCR every 1w'],
-        screen_keys =  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
+        # screen_keys = ['None'],
+        schcfg_keys = ['k5'],
     )
     pop_size = cfg.sim_pars.pop_size
 
-    runner = Screening(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
+    runner = BaselineK5(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
     runner.run(args.force)
     analyzer = runner.analyze()
 
     runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
 
-    analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', height=5, aspect=2, ext='_wide')
-
-
     analyzer.cum_incidence(colvar='Prevalence Target')
     analyzer.introductions_rate_by_stype(xvar='Prevalence Target')
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
-
+    analyzer.source_dow(figsize=(6.5,5))
     runner.tsplots()
+

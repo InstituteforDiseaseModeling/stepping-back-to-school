@@ -22,13 +22,14 @@ def generate_scenarios(start_date='2020-11-02', base_beta_s=1.5, seed_date=None)
 
     scns = sc.odict()
 
+    # UPDATED: was day screen2pcr
     normal = {
         'start_date': start_date,
         'seed_date': seed_date,
         'schedule': 'Full',
         'screen_prob': 0,
         'test_prob': 0, # Amongst those who screen positive
-        'screen2pcr': 3, # Days from screening to receiving PCR results
+        'screen2pcr': 2, # Days from screening to receiving PCR results
         'trace_prob': 0, # Fraction of newly diagnosed index cases who are traced
         'quar_prob': 0, # Of those reached by contact tracing, this fraction will quarantine
         'ili_prob': 0.002, # Daily ili probability equates to about 10% incidence over the first 3 months of school
@@ -38,7 +39,6 @@ def generate_scenarios(start_date='2020-11-02', base_beta_s=1.5, seed_date=None)
     }
     scns['as_normal'] = scenario(es=normal, ms=normal, hs=normal)
 
-    # UPDATED: was screen prob 0.5 and 3 day screen2pcr
     full_with_countermeasures = {
         'start_date': start_date,
         'seed_date': seed_date,
@@ -69,7 +69,7 @@ def generate_scenarios(start_date='2020-11-02', base_beta_s=1.5, seed_date=None)
         'schedule': 'Remote',
         'screen_prob': 0,
         'test_prob': 0,
-        'screen2pcr': 3, # Days from screening to receiving PCR results
+        'screen2pcr': 2, # Days from screening to receiving PCR results
         'trace_prob': 0,
         'quar_prob': 0,
         'ili_prob': 0,
@@ -211,12 +211,12 @@ def generate_screening(start_date='2020-11-02'):
         'None': None,
         'PCR 1w prior': PCR_1w_prior,
         'PCR every 4w': PCR_every_4w_starting_1wprior,
-        'Antigen every 4w, PCR f/u': Antigen_every_4w_starting_1wprior_all_PCR_followup,
-        'Antigen every 1w teach&staff, PCR f/u': Antigen_every_1w_starting_1wprior_teachersstaff_PCR_followup,
+        'Antigen every 4w': Antigen_every_4w_starting_1wprior_all_PCR_followup,
+        'Antigen every 1w teach&staff': Antigen_every_1w_starting_1wprior_teachersstaff_PCR_followup,
         'PCR every 2w': PCR_every_2w_starting_1wprior,
         'Antigen every 2w, no f/u': Antigen_every_2w_starting_1wprior_all_no_followup,
-        'Antigen every 2w, PCR f/u': Antigen_every_2w_starting_1wprior_all_PCR_followup,
-        'Antigen every 1w, PCR f/u': Antigen_every_1w_starting_1wprior_all_PCR_followup,
+        'Antigen every 2w': Antigen_every_2w_starting_1wprior_all_PCR_followup,
+        'Antigen every 1w': Antigen_every_1w_starting_1wprior_all_PCR_followup,
         'PCR every 1w': PCR_every_1w_starting_1wprior,
         'PCR every 1d': PCR_every_1d_starting_1wprior,
     }
@@ -240,12 +240,12 @@ def screening_map():
         'None':                                     ('No diagnostic screening',                         'gray'),
         'PCR 1w prior':                             ('PCR one week prior, 1d delay',                    blues(1/6)),
         'PCR every 4w':                             ('Monthly PCR, 1d delay',                           blues(2/6)),
-        'Antigen every 1w teach&staff, PCR f/u':    ('Weekly antigen for teachers & staff, PCR f/u',    reds(1/6)),
-        'Antigen every 4w, PCR f/u':                ('Monthly antigen, no f/u',                         reds(2/6)),
+        'Antigen every 1w teach&staff, PCR f/u':    ('Weekly antigen for teachers & staff',             reds(1/6)),
+        'Antigen every 4w, PCR f/u':                ('Monthly antigen',                                 reds(2/6)),
         'Antigen every 2w, no f/u':                 ('Fortnightly antigen, no f/u',                     reds(3/6)),
-        'Antigen every 2w, PCR f/u':                ('Fortnightly antigen, PCR f/u',                    reds(4/6)),
+        'Antigen every 2w, PCR f/u':                ('Fortnightly antigen',                             reds(4/6)),
         'PCR every 2w':                             ('Fortnightly PCR, 1d delay',                       blues(3/6)),
-        'Antigen every 1w, PCR f/u':                ('Weekly antigen, PCR f/u',                         reds(5/6)),
+        'Antigen every 1w, PCR f/u':                ('Weekly antigen',                                  reds(5/6)),
         'PCR every 1w':                             ('Weekly PCR, 1d delay',                            blues(4/6)),
         'PCR every 1d':                             ('Daily PCR, no delay',                             blues(5/6)),
     })

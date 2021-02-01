@@ -112,13 +112,13 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, loa
 
     #%% Handle population -- NB, although called popfile, might be a People object
     if load_pop: # Load from disk -- normal usage
-        if popfile_stem is None:
-            popfile_stem = os.path.join('inputs', f'kc_clustered_{int(pop_size)}_seed')
-        if folder is not None:
-            popfile_stem = os.path.join(folder, popfile_stem) # Prepend user folder
         pop_seed = p.rand_seed % max_pop_seeds
-        popfile = popfile_stem + str(pop_seed) + '.ppl'
-        print(f'Note: loading population from {popfile}')
+        popfile = cvsch.pop_path(popfile=None, folder='inputs', strategy='clustered', n=pop_size, rand_seed=pop_seed)
+        if os.path.exists(popfile):
+            print(f'Loading population from {popfile}')
+        else:
+            errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
+            raise FileNotFoundError(errormsg)
     elif people is not None: # People is supplied; use that
         popfile = people
         print('Note: using supplied people')
@@ -128,40 +128,5 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, loa
 
     # Create sim
     sim = cv.Sim(p, popfile=popfile, load_pop=True, label=label, interventions=interventions)
-
-    # TODO: DELETE...
-    '''
-    # Modify sim for variations
-    # 1. Children equally as susceptible as adults 20-64
-    if children_equally_sus:
-        prog = sim.pars['prognoses']
-        ages = prog['age_cutoffs']
-        sus_ORs = prog['sus_ORs']
-        sus_ORs[ages<=20] = 1
-        prog['sus_ORs'] = sus_ORs
-
-    # 2. Lower levels of symptomaticity in children
-    if alternate_symptomaticity:
-
-        prog = sim.pars['prognoses']
-        ages = prog['age_cutoffs']
-        symp_probs = prog['symp_probs']
-
-        if False:
-            # Source: table 1 from https://arxiv.org/pdf/2006.08471.pdf
-            symp_probs[:] = 0.6456
-            symp_probs[ages<80] = 0.3546
-            symp_probs[ages<60] = 0.3054
-            symp_probs[ages<40] = 0.2241
-            symp_probs[ages<20] = 0.1809
-            prog['symp_probs'] = symp_probs
-        else:
-            print('WARNING: DAN MADE THIS UP!!!')
-            #prog['symp_probs'] = 0.10 + (0.9-0.15) * (ages - min(ages)) / (max(ages)-min(ages))
-            symp_probs[:] = 0.8
-            symp_probs[ages<20] = 0.20
-            symp_probs[ages<10] = 0.15
-            prog['symp_probs'] = symp_probs
-    '''
 
     return sim
