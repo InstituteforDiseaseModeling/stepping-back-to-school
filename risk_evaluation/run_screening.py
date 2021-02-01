@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
 
     analyzer.cum_incidence(colvar='Prevalence Target')
-    analyzer.introductions_rate_by_stype(xvar='Prevalence Target', colvar=None, huevar='stype', order=3)
+    analyzer.introductions_rate_by_stype(xvar='Prevalence Target')
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
 

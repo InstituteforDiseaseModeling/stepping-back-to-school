@@ -23,10 +23,12 @@ import warnings
 warnings.simplefilter('ignore', np.RankWarning)
 
 # Global plotting styles
-font_size = 18
+font_size = 20
 font_style = 'Roboto Condensed'
 mplt.rcParams['font.size'] = font_size
 mplt.rcParams['font.family'] = font_style
+mplt.rcParams['legend.fontsize'] = 16
+mplt.rcParams['legend.title_fontsize'] = 16
 
 class Analysis():
 
@@ -283,7 +285,6 @@ class Analysis():
         # Instantiate a Gaussian Process model
         kernel = Matern(length_scale=0.1, nu=1.5) + WhiteKernel(noise_level=0.1)
         gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9, normalize_y=True)
-        print(gp.kernel.get_params())
 
         # Fit to data using Maximum Likelihood Estimation of the parameters
         fit = gp.fit(data[xvar].values.reshape(-1, 1), data[yvar])
