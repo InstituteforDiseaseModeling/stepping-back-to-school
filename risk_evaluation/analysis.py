@@ -36,6 +36,10 @@ def curved_arrow(ax, x, y, style=None, text='', color='k', **kwargs):
     Draw a curved arrow with optional text label. x and y are 2-element vectors
     for the initial and final points of the arrow, in data coordinates.
 
+    **Example**::
+
+        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='I am pointing down', linewidth=2)
+
     Adapted from https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html
     '''
     ax.annotate(text,
