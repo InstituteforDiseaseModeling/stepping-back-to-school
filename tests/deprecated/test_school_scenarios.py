@@ -10,8 +10,8 @@ import os
 from pathlib import Path
 import sciris as sc
 from tempfile import mkstemp
-from testing_the_waters.create_sim import create_sim as cs
-from testing_the_waters.testing_scenarios import generate_scenarios , generate_testing
+from risk_evaluation.create_sim import create_sim as cs
+from risk_evaluation.testing_scenarios import generate_scenarios , generate_testing
 import unittest
 
 TestResults = namedtuple("TestResults", ["scheduled", "in_person", "antigen", "pcr"])

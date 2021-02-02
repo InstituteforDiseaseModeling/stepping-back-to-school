@@ -7,7 +7,7 @@ import unittest
 import sciris as sc
 import numpy as np
 import covasim_schools as cvsch
-from testing_the_waters.create_sim import create_sim as tw_create_sim
+from risk_evaluation.create_sim import create_sim as tw_create_sim
 
 
 
