@@ -670,10 +670,12 @@ class SchoolStats(sc.prettyobj):
         ppl = sim.people
         rescale = sim.rescale_vec[t]
 
-        self.susceptible_person_days += len(cv.itruei(ppl.susceptible, school.uids))
-        self.cum_incidence[t] = len(cv.ifalsei(ppl.susceptible, school.uids))
+        if school.schedule.lower() != 'remote':
+            self.susceptible_person_days += len(cv.itruei(ppl.susceptible, school.uids))
+            self.cum_incidence[t] = len(cv.ifalsei(ppl.susceptible, school.uids))
+
         if school.ct_mgr.school_day:
-            self.num_school_days += 1
+            self.num_school_days += 1 # Includes remote learning
 
         student_uids = cv.itruei(ppl.student_flag, school.uids) # TODO: Could cache
         teacher_uids = cv.itruei(ppl.teacher_flag, school.uids)
