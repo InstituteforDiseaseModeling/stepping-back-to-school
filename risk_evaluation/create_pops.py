@@ -7,7 +7,7 @@ of parallelization so you do not run out of RAM, but be warned.
 
 To run with a different location or size, you can specify these as follows, e.g.
 
-    python create_pops.py --pop_size 35 --location spokane
+    python create_pops.py --pop_size 35 --location Spokane_County
 '''
 
 import sys
