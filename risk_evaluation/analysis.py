@@ -449,7 +449,7 @@ class Analysis():
         xv = d['In-school transmission multiplier'].unique()
         g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25", zorder=10)
         for ax in g.axes.flat:
-            for l in g.axes.flat[0].lines: # Move the error bars in front of the bars
+            for l in ax.lines: # Move the error bars in front of the bars
                 l.set_zorder(20)
             ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
 
