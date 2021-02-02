@@ -31,12 +31,17 @@ mplt.rcParams['legend.fontsize'] = 16
 mplt.rcParams['legend.title_fontsize'] = 16
 
 
-def curved_arrow(ax, x1, y1, x2, y2, connectionstyle, text='', color='k', **kwargs):
-    ''' From https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html '''
+def curved_arrow(ax, x, y, style=None, text='', color='k', **kwargs):
+    '''
+    Draw a curved arrow with optional text label. x and y are 2-element vectors
+    for the initial and final points of the arrow, in data coordinates.
+
+    Adapted from https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html
+    '''
     ax.annotate(text,
-        xy=(x2, y2), xycoords='data',
-        xytext=(x1, y1), textcoords='data',
-        arrowprops=dict(arrowstyle="->", connectionstyle=connectionstyle, **kwargs),
+        xy=(x[1], y[1]), xycoords='data',
+        xytext=(x[0], y[0]), textcoords='data',
+        arrowprops=dict(arrowstyle="->", connectionstyle=style, **kwargs),
         )
     return
 
@@ -245,8 +250,8 @@ class Analysis():
         fig.tight_layout()
 
         # Add labels
-        curved_arrow(ax, 50, 0.20, 49, 0.13, "arc3,rad=-0.3", text='First in-person day', linewidth=2)
-        curved_arrow(ax, 63, 0.1, 67.5, 0.05, "arc3,rad=-0.1", text='Weekend', linewidth=2)
+        curved_arrow(ax, x=[50, 49], y=[0.20, 0.13], style="arc3,rad=-0.3", text='First in-person day', linewidth=2)
+        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
 
         # Finish up
         cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
