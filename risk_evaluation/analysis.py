@@ -444,21 +444,30 @@ class Analysis():
             ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
             ax.set_xlabel('Transmission probability in schools, per-contact per-day')
 
-        fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression{ext}.png'
+        fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
-    def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
-        ##### Outbreak size
-        cols = [xvar] if huevar is None else [xvar, huevar]
-        d = self.results.loc['exports_to_hh'].reset_index(cols)#[[xvar, huevar, 'value']]
-        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
-        g.set(ylim=(0,None))
-        g.set_ylabels('Exports to HH')
-        plt.tight_layout()
+    def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=6, aspect=0.6, ext=None, legend=False):
+        df = self.results.loc['outbreak_size'].reset_index()
+        df['value_log'] = np.log2(df['value'])
+        if row == 'Dx Screening' and row_order is None:
+            row_order = self.screen_order
+        g = sns.catplot(data=df, x='value_log', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
+        g.set_titles(col_template='{col_name}')
 
-        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
+        for ax in g.axes.flat:
+            ax.set_title(f'{100*float(ax.get_title()):.1f}%')
+            ax.set_ylabel('')
+            ax.set_xlabel('')
+            ax.set_xticks(range(10))
+            ax.set_xticklabels([f'{2**x:.0f}' for x in range(10)])
+        plt.subplots_adjust(bottom=0.05)
+        plt.figtext(0.6,0.01,'Outbreak size', ha='center')
+
+        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
+        plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
 
@@ -485,6 +494,20 @@ class Analysis():
         fn = 'OutbreakR0.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
         return g
+
+    def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
+        ##### Outbreak size
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        d = self.results.loc['exports_to_hh'].reset_index(cols)#[[xvar, huevar, 'value']]
+        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
+        g.set(ylim=(0,None))
+        g.set_ylabels('Exports to HH')
+        plt.tight_layout()
+
+        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        return g
+
 
 
     def timeseries(self, channel, label, normalize):

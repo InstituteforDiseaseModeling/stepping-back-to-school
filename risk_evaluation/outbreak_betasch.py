@@ -52,6 +52,8 @@ if __name__ == '__main__':
     runner.run(args.force)
     analyzer = runner.analyze()
 
+    analyzer.outbreak_size_distribution(row='In-school transmission multiplier', col=None)
+
     analyzer.outbreak_R0()
 
     xvar='In-school transmission multiplier'
