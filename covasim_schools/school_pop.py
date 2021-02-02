@@ -89,7 +89,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
         pars.school_mixing_type = {'pk': 'age_clustered', 'es': 'age_clustered', 'ms': 'age_clustered',
                               'hs': 'random', 'uv': 'random'}
 
-    popfile = pop_path(popfile, folder, strategy, pars.n, pars.rand_seed)
+    popfile = pop_path(popfile=popfile, location=location, folder=folder, strategy=strategy, n=pars.n, rand_seed=pars.rand_seed)
 
     T = sc.tic()
     print('Making population...')

@@ -22,7 +22,7 @@ sim_pars = sc.objdict(
 )
 
 pop_pars = sc.objdict(
-    location = 'seattle',
+    location = 'seattle_metro',
 )
 
 sweep_pars = sc.objdict(

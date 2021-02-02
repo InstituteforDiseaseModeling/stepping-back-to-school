@@ -28,7 +28,7 @@ if __name__ == '__main__':
     seeds = range(n_seeds)
     parallelize = True
 
-    print(f'Creating {n_seeds} populations of size {pop_size}...')
+    print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
 
     if parallelize:
         ram = psutil.virtual_memory().available/1e9
@@ -45,4 +45,4 @@ if __name__ == '__main__':
         sc.parallelize(cvsch.make_population, kwargs={'pop_size':pop_size}, iterkwargs={'rand_seed':seeds}, ncpus=ncpus) # Run them in parallel
     else:
         for seed in seeds:
-            cvsch.make_population(pop_size=pop_size, rand_seed=seed, location=location)
+            cvsch.make_population(pop_size=pop_size, rand_seed=seed, location=location, folder=cfg.paths.inputs)
