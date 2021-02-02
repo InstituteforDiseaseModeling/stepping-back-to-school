@@ -1,14 +1,11 @@
 '''
-Outbreak analysis to sweep in-school transbissibility while also exploring several diagnostic screening scenarios.
+Outbreak analysis to sweep in-school transmissibility while also exploring several diagnostic screening scenarios.
 '''
 
 import sys
-import os
-import matplotlib.pyplot as plt
 import utils as ut
 import config as cfg
 from run import Run
-import numpy as np
 
 
 alt_sus = False
