@@ -8,7 +8,7 @@ import sciris as sc
 import covasim as cv
 import synthpops as sp
 
-n_brackets = 20 # This is required
+n_brackets = 20 # This is required...maybe
 
 
 def pop_path(popfile=None, location=None, folder=None, strategy=None, n=None, rand_seed=None):
