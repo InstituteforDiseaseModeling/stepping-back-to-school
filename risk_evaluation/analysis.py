@@ -355,7 +355,7 @@ class Analysis():
         elif xvar == 'Screen prob':
             g.set_xlabels('Daily probability of symptom screening')
 
-        labels = [h for h in hue_order if h in df.reset_index()[huevar].unique()] if huevar is not None else []
+        labels = [h for h in hue_order if h in df.reset_index()[huevar].unique()] if (huevar is not None and hue_order is not None) else []
         if legend and len(labels)>1:
             #g.add_legend() # Ugh, not working due to seaborn bug
             if huevar in df.reset_index():
