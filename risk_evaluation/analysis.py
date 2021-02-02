@@ -459,7 +459,7 @@ class Analysis():
             ax.set_xticklabels( [f'{m*self.beta0*betamult + b:.1%}' for betamult in xt] )
             ax.set_xlabel('Transmission probability in schools, per-contact per-day')
             ax.grid(color='lightgray', axis='y', zorder=-10)
-
+            sns.despine(right=False, top=False) # Add spines back
 
         g.set_ylabels('Basic reproduction number in school')
         plt.tight_layout()
