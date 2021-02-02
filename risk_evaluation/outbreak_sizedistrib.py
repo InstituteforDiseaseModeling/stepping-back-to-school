@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     #runner.regplots(xvar=xvar, huevar=huevar)
 
-    analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.5)
+    analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.8)
     sys.exit()
     analyzer.outbreak_reg(xvar, huevar)
 

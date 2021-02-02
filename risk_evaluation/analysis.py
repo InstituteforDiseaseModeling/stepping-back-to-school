@@ -491,6 +491,11 @@ class Analysis():
         # n_edges = len(bins)-1
         # x = range(n_edges)
         # df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
+
+        # Remove middle column
+        val = df[col].unique()[1]
+        df = df[df[col] != val]
+
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
         g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
