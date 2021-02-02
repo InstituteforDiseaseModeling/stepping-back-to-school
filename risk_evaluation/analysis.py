@@ -259,7 +259,6 @@ class Analysis():
 
         # Finish up
         cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
-        plt.show()
         return fig
 
     def source_pie(self):
