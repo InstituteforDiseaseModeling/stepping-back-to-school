@@ -306,6 +306,14 @@ class Analysis():
 
 
     def gp_reg(self, df, xvar, huevar, height=6, aspect=1.4, legend=True, cmap='Set1', hue_order=None):
+        if huevar is None:
+            legend = False
+        else:
+            if hue_order is not None:
+                hue_order = [h for h in hue_order if h in df.reset_index()[huevar].unique()]
+            else:
+                hue_order = df.reset_index()[huevar].unique()
+
         g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, height=height, aspect=aspect, palette=cmap)
         g.map_dataframe(self.gpplot, xvar=xvar, yvar='value')
         plt.grid(color='lightgray', zorder=-10)
@@ -326,21 +334,27 @@ class Analysis():
         elif xvar == 'Screen prob':
             g.set_xlabels('Daily probability of symptom screening')
 
-        labels = [h for h in hue_order if h in df.reset_index()[huevar].unique()] if huevar is not None else []
-        if legend and len(labels)>1:
+        if legend and len(hue_order)>1:
             #g.add_legend() # Ugh, not working due to seaborn bug
             if huevar in df.reset_index():
-                colors = sns.color_palette(cmap).as_hex()[:len(labels)] # 'deep'
-                #h = [patches.Patch(color=col, label=lab) for col, lab in zip(colors, labels)]
-                h = [plt.plot(0,0,color=col, label=lab) for col, lab in zip(colors, labels)]
+                title = huevar
+                if huevar=='Prevalence Target':
+                    title = 'Prevalence'
+                    hue_order = [f'{p:.1%}' for p in hue_order]
+                elif huevar=='stype':
+                    title = 'School Type'
+                elif huevar=='Dx Screening':
+                    title = 'Diagnostic Screening'
+                elif huevar=='In-school transmission multiplier':
+                    title = 'Transmission probability'
+                    hue_order = [f'{self.beta0*betamult:.1%}' for betamult in hue_order]
+
+                colors = sns.color_palette(cmap).as_hex()[:len(hue_order)] # 'deep'
+                #h = [patches.Patch(color=col, label=lab) for col, lab in zip(colors, hue_order)]
+                h = [plt.plot(0,0,color=col, label=lab) for col, lab in zip(colors, hue_order)]
                 h = [z[0] for z in h]
 
-                title = huevar
-                if huevar=='Prevalence Target': title='Prevalence'
-                elif huevar=='stype': title='School Type'
-                elif huevar=='Dx Screening': title='Diagnostic Screening'
-
-                plt.legend(handles=h, title=title)#, loc='center left', bbox_to_anchor=(1, 0.75))
+                plt.legend(handles=h, title=title)
 
         return g
 
@@ -363,7 +377,8 @@ class Analysis():
             fracs.append(top/bot)
         df = pd.concat(fracs)
 
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend)
+        hue_order = self.screen_order if huevar == 'Dx Screening' else None
+        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {factor:,}')
 
@@ -453,6 +468,7 @@ class Analysis():
         xv = d['In-school transmission multiplier'].unique()
         g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25", zorder=10)
         for ax in g.axes.flat:
+            for a in ax.lines: a.set_zorder(20)
             ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
 
             xt = ax.get_xticks()
