@@ -482,25 +482,26 @@ class Analysis():
         df = self.results.loc['outbreak_size'].reset_index()
         # df['value_log'] = np.log2(df['value'])
         # bins = [0, 1, 2, 5, 10, 20, 50, 100, 200]
-        bins = list(sc.cat(sc.inclusiverange(0, 10, 1),
-                           sc.inclusiverange(11, 50, 2),
-                           sc.inclusiverange(51, 100, 5),
-                           sc.inclusiverange(101, 200, 10)
-                           ))
+        # bins = list(sc.cat(sc.inclusiverange(0, 10, 1),
+        #                    sc.inclusiverange(11, 50, 2),
+        #                    sc.inclusiverange(51, 100, 5),
+        #                    sc.inclusiverange(101, 200, 10)
+        #                    ))
         # left_edges = bins[:-1]
-        n_edges = len(bins)-1
-        x = range(n_edges)
-        df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
+        # n_edges = len(bins)-1
+        # x = range(n_edges)
+        # df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
-        g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='swarm', legend=legend, height=height, aspect=aspect)
+        g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
             ax.set_title(f'{100*float(ax.get_title()):.1f}%')
             ax.set_ylabel('')
             ax.set_xlabel('')
-            ax.set_xscale('log')
+            ax.set_xlim([0,50])
+            # ax.set_xscale('log')
             # ax.set_xticks(x)
             # ax.set_xticklabels([f'{bins[b+1]}' for b in range(n_edges)])
         plt.subplots_adjust(bottom=0.05)
