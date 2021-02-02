@@ -17,18 +17,37 @@ import utils as ut
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 import matplotlib
-import matplotlib.patches as patches
 
 import warnings
 warnings.simplefilter('ignore', np.RankWarning)
 
 # Global plotting styles
+dpi = 300
 font_size = 20
 font_style = 'Roboto Condensed'
 mplt.rcParams['font.size'] = font_size
 mplt.rcParams['font.family'] = font_style
 mplt.rcParams['legend.fontsize'] = 16
 mplt.rcParams['legend.title_fontsize'] = 16
+
+
+def curved_arrow(ax, x, y, style=None, text='', color='k', **kwargs):
+    '''
+    Draw a curved arrow with optional text label. x and y are 2-element vectors
+    for the initial and final points of the arrow, in data coordinates.
+
+    **Example**::
+
+        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='I am pointing down', linewidth=2)
+
+    Adapted from https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html
+    '''
+    ax.annotate(text,
+        xy=(x[1], y[1]), xycoords='data',
+        xytext=(x[0], y[0]), textcoords='data',
+        arrowprops=dict(arrowstyle="->", connectionstyle=style, **kwargs),
+        )
+    return
 
 class Analysis():
 
@@ -111,7 +130,6 @@ class Analysis():
                 if stats['type'] not in stypes.keys():
                     continue
                 stype = stypes[stats['type']]
-
 
                 # Only count outbreaks in which total infectious days at school is > 0
                 outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
@@ -206,7 +224,7 @@ class Analysis():
         g.set(xlim=(start_day, None))
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=dpi)
         return g
 
     def outbreak_size_over_time(self, rowvar=None, colvar=None):
@@ -216,17 +234,32 @@ class Analysis():
 
         g = sns.lmplot(data=d.reset_index(), x='first_infectious_day_at_school', y='outbreak_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=dpi)
         return g
 
     def source_dow(self, figsize=(6,6)):
+
+        # Make figure and histogram
         fig, ax = plt.subplots(1,1,figsize=figsize)
-        sns.histplot(np.hstack(self.results.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
-        ax.set_xlabel('Simulation Day')
-        ax.set_ylabel('Introductions (%)')
+        color = '#9B6875' # One of the colors from the other bar graph
+        sns.histplot(np.hstack(self.results.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax, color=color, edgecolor='w')
+
+        # Basic annotations
+        ax.set_xlabel('Day of week')
+        ax.set_ylabel('Proportion of introductions')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+        ax.set_xticks(np.arange(*np.round(ax.get_xlim())))
+        ax.set_xticklabels(['S', 'S', 'M', 'T', 'W', 'T', 'F']*4 + ['S'])
+        ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=300)
+
+        # Add labels
+        curved_arrow(ax, x=[50, 49], y=[0.20, 0.13], style="arc3,rad=-0.3", text='First in-person day', linewidth=2)
+        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
+
+        # Finish up
+        cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
+        plt.show()
         return fig
 
     def source_pie(self):
@@ -272,7 +305,7 @@ class Analysis():
         g.set_titles(col_template="{col_name}", row_template="{row_name}")
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=dpi)
         return g
 
 
@@ -360,9 +393,6 @@ class Analysis():
 
 
     def introductions_rate(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
-        num_cols = 'introductions'
-        den_cols = 'susceptible_person_days'
-
         factor = 100_000
         cols = [xvar] if huevar is None else [xvar, huevar]
         num = self.results.loc['introductions']
@@ -384,7 +414,7 @@ class Analysis():
 
         fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -394,7 +424,6 @@ class Analysis():
 
         bs = []
         for idx, stype in enumerate(stypes):
-            n = self.results.loc[f'introductions_{stype}'].shape[0]
             num = self.results.loc[f'introductions_{stype}']
             den = self.results.loc[f'susceptible_person_days_{stype}']
 
@@ -415,7 +444,7 @@ class Analysis():
 
         fn = 'IntroductionRateStype.png' if ext is None else f'IntroductionRateStype_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -446,7 +475,7 @@ class Analysis():
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=6, aspect=0.6, ext=None, legend=False):
@@ -477,7 +506,8 @@ class Analysis():
         xv = d['In-school transmission multiplier'].unique()
         g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25", zorder=10)
         for ax in g.axes.flat:
-            for a in ax.lines: a.set_zorder(20)
+            for l in ax.lines: # Move the error bars in front of the bars
+                l.set_zorder(20)
             ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
 
             xt = ax.get_xticks()
@@ -486,13 +516,13 @@ class Analysis():
             ax.set_xticklabels( [f'{m*self.beta0*betamult + b:.1%}' for betamult in xt] )
             ax.set_xlabel('Transmission probability in schools, per-contact per-day')
             ax.grid(color='lightgray', axis='y', zorder=-10)
-
+            sns.despine(right=False, top=False) # Add spines back
 
         g.set_ylabels('Basic reproduction number in school')
         plt.tight_layout()
 
         fn = 'OutbreakR0.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
     def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
@@ -505,7 +535,7 @@ class Analysis():
         plt.tight_layout()
 
         fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -535,7 +565,7 @@ class Analysis():
         if normalize:
             ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=dpi)
         return fig
 
     def plot_several_timeseries(self, config):

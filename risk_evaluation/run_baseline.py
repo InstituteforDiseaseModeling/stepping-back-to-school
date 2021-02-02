@@ -8,8 +8,6 @@ Example usage, forcing new results and using a 4 different seeds:
 '''
 
 import sys
-import os
-import matplotlib.pyplot as plt
 import utils as ut
 import config as cfg
 from run import Run
