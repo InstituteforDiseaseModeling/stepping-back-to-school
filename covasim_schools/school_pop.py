@@ -8,6 +8,8 @@ import sciris as sc
 import covasim as cv
 import synthpops as sp
 
+n_brackets = 20 # This is required
+
 
 def pop_path(popfile=None, location=None, folder=None, strategy=None, n=None, rand_seed=None):
     ''' Define the path for the population '''
@@ -34,6 +36,8 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
         community_contacts (int): how many community contacts there are
         kwargs (dict): passed to sp.make_population()
     '''
+
+    sp.set_nbrackets(n_brackets)
 
     pars = sc.objdict(
         n = pop_size,
