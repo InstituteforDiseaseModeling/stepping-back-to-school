@@ -227,7 +227,7 @@ def scenario_map():
         'as_normal':            ('Full Schedule No Countermeasures', col(0)),
         'with_countermeasures': ('Full Schedule', col(1)),
         'all_hybrid':           ('Hybrid', col(2)),
-        'k5':                   ('K-5 In-Person Others Remote', col(3)),
+        'k5':                   ('K-5 In-Person, Others Remote', col(3)),
         'all_remote':           ('All Remote', col(4)),
     })
     return scen_map
