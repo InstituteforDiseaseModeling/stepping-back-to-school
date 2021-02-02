@@ -17,7 +17,6 @@ import utils as ut
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 import matplotlib
-import matplotlib.patches as patches
 
 import warnings
 warnings.simplefilter('ignore', np.RankWarning)
@@ -30,6 +29,16 @@ mplt.rcParams['font.size'] = font_size
 mplt.rcParams['font.family'] = font_style
 mplt.rcParams['legend.fontsize'] = 16
 mplt.rcParams['legend.title_fontsize'] = 16
+
+
+def curved_arrow(ax, x1, y1, x2, y2, connectionstyle, text='', color='k', **kwargs):
+    ''' From https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html '''
+    ax.annotate(text,
+        xy=(x2, y2), xycoords='data',
+        xytext=(x1, y1), textcoords='data',
+        arrowprops=dict(arrowstyle="->", connectionstyle=connectionstyle, **kwargs),
+        )
+    return
 
 class Analysis():
 
@@ -220,13 +229,28 @@ class Analysis():
         return g
 
     def source_dow(self, figsize=(6,6)):
+
+        # Make figure and histogram
         fig, ax = plt.subplots(1,1,figsize=figsize)
-        sns.histplot(np.hstack(self.results.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax)
-        ax.set_xlabel('Simulation Day')
-        ax.set_ylabel('Introductions (%)')
+        color = '#9B6875' # One of the colors from the other bar graph
+        sns.histplot(np.hstack(self.results.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax, color=color, edgecolor='w')
+
+        # Basic annotations
+        ax.set_xlabel('Day of week')
+        ax.set_ylabel('Proportion of introductions')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+        ax.set_xticks(np.arange(*np.round(ax.get_xlim())))
+        ax.set_xticklabels(['S', 'S', 'M', 'T', 'W', 'T', 'F']*4 + ['S'])
+        ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
+
+        # Add labels
+        curved_arrow(ax, 50, 0.20, 49, 0.13, "arc3,rad=-0.3", text='First in-person day', linewidth=2)
+        curved_arrow(ax, 63, 0.1, 67.5, 0.05, "arc3,rad=-0.1", text='Weekend', linewidth=2)
+
+        # Finish up
         cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
+        plt.show()
         return fig
 
     def source_pie(self):

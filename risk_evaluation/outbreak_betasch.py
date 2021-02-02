@@ -50,16 +50,16 @@ if __name__ == '__main__':
     runner.run(args.force)
     analyzer = runner.analyze()
 
-    g = analyzer.outbreak_R0()
+    analyzer.outbreak_R0()
 
-    # xvar='In-school transmission multiplier'
-    # huevar=None
+    xvar='In-school transmission multiplier'
+    huevar=None
 
-    # #runner.regplots(xvar=xvar, huevar=huevar)
-    # analyzer.outbreak_reg(xvar, huevar)
+    #runner.regplots(xvar=xvar, huevar=huevar)
+    analyzer.outbreak_reg(xvar, huevar)
 
-    # analyzer.cum_incidence(colvar=xvar)
-    # analyzer.outbreak_size_over_time()
-    # analyzer.source_pie()
+    analyzer.cum_incidence(colvar=xvar)
+    analyzer.outbreak_size_over_time()
+    analyzer.source_pie()
 
-    # runner.tsplots()
+    runner.tsplots()
