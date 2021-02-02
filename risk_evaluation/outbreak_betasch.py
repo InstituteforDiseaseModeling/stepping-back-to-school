@@ -3,8 +3,6 @@ Outbreak analysis to sweep in-school transmissibility
 '''
 
 import sys
-import os
-import matplotlib.pyplot as plt
 import utils as ut
 import config as cfg
 from run import Run
