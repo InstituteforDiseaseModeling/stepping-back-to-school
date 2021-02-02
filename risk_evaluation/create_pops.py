@@ -29,6 +29,7 @@ if __name__ == '__main__':
     parallelize = True
 
     print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
+    kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
 
     if parallelize:
         ram = psutil.virtual_memory().available/1e9
@@ -42,7 +43,7 @@ if __name__ == '__main__':
         else:
             ncpus = int(max_parallel*ram/max_required)
             print(f'You have {ram:0.1f} GB of RAM, but this is estimated to require {max_required:0.1f} GB -- changing from {max_cpus} CPUs to {ncpus}')
-        sc.parallelize(cvsch.make_population, kwargs={'pop_size':pop_size}, iterkwargs={'rand_seed':seeds}, ncpus=ncpus) # Run them in parallel
+        sc.parallelize(cvsch.make_population, kwargs=kwargs, iterkwargs={'rand_seed':seeds}, ncpus=ncpus) # Run them in parallel
     else:
         for seed in seeds:
-            cvsch.make_population(pop_size=pop_size, rand_seed=seed, location=location, folder=cfg.paths.inputs)
+            cvsch.make_population(**kwargs, rand_seed=seed)
