@@ -23,6 +23,7 @@ import warnings
 warnings.simplefilter('ignore', np.RankWarning)
 
 # Global plotting styles
+dpi = 300
 font_size = 20
 font_style = 'Roboto Condensed'
 mplt.rcParams['font.size'] = font_size
@@ -111,7 +112,6 @@ class Analysis():
                 if stats['type'] not in stypes.keys():
                     continue
                 stype = stypes[stats['type']]
-
 
                 # Only count outbreaks in which total infectious days at school is > 0
                 outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
@@ -206,7 +206,7 @@ class Analysis():
         g.set(xlim=(start_day, None))
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=dpi)
         return g
 
     def outbreak_size_over_time(self, rowvar=None, colvar=None):
@@ -216,7 +216,7 @@ class Analysis():
 
         g = sns.lmplot(data=d.reset_index(), x='first_infectious_day_at_school', y='outbreak_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=dpi)
         return g
 
     def source_dow(self, figsize=(6,6)):
@@ -226,7 +226,7 @@ class Analysis():
         ax.set_ylabel('Introductions (%)')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
         fig.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
         return fig
 
     def source_pie(self):
@@ -272,7 +272,7 @@ class Analysis():
         g.set_titles(col_template="{col_name}", row_template="{row_name}")
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=dpi)
         return g
 
 
@@ -346,9 +346,6 @@ class Analysis():
 
 
     def introductions_rate(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
-        num_cols = 'introductions'
-        den_cols = 'susceptible_person_days'
-
         factor = 100_000
         cols = [xvar] if huevar is None else [xvar, huevar]
         num = self.results.loc['introductions']
@@ -369,7 +366,7 @@ class Analysis():
 
         fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -379,7 +376,6 @@ class Analysis():
 
         bs = []
         for idx, stype in enumerate(stypes):
-            n = self.results.loc[f'introductions_{stype}'].shape[0]
             num = self.results.loc[f'introductions_{stype}']
             den = self.results.loc[f'susceptible_person_days_{stype}']
 
@@ -400,7 +396,7 @@ class Analysis():
 
         fn = 'IntroductionRateStype.png' if ext is None else f'IntroductionRateStype_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -431,7 +427,7 @@ class Analysis():
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
     def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
@@ -444,7 +440,7 @@ class Analysis():
         plt.tight_layout()
 
         fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
     def outbreak_R0(self, figsize=(6*1.4,6)):
@@ -453,6 +449,8 @@ class Analysis():
         xv = d['In-school transmission multiplier'].unique()
         g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25", zorder=10)
         for ax in g.axes.flat:
+            for l in g.axes.flat[0].lines: # Move the error bars in front of the bars
+                l.set_zorder(20)
             ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
 
             xt = ax.get_xticks()
@@ -467,7 +465,7 @@ class Analysis():
         plt.tight_layout()
 
         fn = 'OutbreakR0.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -496,7 +494,7 @@ class Analysis():
         if normalize:
             ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=300)
+        cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=dpi)
         return fig
 
     def plot_several_timeseries(self, config):
