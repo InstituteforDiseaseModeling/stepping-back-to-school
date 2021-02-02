@@ -478,9 +478,10 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
-    def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=6, aspect=0.6, ext=None, legend=False):
+    def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
         # df['value_log'] = np.log2(df['value'])
+        # xtmax = int(np.ceil(df['value_log'].max()))
         # bins = [0, 1, 2, 5, 10, 20, 50, 100, 200]
         # bins = list(sc.cat(sc.inclusiverange(0, 10, 1),
         #                    sc.inclusiverange(11, 50, 2),
@@ -502,13 +503,16 @@ class Analysis():
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
-            ax.set_title(f'{100*float(ax.get_title()):.1f}%')
+            ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
             ax.set_ylabel('')
             ax.set_xlabel('')
             ax.set_xlim([0,50])
             # ax.set_xscale('log')
             # ax.set_xticks(x)
             # ax.set_xticklabels([f'{bins[b+1]}' for b in range(n_edges)])
+            # ax.set_xticks(range(xtmax), minor=True)
+            # ax.set_xticks(range(0,xtmax,2))
+            # ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
         plt.subplots_adjust(bottom=0.05)
         plt.figtext(0.6,0.01,'Outbreak size', ha='center')
 
