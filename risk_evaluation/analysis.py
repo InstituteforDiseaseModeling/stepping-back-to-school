@@ -478,20 +478,22 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
-    def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=6, aspect=0.6, ext=None, legend=False):
+    def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
         df['value_log'] = np.log2(df['value'])
+        xtmax = int(np.ceil(df['value_log'].max()))
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
         g = sns.catplot(data=df, x='value_log', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
-            ax.set_title(f'{100*float(ax.get_title()):.1f}%')
+            ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
             ax.set_ylabel('')
             ax.set_xlabel('')
-            ax.set_xticks(range(10))
-            ax.set_xticklabels([f'{2**x:.0f}' for x in range(10)])
+            ax.set_xticks(range(xtmax), minor=True)
+            ax.set_xticks(range(0,xtmax,2))
+            ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
         plt.subplots_adjust(bottom=0.05)
         plt.figtext(0.6,0.01,'Outbreak size', ha='center')
 
