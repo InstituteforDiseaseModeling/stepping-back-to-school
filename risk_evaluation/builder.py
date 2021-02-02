@@ -45,6 +45,7 @@ class Builder:
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
+
         # Would like to reuse screenpars_func here
         def screen_func(config, key, test):
             print(f'Building screening parameter {key}={test}')

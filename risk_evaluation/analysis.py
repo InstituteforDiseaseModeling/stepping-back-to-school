@@ -305,7 +305,7 @@ class Analysis():
         plt.plot(x, y_pred, color=color, zorder=11, lw=2)
 
 
-    def gp_reg(self, df, xvar, huevar, height=6, aspect=1.4, nboot=50, legend=True, cmap='Set1', hue_order=None):
+    def gp_reg(self, df, xvar, huevar, height=6, aspect=1.4, legend=True, cmap='Set1', hue_order=None):
         g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, height=height, aspect=aspect, palette=cmap)
         g.map_dataframe(self.gpplot, xvar=xvar, yvar='value')
         plt.grid(color='lightgray', zorder=-10)
@@ -326,7 +326,7 @@ class Analysis():
         elif xvar == 'Screen prob':
             g.set_xlabels('Daily probability of symptom screening')
 
-        labels = df.reset_index()[huevar].unique() if huevar is not None else []
+        labels = [h for h in hue_order if h in df.reset_index()[huevar].unique()] if huevar is not None else []
         if legend and len(labels)>1:
             #g.add_legend() # Ugh, not working due to seaborn bug
             if huevar in df.reset_index():
