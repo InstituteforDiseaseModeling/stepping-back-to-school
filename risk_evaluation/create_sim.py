@@ -7,6 +7,7 @@ import os
 import covasim as cv
 import sciris as sc
 import covasim_schools as cvsch
+import config as cfg
 
 
 def define_pars(which='best', kind='default', ):
@@ -31,7 +32,7 @@ def define_pars(which='best', kind='default', ):
     return output
 
 
-def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, load_pop=True, save_pop=False, people=None,
+def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, strategy='clustered', load_pop=True, save_pop=False, people=None,
                label=None, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
@@ -44,6 +45,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, loa
         children_equally_sus (bool): whether children should be equally susceptible as adults (for sensitivity)
         alternate_symptomaticity (bool): whether to use symptoms by age from Table 1 in https://arxiv.org/pdf/2006.08471.pdf
         max_pop_seeds (int): maximum number of populations to generate (for use with different random seeds)
+        strategy (str): the cohorting strategy to use
         load_pop (bool): whether to load people from disk (otherwise, use supplied or create afresh)
         save_pop (bool): if a population is being generated, whether to save
         people (People): if supplied, use instead of loading from file
@@ -113,7 +115,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, loa
     #%% Handle population -- NB, although called popfile, might be a People object
     if load_pop: # Load from disk -- normal usage
         pop_seed = p.rand_seed % max_pop_seeds
-        popfile = cvsch.pop_path(popfile=None, folder='inputs', strategy='clustered', n=pop_size, rand_seed=pop_seed)
+        popfile = cvsch.pop_path(popfile=None, location=cfg.pop_pars.location, folder=cfg.paths.inputs, strategy=strategy, n=pop_size, rand_seed=pop_seed)
         if os.path.exists(popfile):
             print(f'Loading population from {popfile}')
         else:

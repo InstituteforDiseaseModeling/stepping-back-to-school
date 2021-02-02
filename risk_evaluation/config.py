@@ -21,6 +21,10 @@ sim_pars = sc.objdict(
     rescale      = False, # True causes problems
 )
 
+pop_pars = sc.objdict(
+    location = 'seattle_metro',
+)
+
 sweep_pars = sc.objdict(
     schcfg_keys       = ['with_countermeasures'],
     screen_keys       = ['None'],
@@ -42,7 +46,8 @@ run_pars = sc.objdict(
 )
 
 paths = sc.objdict(
-    outputs = 'Results', # Folder for outputs
+    inputs = 'inputs', # Folder for population files
+    outputs = 'results', # Folder for figures, sims, etc.
     ei     = 'fit_EI.obj',
     ir     = 'fit_IR.obj',
 )
@@ -58,6 +63,7 @@ def process_inputs(argv):
     parser.add_argument('--n_reps', type=int, default=0)
     parser.add_argument('--n_seeds', type=int, default=0)
     parser.add_argument('--n_prev', type=int, default=0)
+    parser.add_argument('--location', type=str, default='')
     args = parser.parse_args(argv[1:])
 
     if args.debug:
@@ -67,6 +73,7 @@ def process_inputs(argv):
 
     if args.pop_size:
         if args.pop_size < 1000: # Allow e.g. 223 or 223000
+            print('Automatically scaling population by 1000')
             args.pop_size *= 1000
         sim_pars.pop_size = args.pop_size
     if args.n_reps:
@@ -75,6 +82,8 @@ def process_inputs(argv):
         sweep_pars.n_seeds = args.n_seeds
     if args.n_prev:
         sweep_pars.n_prev = args.n_prev
+    if args.location:
+        pop_pars.location = args.location
 
     return args
 
