@@ -12,7 +12,7 @@ This repository contains the code originally used for the King County, WA school
 
 ### Requirements
 
-Python >=3.7 (64-bit). (Note: Python 2 is not supported, and only Python <=3.6 requires special installation options.)
+Python >=3.7 (64-bit). (Note: Python 2 is not supported, and Python <=3.6 requires special installation options.)
 
 
 ### Steps
