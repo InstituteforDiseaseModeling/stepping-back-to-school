@@ -488,7 +488,7 @@ class Analysis():
         return g
 
 
-    def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
+    def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=1, legend=True):
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         ret = self.results.loc['outbreak_size']
@@ -613,8 +613,8 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=dpi)
         return fig
 
-    def plot_several_timeseries(self, config):
-        for config in config:
+    def plot_several_timeseries(self, configs):
+        for config in configs:
             self.timeseries(config['channel'], config['label'], config['normalize'])
 
 

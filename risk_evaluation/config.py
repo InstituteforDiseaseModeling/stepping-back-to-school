@@ -3,6 +3,7 @@ Set global configurations for the runs
 '''
 
 import argparse
+import numpy as np
 import sciris as sc
 
 # Default settings are for debug runs
@@ -42,8 +43,10 @@ run_pars = sc.objdict(
     mem_thresh = 0.80, # Don't use more than this amount of available RAM, if number of CPUs is not set
     parallel   = True, # Only switch to False for debugging
     shrink     = True, # Whether to remove the people from the sim objects (makes for smaller files)
-    verbose    = 0.1 # Print progress this fraction of simulated days
+    verbose    = 0.1, # Print progress this fraction of simulated days
+    base_seed  = 0, # Add this seed to all other random seeds
 )
+np.random.seed(run_pars.base_seed) # Reset the global seed on import
 
 paths = sc.objdict(
     inputs = 'inputs', # Folder for population files
