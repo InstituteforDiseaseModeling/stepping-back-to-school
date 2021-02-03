@@ -487,6 +487,8 @@ class Analysis():
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
+            if isinstance(ax.get_title(), str):
+                continue
             ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
             ax.set_ylabel('')
             ax.set_xlabel('')
@@ -526,6 +528,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
+    '''
     def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
@@ -538,8 +541,37 @@ class Analysis():
         fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
+    '''
 
+    def exports_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
+        ##### Outbreak size
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        ret = self.results.loc['exports_to_hh']
 
+        # Bootstrap
+        resamples = []
+        for i in range(nboot):
+            rows = np.random.randint(low=0, high=ret.shape[0], size=ret.shape[0])
+            resample_mu = ret.iloc[rows].groupby(cols).mean() # Mean estimator
+            resamples.append(resample_mu)
+        df = pd.concat(resamples)
+
+        hue_order = self.screen_order if huevar == 'Dx Screening' else None
+        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        for ax in g.axes.flat:
+            ax.set_ylabel('Number of exports to households')
+
+        if xvar == 'In-school transmission multiplier':
+            xlim = ax.get_xlim()
+            xt = np.linspace(xlim[0], xlim[1], 5)
+            ax.set_xticks( xt )
+            ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+
+        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
+        plt.tight_layout()
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return g
 
     def timeseries(self, channel, label, normalize):
         l = []

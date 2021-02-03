@@ -58,6 +58,7 @@ if __name__ == '__main__':
     huevar=None
 
     #runner.regplots(xvar=xvar, huevar=huevar)
+    analyzer.exports_reg(xvar, huevar)
     analyzer.outbreak_reg(xvar, huevar)
 
     analyzer.cum_incidence(colvar=xvar)
