@@ -79,13 +79,13 @@ def p2f(x):
 
 
 #%% Running
-def create_run_sim(sconf, n_sims, run_config):
+def create_run_sim(sconf, n_sims, run_config, config=None):
     ''' Create and run the actual simulations '''
     label = f'sim {sconf.count} of {n_sims}'
     print(f'Creating and running {label}...')
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label)
+    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label, config=config)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
