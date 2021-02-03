@@ -57,6 +57,7 @@ if __name__ == '__main__':
     huevar=None
 
     #runner.regplots(xvar=xvar, huevar=huevar)
+    analyzer.exports_reg(xvar, huevar)
     analyzer.outbreak_reg(xvar, huevar)
     analyzer.outbreak_size_plot(xvar, scatter=True, loess=False)
     analyzer.outbreak_size_plot(xvar, scatter=False, loess=True) # Included for completeness but looks weird

@@ -54,6 +54,6 @@ if __name__ == '__main__':
     #analyzer.introductions_rate_by_stype(xvar='Prevalence Target')
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
-    analyzer.source_dow(figsize=(6.5,5))
+    analyzer.source_dow(figsize=(8,5)) # 6.5 x 5
     runner.tsplots()
 
