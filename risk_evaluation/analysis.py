@@ -479,11 +479,26 @@ class Analysis():
 
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
-        df['value_log'] = np.log2(df['value'])
-        xtmax = int(np.ceil(df['value_log'].max()))
+        # df['value_log'] = np.log2(df['value'])
+        # xtmax = int(np.ceil(df['value_log'].max()))
+        # bins = [0, 1, 2, 5, 10, 20, 50, 100, 200]
+        # bins = list(sc.cat(sc.inclusiverange(0, 10, 1),
+        #                    sc.inclusiverange(11, 50, 2),
+        #                    sc.inclusiverange(51, 100, 5),
+        #                    sc.inclusiverange(101, 200, 10)
+        #                    ))
+        # left_edges = bins[:-1]
+        # n_edges = len(bins)-1
+        # x = range(n_edges)
+        # df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
+
+        # Remove middle column
+        val = df[col].unique()[1]
+        df = df[df[col] != val]
+
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
-        g = sns.catplot(data=df, x='value_log', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
+        g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
@@ -492,15 +507,20 @@ class Analysis():
             ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
             ax.set_ylabel('')
             ax.set_xlabel('')
-            ax.set_xticks(range(xtmax), minor=True)
-            ax.set_xticks(range(0,xtmax,2))
-            ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
+            ax.set_xlim([0,50])
+            # ax.set_xscale('log')
+            # ax.set_xticks(x)
+            # ax.set_xticklabels([f'{bins[b+1]}' for b in range(n_edges)])
+            # ax.set_xticks(range(xtmax), minor=True)
+            # ax.set_xticks(range(0,xtmax,2))
+            # ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
         plt.subplots_adjust(bottom=0.05)
         plt.figtext(0.6,0.01,'Outbreak size', ha='center')
 
         fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        plt.show()
         return g
 
     def outbreak_R0(self, figsize=(6*1.4,6)):

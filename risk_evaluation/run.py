@@ -18,7 +18,7 @@ class Run:
     the test run uses 8.
     '''
 
-    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None):
+    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None):
         # Check that versions are correct
         sp_gitinfo = sc.gitinfo(sp.__file__)
         sp_ver = sp.__version__
@@ -43,13 +43,15 @@ class Run:
         if self.sweep_pars.prev is None:
             self.sweep_pars.prev = np.linspace(0.002, 0.02, self.sweep_pars.n_prev) # TODO: this might create subtle bugs and shouldn't be hard-coded
 
-        # TODO: make default config`, update with user config
         self.run_pars = sc.dcp(cfg.run_pars)
         if run_pars is not None:
             self.run_pars.update(run_pars)
+        self.pop_pars = sc.dcp(cfg.pop_pars)
+        if pop_pars is not None:
+            self.pop_pars.update(pop_pars)
 
         self.paths = sc.dcp(cfg.paths)
-        self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
+        self.stem = f'{self.pop_pars.location}_{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
         self.dir = os.path.join(self.paths.outputs, self.stem)
         self.cachefn = os.path.join(self.dir, 'results.sims') # Might need to change the extension here, depending if combine.py was used
 

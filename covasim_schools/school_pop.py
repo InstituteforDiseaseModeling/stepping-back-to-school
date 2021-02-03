@@ -8,16 +8,20 @@ import sciris as sc
 import covasim as cv
 import synthpops as sp
 
+n_brackets = 20 # This is required...maybe
 
-def pop_path(popfile=None, folder=None, strategy=None, n=None, rand_seed=None):
+
+def pop_path(popfile=None, location=None, folder=None, strategy=None, n=None, rand_seed=None):
     ''' Define the path for the population '''
+    if folder is None:
+        folder = '.' # Current folder
     if popfile is None:
-        name = f'seattle_{strategy}_{int(n)}_seed{rand_seed}.ppl'
+        name = f'{location}_{strategy}_{int(n)}_seed{rand_seed}.ppl'
         popfile = os.path.join(folder, name)
     return popfile
 
 
-def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, folder='inputs', popfile=None, cohorting=True, n_brackets=20, community_contacts=20,**kwargs):
+def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, location='seattle_metro', folder=None, popfile=None, cohorting=True, community_contacts=20, **kwargs):
     '''
     Generate the synthpops population.
 
@@ -29,12 +33,11 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, fol
         folder (str): if so, the root folder
         popfile (str): if so, where to save it to
         cohorting (bool): whether to use cohorting
-        n_brackets (int): whether to use 16- or 20-bracket age bins
         community_contacts (int): how many community contacts there are
         kwargs (dict): passed to sp.make_population()
     '''
 
-    sp.set_nbrackets(n_brackets) # Essential for getting the age distribution right
+    sp.set_nbrackets(n_brackets)
 
     pars = sc.objdict(
         n = pop_size,
@@ -48,7 +51,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, fol
 
         country_location = 'usa',
         state_location = 'Washington',
-        location = 'seattle_metro',
+        location = location,
         use_default = True,
 
         smooth_ages = True,  # use smooth_ages to smooth out the binned age distribution
@@ -90,7 +93,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, fol
         pars.school_mixing_type = {'pk': 'age_clustered', 'es': 'age_clustered', 'ms': 'age_clustered',
                               'hs': 'random', 'uv': 'random'}
 
-    popfile = pop_path(popfile, folder, strategy, pars.n, pars.rand_seed)
+    popfile = pop_path(popfile=popfile, location=location, folder=folder, strategy=strategy, n=pars.n, rand_seed=pars.rand_seed)
 
     T = sc.tic()
     print('Making population...')
