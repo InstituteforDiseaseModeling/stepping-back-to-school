@@ -520,7 +520,7 @@ class Analysis():
         return g
 
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True):
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012, grid=False):
 
         # Get x and y coordinates of all outbreaks
         df = self.results.reset_index() # Un-melt (congeal?) results
@@ -528,29 +528,65 @@ class Analysis():
         x = df[xvar].values # Pull out x values
         y = df['value'].values # Pull out y values (i.e., outbreak size)
 
+        # Handle non-numeric x axes
+        is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
+        if not is_numeric:
+            labels = df[xvar].unique()
+            indices = range(len(labels))[::-1]
+            labelmap = dict(zip(labels, indices))
+            x = np.array([labelmap[i] for i in x]) # Convert from strings to indices
+
         plt.figure(figsize=(height*aspect, height))
 
         # Scatter plots
         if scatter:
             dx = x.max() - x.min()
-            noise = dx*0.012*(1+np.random.randn(len(x)))
+            noise = dx*jitter*(1+np.random.randn(len(x)))
+            xjitter = x + noise
             colors = sc.vectocolor(np.sqrt(y), cmap='copper')
-            plt.scatter(x+noise, y, alpha=0.7, s=4*y, c=colors)
-            plt.ylim([-2, y.max()*1.1])
+            if landscape:
+                plt_x = xjitter
+                plt_y = y
+                lim_func = plt.ylim
+            else:
+                plt_x = y
+                plt_y = xjitter
+                lim_func = plt.xlim
+
+            plt.scatter(plt_x, plt_y, alpha=0.7, s=4*y, c=colors)
+            lim_func([-2, y.max()*1.1])
 
         # Loess plots
         if loess:
+            if not landscape: raise NotImplementedError
             res = loess_bound(x, y, frac=0.5)
             plt.fill_between(res.x, res.low, res.high, alpha=0.3)
             plt.plot(res.x, res.mean, lw=3)
 
         # General settings
         ax = plt.gca()
+        if landscape:
+            set_xticks = ax.set_xticks
+            set_xticklabels = ax.set_xticklabels
+            set_xlabel = ax.set_xlabel
+            set_ylabel = ax.set_ylabel
+        else:
+            set_xticks = ax.set_yticks
+            set_xticklabels = ax.set_yticklabels
+            set_xlabel = ax.set_ylabel
+            set_ylabel = ax.set_xlabel
         xt = np.linspace(x.min(), x.max(), 6)
-        ax.set_xticks( xt )
-        ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
-        ax.set_xlabel('Transmission probability in schools, per-contact per-day')
-        ax.set_ylabel('Outbreak size')
+        if is_numeric:
+            set_xticks(xt)
+            set_xticklabels([f'{self.beta0*betamult:.1%}' for betamult in xt])
+            set_xlabel('Transmission probability in schools, per-contact per-day')
+        else:
+            set_xticks(indices)
+            set_xticklabels(labels)
+
+        set_ylabel('Outbreak size')
+        if grid:
+            plt.grid(zorder=-10)
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
