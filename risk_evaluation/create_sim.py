@@ -64,6 +64,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
         rescale        = False, # True causes problems
         start_day      = '2020-11-01',
         end_day        = '2021-04-30',
+        rand_seed      = 1,
     )
 
     p = sc.objdict(sc.mergedicts(default_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
