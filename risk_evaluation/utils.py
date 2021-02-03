@@ -7,6 +7,7 @@ import sciris as sc
 import covasim as cv
 import multiprocessing as mp
 import create_sim as cs
+import config as cfg
 
 
 def alternate_symptomaticity(config, key, value):
@@ -80,10 +81,11 @@ def p2f(x):
 #%% Running
 def create_run_sim(sconf, n_sims, run_config):
     ''' Create and run the actual simulations '''
-    print(f'Creating and running sim {sconf.count} of {n_sims}...')
+    label = f'sim {sconf.count} of {n_sims}'
+    print(f'Creating and running {label}...')
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=20)
+    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
