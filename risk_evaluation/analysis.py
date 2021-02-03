@@ -487,7 +487,10 @@ class Analysis():
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
-            ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
+            try:
+                ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
+            except Exception as E:
+                print(f'Warning: could not set title ({str(E)})')
             ax.set_ylabel('')
             ax.set_xlabel('')
             ax.set_xticks(range(xtmax), minor=True)

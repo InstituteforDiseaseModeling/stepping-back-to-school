@@ -7,6 +7,7 @@ import covasim.misc as cvm
 import matplotlib.pyplot as plt
 from numpy.linalg import matrix_power as mp
 from risk_evaluation import create_sim as cs
+from risk_evaluation import config as cfg
 import covasim_controller as cvc
 np.set_printoptions(suppress=True)
 
@@ -34,8 +35,8 @@ targets = {
 }
 
 # These come from fit_transmats
-ei = sc.loadobj('EI.obj')
-ir = sc.loadobj('IR.obj')
+ei = sc.loadobj(cfg.paths.ei)
+ir = sc.loadobj(cfg.paths.ir)
 
 ref = cvc.ReferenceTrajectory(targets)
 

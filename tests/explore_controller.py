@@ -19,9 +19,12 @@ plt.rcParams['font.family'] = 'Roboto Condensed'
 
 load = False
 # NOTE: The following may be bypassed below by hard-coded pop_size and folder
-bypass = False
+bypass = True
 folder = '../risk_evaluation/v2020-12-02'
-pop_size = 2.25e5 #50e3 
+if bypass:
+    pop_size = int(20e3)
+else:
+    pop_size = int(2.25e5) #50e3 
 
 def test_controller(do_plot=False):
     scen = generate_scenarios()['with_countermeasures']#['all_remote']#['all_hybrid']
@@ -39,7 +42,7 @@ def test_controller(do_plot=False):
     }
 
     if bypass: # BYPASS option -- create small population on the fly
-        sim = cs.create_sim(params, pop_size=int(20e3), load_pop=False)
+        sim = cs.create_sim(params, pop_size=pop_size, load_pop=False)
     else: # Otherwise, load full population from disk
         sim = cs.create_sim(params, pop_size=pop_size, folder=folder, verbose=0.1)
 
