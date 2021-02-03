@@ -519,6 +519,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
+
     def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True):
 
         # Get x and y coordinates of all outbreaks
@@ -549,7 +550,7 @@ class Analysis():
         ax.set_xticks( xt )
         ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
         ax.set_xlabel('Transmission probability in schools, per-contact per-day')
-        ax.set_ylabel('Outbreak size, including source')
+        ax.set_ylabel('Outbreak size')
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
