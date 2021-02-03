@@ -565,7 +565,7 @@ class Analysis():
                 plt_y = xjitter
                 lim_func = plt.xlim
 
-            plt.scatter(plt_x, plt_y, alpha=0.7, s=4*y, c=colors)
+            plt.scatter(plt_x, plt_y, alpha=0.7, s=800*y/y.max(), c=colors)
             lim_func([-2, y.max()*1.1])
 
         # Loess plots
