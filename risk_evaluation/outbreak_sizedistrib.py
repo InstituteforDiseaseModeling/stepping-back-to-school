@@ -19,7 +19,7 @@ class OutbreakScreeningSizeDistrib(Run):
 
         # Sweep over NPI multipliers
         #npi_scens = {x:{'beta_s': 1.5*x} for x in [0.75, 0.75*1.6]}
-        beta_s = [1.61111111] # [0.83333333,1.61111111]
+        beta_s = [1.61111111] # [0.83333333,1.61111111] # Just show one level
         npi_scens = {x:{'beta_s': 1.5*x} for x in beta_s} #,1.22222222 np.linspace(0.25, 2, 10)
         self.builder.add_level('In-school transmission multiplier', npi_scens, self.builder.screenpars_func)
 

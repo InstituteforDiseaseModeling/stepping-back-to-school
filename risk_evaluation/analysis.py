@@ -78,8 +78,7 @@ def loess_bound(x, y, frac=0.2, it=5, n_bootstrap=80, sample_frac=1.0, quantiles
         yi = y[inds]
         xi = x[inds]
         yl = lowess(yi, xi, frac=frac, it=it, return_sorted=False)
-        yvec = scipy.interpolate.interp1d(xi, yl, fill_value='extrapolate')(xvec)
-        yarr[:,k] = yvec
+        yarr[:,k] = scipy.interpolate.interp1d(xi, yl, fill_value='extrapolate')(xvec)
 
     res = sc.objdict()
     res.x = xvec
@@ -521,6 +520,19 @@ class Analysis():
 
 
     def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+        '''
+        Plot outbreak sizes in various ways.
+
+        Args:
+            xvar (str): the variable to use as the x-axis
+            ext (str): suffix for filename
+            height (float): figure height
+            aspect (float): figure aspect ratio
+            scatter (bool): show scatter of points
+            loess (bool): show loess fit to points
+            landscape (bool): flip orientation so x-axis is y-axis
+            jitter (float): amount of scatter to add to point locations
+        '''
 
         # Get x and y coordinates of all outbreaks
         df = self.results.reset_index() # Un-melt (congeal?) results
