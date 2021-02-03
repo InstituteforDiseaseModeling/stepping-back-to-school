@@ -100,7 +100,7 @@ def create_run_sim(sconf, n_sims, run_config):
     return sim
 
 
-def run_configs(sim_configs, stem, run_cfg, filename=None):
+def run_configs(sim_configs, stem, run_cfg, filename=None, config=None):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
@@ -118,7 +118,7 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
     sc.heading('Running sims...')
     TT = sc.tic()
     if run_cfg['parallel']:
-        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), run_config=run_cfg), ncpus=n_cpus)
+        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), run_config=run_cfg, config=config), ncpus=n_cpus)
     else:
         sims = []
         for sconf in sim_configs:

@@ -18,7 +18,9 @@ class Run:
     the test run uses 8.
     '''
 
-    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None):
+    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None):
+
+
         # Check that versions are correct
         sp_gitinfo = sc.gitinfo(sp.__file__)
         sp_ver = sp.__version__
@@ -26,7 +28,7 @@ class Run:
         if sc.compareversions(sp_ver, sp_expected) < 0:
             errormsg = f'This code is designed to work with SynthPops >= {sp_expected}, but you have {sp_ver}'
             raise ImportError(errormsg)
-        cv.check_save_version('2.0.0', folder='gitinfo', comments={'SynthPops':sp_gitinfo})
+        cv.check_save_version('2.0.2', folder='gitinfo', comments={'SynthPops':sp_gitinfo})
 
         self.name = self.__class__.__name__ if name is None else name
         self.sims = None  # To be run or loaded by calling run()
@@ -51,6 +53,8 @@ class Run:
             self.pop_pars.update(pop_pars)
 
         self.paths = sc.dcp(cfg.paths)
+        if paths is not None:
+            self.paths.update(paths)
         self.stem = f'{self.pop_pars.location}_{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
         self.dir = os.path.join(self.paths.outputs, self.stem)
         self.cachefn = os.path.join(self.dir, 'results.sims') # Might need to change the extension here, depending if combine.py was used
