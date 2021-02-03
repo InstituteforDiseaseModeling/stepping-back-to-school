@@ -488,7 +488,7 @@ class Analysis():
         return g
 
 
-    def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=1, legend=True):
+    def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         ret = self.results.loc['outbreak_size']
@@ -517,6 +517,25 @@ class Analysis():
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
+
+    def outbreak_size_loess(self, xvar, ext=None, height=6, aspect=1.4):
+
+        # Get x and y coordinates of all outbreaks
+        df = self.results.reset_index() # Un-melt (congeal?) results
+        df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
+        x = df[xvar].values # Pull out x values
+        y = df['value'].values # Pull out y values (i.e., outbreak size)
+
+        fig = plt.figure(figsize=(height*aspect, height))
+        sns.stripplot(data=df, x=xvar, y='value')
+        # plt.scatter(x,y)
+
+        fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
+        plt.tight_layout()
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return self.results
+
+
 
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
