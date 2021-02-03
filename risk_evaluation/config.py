@@ -104,6 +104,6 @@ def set_full():
     ''' Reset the configuration for the full run '''
     print('Setting run parameters for a full run...')
     sweep_pars.n_reps = 5
-    sweep_pars.n_seeds = 20
+    sweep_pars.n_seeds = 10
     sim_pars.pop_size = 223_000
     return

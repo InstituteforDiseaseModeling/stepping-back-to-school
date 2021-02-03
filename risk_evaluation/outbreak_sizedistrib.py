@@ -56,7 +56,7 @@ if __name__ == '__main__':
     #runner.regplots(xvar=xvar, huevar=huevar)
 
     analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
-    analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=2.0, grid=True)
+    analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
     # exit()
     # analyzer.outbreak_reg(xvar, huevar)
 

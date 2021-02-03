@@ -520,7 +520,7 @@ class Analysis():
         return g
 
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012, grid=False):
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
 
         # Get x and y coordinates of all outbreaks
         df = self.results.reset_index() # Un-melt (congeal?) results
@@ -585,8 +585,6 @@ class Analysis():
             set_xticklabels(labels)
 
         set_ylabel('Outbreak size')
-        if grid:
-            plt.grid(zorder=-10)
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
