@@ -16,6 +16,8 @@ import scenarios as scn
 import utils as ut
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel
+from statsmodels.nonparametric.smoothers_lowess import lowess
+import scipy
 import matplotlib
 
 import warnings
@@ -57,37 +59,36 @@ def curved_arrow(x, y, style=None, text='', ax=None, color='k', **kwargs):
     return
 
 
-def loess_bound(x, y, width=0.2):
+def loess_bound(x, y, frac=0.2, it=5, n_bootstrap=80, sample_frac=1.0, quantiles=None, npts=None):
     '''
     Fit a LOESS curve, with uncertainty.
     '''
 
-    def kernel(d, exp=3):
-        ''' Distance kernel '''
-        return np.clip((1 - np.abs(d)**exp)**exp, 0, 1)
+    if quantiles is None:
+        quantiles = [0.025, 0.975]
+    if npts is None:
+        npts = len(x)
+    assert len(x) == len(y), 'Vectors must be the same length'
 
-    assert x.size == y.size, 'Vector sizes do not match'
-    n = x.size
-    order = np.argsort(x)
-    xo = x[order]
-    yo = y[order]
-    Y, E = np.zeros(n), np.zeros(n)
-    for i in range(n):
-        oi = order[i]
-        d = np.abs((xo[i]-xo))/((xo.max() - xo.min()) * width)
-        weights = kernel(d)
-        matrix = np.stack([weights, xo*weights]).T
-        yweights = weights * yo
-        sys1 = matrix.T.dot(matrix)
-        sys2 = matrix.T.dot(yweights)
-        ans = np.linalg.solve(sys1, sys2)
-        var = np.sum((matrix.dot(ans) - yo)**2)/n
-        sys1inv = np.linalg.inv(sys1)
-        mi = matrix[i]
-        Y[oi] = matrix[i].dot(ans)
-        E[oi] = np.sqrt(var*mi.dot(sys1inv).dot(mi))
+    yarr = np.zeros((npts, n_bootstrap))
+    xvec = np.linspace(x.min(), x.max(), npts)
 
-    return Y, E
+    for k in range(n_bootstrap):
+        inds = np.random.choice(len(x), int(len(x)*sample_frac), replace=True)
+        yi = y[inds]
+        xi = x[inds]
+        yl = lowess(yi, xi, frac=frac, it=it, return_sorted=False)
+        yvec = scipy.interpolate.interp1d(xi, yl, fill_value='extrapolate')(xvec)
+        yarr[:,k] = yvec
+
+    res = sc.objdict()
+    res.x = xvec
+    res.mean = np.nanmean(yarr, axis=1)
+    res.median = np.nanmedian(yarr, axis=1)
+    res.low = np.nanquantile(yarr, quantiles[0], axis=1)
+    res.high = np.nanquantile(yarr, quantiles[1], axis=1)
+
+    return res
 
 
 class Analysis():
@@ -538,11 +539,9 @@ class Analysis():
 
         # Loess plots
         if loess:
-            order = np.argsort(x)
-            xo = x[order]
-            Y, E = loess_bound(xo, y[order], width=0.5)
-            plt.plot(xo, Y, color='tomato')
-            plt.fill_between(xo, Y-E, Y+E, alpha=0.3)
+            res = loess_bound(x, y, frac=0.5)
+            plt.fill_between(res.x, res.low, res.high, alpha=0.3)
+            plt.plot(res.x, res.mean, lw=3)
 
         # General settings
         ax = plt.gca()
