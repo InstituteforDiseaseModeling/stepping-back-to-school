@@ -31,23 +31,64 @@ mplt.rcParams['legend.fontsize'] = 16
 mplt.rcParams['legend.title_fontsize'] = 16
 
 
-def curved_arrow(ax, x, y, style=None, text='', color='k', **kwargs):
+def curved_arrow(x, y, style=None, text='', ax=None, color='k', **kwargs):
     '''
-    Draw a curved arrow with optional text label. x and y are 2-element vectors
-    for the initial and final points of the arrow, in data coordinates.
+    Draw a curved arrow with an optional text label.
+
+    Args:
+
+        x (list/arr): initial and final x-points (2-element list or array)
+        y (list/arr): initial and final y-points (2-element list or array)
+        style (str): the arrow style
+        text (str): text annotation
+        ax (axes): the axes instance to draw into; if none, use current
+        color (str): color of the arrow
+        kwargs (dict): passed to arrowprops
 
     **Example**::
 
-        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='I am pointing down', linewidth=2)
-
-    Adapted from https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html
+        pl.scatter(pl.rand(10), pl.rand(10))
+        curved_arrow(x=[0.13, 0.67], y=[0.6, 0.2], style="arc3,rad=-0.1", text='I am pointing down', linewidth=2)
     '''
-    ax.annotate(text,
-        xy=(x[1], y[1]), xycoords='data',
-        xytext=(x[0], y[0]), textcoords='data',
-        arrowprops=dict(arrowstyle="->", connectionstyle=style, **kwargs),
-        )
+    if ax is None:
+        ax = plt.gca()
+    ax.annotate(text, xy=(x[1], y[1]), xytext=(x[0], y[0]), xycoords='data', textcoords='data',
+        arrowprops=dict(arrowstyle="->", connectionstyle=style, **kwargs))
     return
+
+
+def loess_bound(x, y, width=0.2):
+    '''
+    Fit a LOESS curve, with uncertainty.
+    '''
+
+    def kernel(d, exp=3):
+        ''' Distance kernel '''
+        return np.clip((1 - np.abs(d)**exp)**exp, 0, 1)
+
+    assert x.size == y.size, 'Vector sizes do not match'
+    n = x.size
+    order = np.argsort(x)
+    xo = x[order]
+    yo = y[order]
+    Y, E = np.zeros(n), np.zeros(n)
+    for i in range(n):
+        oi = order[i]
+        d = np.abs((xo[i]-xo))/((xo.max() - xo.min()) * width)
+        weights = kernel(d)
+        matrix = np.stack([weights, xo*weights]).T
+        yweights = weights * yo
+        sys1 = matrix.T.dot(matrix)
+        sys2 = matrix.T.dot(yweights)
+        ans = np.linalg.solve(sys1, sys2)
+        var = np.sum((matrix.dot(ans) - yo)**2)/n
+        sys1inv = np.linalg.inv(sys1)
+        mi = matrix[i]
+        Y[oi] = matrix[i].dot(ans)
+        E[oi] = np.sqrt(var*mi.dot(sys1inv).dot(mi))
+
+    return Y, E
+
 
 class Analysis():
 
@@ -254,8 +295,8 @@ class Analysis():
         fig.tight_layout()
 
         # Add labels
-        curved_arrow(ax, x=[50, 49], y=[0.20, 0.13], style="arc3,rad=-0.3", text='First in-person day', linewidth=2)
-        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
+        curved_arrow(ax=ax, x=[50, 49], y=[0.20, 0.13], style="arc3,rad=-0.3", text='First in-person day', linewidth=2)
+        curved_arrow(ax=ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
 
         # Finish up
         cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
