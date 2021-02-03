@@ -16,6 +16,8 @@ import scenarios as scn
 import utils as ut
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel
+from statsmodels.nonparametric.smoothers_lowess import lowess
+import scipy
 import matplotlib
 
 import warnings
@@ -31,23 +33,62 @@ mplt.rcParams['legend.fontsize'] = 16
 mplt.rcParams['legend.title_fontsize'] = 16
 
 
-def curved_arrow(ax, x, y, style=None, text='', color='k', **kwargs):
+def curved_arrow(x, y, style=None, text='', ax=None, color='k', **kwargs):
     '''
-    Draw a curved arrow with optional text label. x and y are 2-element vectors
-    for the initial and final points of the arrow, in data coordinates.
+    Draw a curved arrow with an optional text label.
+
+    Args:
+
+        x (list/arr): initial and final x-points (2-element list or array)
+        y (list/arr): initial and final y-points (2-element list or array)
+        style (str): the arrow style
+        text (str): text annotation
+        ax (axes): the axes instance to draw into; if none, use current
+        color (str): color of the arrow
+        kwargs (dict): passed to arrowprops
 
     **Example**::
 
-        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='I am pointing down', linewidth=2)
-
-    Adapted from https://matplotlib.org/3.1.0/gallery/userdemo/connectionstyle_demo.html
+        pl.scatter(pl.rand(10), pl.rand(10))
+        curved_arrow(x=[0.13, 0.67], y=[0.6, 0.2], style="arc3,rad=-0.1", text='I am pointing down', linewidth=2)
     '''
-    ax.annotate(text,
-        xy=(x[1], y[1]), xycoords='data',
-        xytext=(x[0], y[0]), textcoords='data',
-        arrowprops=dict(arrowstyle="->", connectionstyle=style, **kwargs),
-        )
+    if ax is None:
+        ax = plt.gca()
+    ax.annotate(text, xy=(x[1], y[1]), xytext=(x[0], y[0]), xycoords='data', textcoords='data',
+        arrowprops=dict(arrowstyle="->", connectionstyle=style, **kwargs))
     return
+
+
+def loess_bound(x, y, frac=0.2, it=5, n_bootstrap=80, sample_frac=1.0, quantiles=None, npts=None):
+    '''
+    Fit a LOESS curve, with uncertainty.
+    '''
+
+    if quantiles is None:
+        quantiles = [0.025, 0.975]
+    if npts is None:
+        npts = len(x)
+    assert len(x) == len(y), 'Vectors must be the same length'
+
+    yarr = np.zeros((npts, n_bootstrap))
+    xvec = np.linspace(x.min(), x.max(), npts)
+
+    for k in range(n_bootstrap):
+        inds = np.random.choice(len(x), int(len(x)*sample_frac), replace=True)
+        yi = y[inds]
+        xi = x[inds]
+        yl = lowess(yi, xi, frac=frac, it=it, return_sorted=False)
+        yarr[:,k] = scipy.interpolate.interp1d(xi, yl, fill_value='extrapolate')(xvec)
+
+    res = sc.objdict()
+    res.x = xvec
+    res.mean = np.nanmean(yarr, axis=1)
+    res.median = np.nanmedian(yarr, axis=1)
+    res.low = np.nanquantile(yarr, quantiles[0], axis=1)
+    res.high = np.nanquantile(yarr, quantiles[1], axis=1)
+
+    return res
+
 
 class Analysis():
 
@@ -254,8 +295,8 @@ class Analysis():
         fig.tight_layout()
 
         # Add labels
-        curved_arrow(ax, x=[50, 49], y=[0.20, 0.13], style="arc3,rad=-0.3", text='First in-person day', linewidth=2)
-        curved_arrow(ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
+        curved_arrow(ax=ax, x=[50, 49], y=[0.20, 0.13], style="arc3,rad=-0.3", text='First in-person day', linewidth=2)
+        curved_arrow(ax=ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
 
         # Finish up
         cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
@@ -477,6 +518,92 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
+
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+        '''
+        Plot outbreak sizes in various ways.
+
+        Args:
+            xvar (str): the variable to use as the x-axis
+            ext (str): suffix for filename
+            height (float): figure height
+            aspect (float): figure aspect ratio
+            scatter (bool): show scatter of points
+            loess (bool): show loess fit to points
+            landscape (bool): flip orientation so x-axis is y-axis
+            jitter (float): amount of scatter to add to point locations
+        '''
+
+        # Get x and y coordinates of all outbreaks
+        df = self.results.reset_index() # Un-melt (congeal?) results
+        df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
+        x = df[xvar].values # Pull out x values
+        y = df['value'].values # Pull out y values (i.e., outbreak size)
+
+        # Handle non-numeric x axes
+        is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
+        if not is_numeric:
+            labels = df[xvar].unique()
+            indices = range(len(labels))[::-1]
+            labelmap = dict(zip(labels, indices))
+            x = np.array([labelmap[i] for i in x]) # Convert from strings to indices
+
+        plt.figure(figsize=(height*aspect, height))
+
+        # Scatter plots
+        if scatter:
+            dx = x.max() - x.min()
+            noise = dx*jitter*(1+np.random.randn(len(x)))
+            xjitter = x + noise
+            colors = sc.vectocolor(np.sqrt(y), cmap='copper')
+            if landscape:
+                plt_x = xjitter
+                plt_y = y
+                lim_func = plt.ylim
+            else:
+                plt_x = y
+                plt_y = xjitter
+                lim_func = plt.xlim
+
+            plt.scatter(plt_x, plt_y, alpha=0.7, s=800*y/y.max(), c=colors)
+            lim_func([-2, y.max()*1.1])
+
+        # Loess plots
+        if loess:
+            if not landscape: raise NotImplementedError
+            res = loess_bound(x, y, frac=0.5)
+            plt.fill_between(res.x, res.low, res.high, alpha=0.3)
+            plt.plot(res.x, res.mean, lw=3)
+
+        # General settings
+        ax = plt.gca()
+        if landscape:
+            set_xticks = ax.set_xticks
+            set_xticklabels = ax.set_xticklabels
+            set_xlabel = ax.set_xlabel
+            set_ylabel = ax.set_ylabel
+        else:
+            set_xticks = ax.set_yticks
+            set_xticklabels = ax.set_yticklabels
+            set_xlabel = ax.set_ylabel
+            set_ylabel = ax.set_xlabel
+        xt = np.linspace(x.min(), x.max(), 6)
+        if is_numeric:
+            set_xticks(xt)
+            set_xticklabels([f'{self.beta0*betamult:.1%}' for betamult in xt])
+            set_xlabel('Transmission probability in schools, per-contact per-day')
+        else:
+            set_xticks(indices)
+            set_xticklabels(labels)
+
+        set_ylabel('Outbreak size')
+
+        fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
+        plt.tight_layout()
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return df
+
+
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
         # df['value_log'] = np.log2(df['value'])
@@ -502,9 +629,10 @@ class Analysis():
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
-            if isinstance(ax.get_title(), str):
-                continue
-            ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
+            try:
+                ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
+            except Exception as E:
+                print(f'Warning: could not set title ({str(E)})')
             ax.set_ylabel('')
             ax.set_xlabel('')
             ax.set_xlim([0,50])
@@ -621,8 +749,8 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=dpi)
         return fig
 
-    def plot_several_timeseries(self, config):
-        for config in config:
+    def plot_several_timeseries(self, configs):
+        for config in configs:
             self.timeseries(config['channel'], config['label'], config['normalize'])
 
 

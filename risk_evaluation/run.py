@@ -30,7 +30,7 @@ class Run:
 
         self.name = self.__class__.__name__ if name is None else name
         self.sims = None  # To be run or loaded by calling run()
-        self.analyzer=None
+        self.analyzer = None
 
         # TODO: move to defaults
         self.sim_pars = sc.dcp(cfg.sim_pars)
@@ -71,7 +71,7 @@ class Run:
             self.builder.add_level('Prevalence', prev_levels, self.builder.prevctr_func)
 
         # Add reps
-        rep_levels = {f'Run {p}':{'rand_seed':p} for p in range(self.sweep_pars['n_reps'])}
+        rep_levels = {f'Run {p}':{'rand_seed':p+cfg.run_pars.base_seed} for p in range(self.sweep_pars['n_reps'])}
         self.builder.add_level('Replicate', rep_levels, self.builder.simpars_func)
 
         # Add school intervention
@@ -81,17 +81,16 @@ class Run:
         return self.builder.get()
 
 
-    def analyze(self):
+    def analyze(self, rerun=True):
         ''' Create (and run) the analysis '''
-        self.analyzer = an.Analysis(self.sims, self.dir)
+        if self.analyzer is None or rerun:
+            self.analyzer = an.Analysis(self.sims, self.dir)
         return self.analyzer
 
     def regplots(self, xvar, huevar, ts_plots=None):
         ''' Generate regular plots '''
 
-        if self.analyzer is None:
-            self.analyze()
-
+        self.analyze(rerun=False)
         self.analyzer.introductions_rate(xvar, huevar)
         self.analyzer.introductions_rate_by_stype(xvar)
         self.analyzer.outbreak_reg(xvar, huevar)
@@ -103,8 +102,7 @@ class Run:
         ''' Generate time series plots '''
 
         print('Generating timeseries plots, these take a few minutes...')
-        if self.analyzer is None:
-            self.analyze()
+        self.analyze(rerun=False)
 
         if ts_plots is None:
             ts_plots = [

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import covasim_controller as cvc
 from risk_evaluation import create_sim as cs
+from risk_evaluation import config as cfg
 
 # Global plotting styles
 plt.rcParams['font.size'] = 6
@@ -25,8 +26,8 @@ params = {
 }
 
 # These come from fit_transmats
-ei = sc.loadobj('EI.obj')
-ir = sc.loadobj('IR.obj')
+ei = sc.loadobj(cfg.paths.ei)
+ir = sc.loadobj(cfg.paths.ir)
 
 EI = ei.Mopt
 IR = ir.Mopt

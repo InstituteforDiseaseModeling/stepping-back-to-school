@@ -28,7 +28,6 @@ if __name__ == '__main__':
 
     args = cfg.process_inputs(sys.argv)
 
-
     sweep_pars = {
         'n_prev':       0, # No controller
         'school_start_date': '2021-02-01',
@@ -60,6 +59,8 @@ if __name__ == '__main__':
     #runner.regplots(xvar=xvar, huevar=huevar)
     analyzer.exports_reg(xvar, huevar)
     analyzer.outbreak_reg(xvar, huevar)
+    analyzer.outbreak_size_plot(xvar, scatter=True, loess=False)
+    analyzer.outbreak_size_plot(xvar, scatter=False, loess=True) # Included for completeness but looks weird
 
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()

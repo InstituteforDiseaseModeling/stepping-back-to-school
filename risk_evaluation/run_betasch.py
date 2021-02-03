@@ -5,7 +5,6 @@ Dense sweep of in-school transmissibility (beta_s) at a few fixed prevalence lev
 import argparse
 from run import Run
 import numpy as np
-import utils as ut
 
 class BetaSchool(Run):
     def build_configs(self):

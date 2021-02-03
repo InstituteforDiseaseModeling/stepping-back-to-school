@@ -12,6 +12,7 @@ To run with a different location or size, you can specify these as follows, e.g.
 
 import sys
 import psutil
+import numpy as np
 import sciris as sc
 import covasim_schools as cvsch
 import config as cfg
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     pop_size = cfg.sim_pars.pop_size
     n_seeds = cfg.sweep_pars.n_seeds
     location = cfg.pop_pars.location
-    seeds = range(n_seeds)
+    seeds = np.arange(n_seeds) + cfg.run_pars.base_seed
     parallelize = True
 
     print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')

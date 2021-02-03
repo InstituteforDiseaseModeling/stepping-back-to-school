@@ -12,7 +12,7 @@ This repository contains the code originally used for the King County, WA school
 
 ### Requirements
 
-Python >=3.6 (64-bit). (Note: Python 2 is not supported, and only Python >=3.8 has been tested.)
+Python >=3.7 (64-bit). (Note: Python 2 is not supported, and Python <=3.6 requires special installation options.)
 
 
 ### Steps
@@ -53,7 +53,7 @@ Python >=3.6 (64-bit). (Note: Python 2 is not supported, and only Python >=3.8 h
 
    ```
    cd tests
-   python test_schools.py
+   pytest test_sim.py
    ```
 
    If everything installed correctly, this will bring up a plot.
