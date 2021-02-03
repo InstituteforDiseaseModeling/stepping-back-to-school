@@ -18,11 +18,12 @@ class SchedulingTest(unittest.TestCase):
         self.folder_name = os.path.join('inputs')
         self.pop_size = 20_000
         self.rand_seed = 1
-        if not os.path.isfile(os.path.join(self.folder_name, f'kc_clustered_{self.pop_size}_seed{self.rand_seed}.ppl')):
+        if not os.path.isfile(os.path.join(self.folder_name, f'seattle_metro_clustered_{self.pop_size}_seed{self.rand_seed}.ppl')):
             cvsch.make_population(
                 pop_size=self.pop_size,
                 rand_seed=self.rand_seed,
-                do_save=True
+                do_save=True,
+                folder=self.folder_name
             )
         self.entry = {
             "index": 1,
@@ -108,7 +109,7 @@ class SchedulingTest(unittest.TestCase):
         if test_pars is None:
             test_pars = self.create_testing_pars(perfection=perfect_testing)
         scen_pars = {
-            'start_day': '2020-11-02',
+            'start_date': '2020-11-02',
             'schedule': schedule,
             'screen_prob': 0.9,
             'test_prob': 0.5,  # Amongst those who screen positive
@@ -118,6 +119,8 @@ class SchedulingTest(unittest.TestCase):
             'ili_prob': 0.0,  # Daily ili probability
             'beta_s': 0.75,  # NPI
             'testing': test_pars,
+            'save_trees': True,
+            'seed_date': '2020-11-03'
         }
         if do_nothing:
             scen_pars['screen_prob'] = 0.0
@@ -240,7 +243,7 @@ class SchedulingTest(unittest.TestCase):
 
     # region results management
     def get_sample_schools(self, school_types_array):
-        sm = self.sim.get_interventions(cvsch.schools_manager) # Get the schools manager to pull out schools
+        sm = self.sim.get_interventions(cvsch.schools_manager)[0] # Get the schools manager to pull out schools
         sample_schools = {}
         school_ids = self.school_stats.keys()
         for school_id in school_ids:
