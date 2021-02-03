@@ -243,7 +243,7 @@ class SchedulingTest(unittest.TestCase):
 
     # region results management
     def get_sample_schools(self, school_types_array):
-        sm = self.sim.get_interventions(cvsch.schools_manager)[0] # Get the schools manager to pull out schools
+        sm = self.sim.get_intervention(cvsch.schools_manager) # Get the schools manager to pull out schools
         sample_schools = {}
         school_ids = self.school_stats.keys()
         for school_id in school_ids:
