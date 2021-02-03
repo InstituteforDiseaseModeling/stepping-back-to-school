@@ -518,7 +518,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
-    def outbreak_size_loess(self, xvar, ext=None, height=6, aspect=1.4):
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True):
 
         # Get x and y coordinates of all outbreaks
         df = self.results.reset_index() # Un-melt (congeal?) results
@@ -526,15 +526,36 @@ class Analysis():
         x = df[xvar].values # Pull out x values
         y = df['value'].values # Pull out y values (i.e., outbreak size)
 
-        fig = plt.figure(figsize=(height*aspect, height))
-        sns.stripplot(data=df, x=xvar, y='value')
-        # plt.scatter(x,y)
+        plt.figure(figsize=(height*aspect, height))
+
+        # Scatter plots
+        if scatter:
+            dx = x.max() - x.min()
+            noise = dx*0.012*(1+np.random.randn(len(x)))
+            colors = sc.vectocolor(np.sqrt(y), cmap='copper')
+            plt.scatter(x+noise, y, alpha=0.7, s=4*y, c=colors)
+            plt.ylim([-2, y.max()*1.1])
+
+        # Loess plots
+        if loess:
+            order = np.argsort(x)
+            xo = x[order]
+            Y, E = loess_bound(xo, y[order], width=0.5)
+            plt.plot(xo, Y, color='tomato')
+            plt.fill_between(xo, Y-E, Y+E, alpha=0.3)
+
+        # General settings
+        ax = plt.gca()
+        xt = np.linspace(x.min(), x.max(), 6)
+        ax.set_xticks( xt )
+        ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+        ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+        ax.set_ylabel('Outbreak size, including source')
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
-        return self.results
-
+        return df
 
 
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):

@@ -58,7 +58,8 @@ if __name__ == '__main__':
 
     #runner.regplots(xvar=xvar, huevar=huevar)
     # analyzer.outbreak_reg(xvar, huevar)
-    r = analyzer.outbreak_size_loess(xvar)
+    analyzer.outbreak_size_plot(xvar, scatter=True, loess=False)
+    analyzer.outbreak_size_plot(xvar, scatter=False, loess=True)
 
     # analyzer.cum_incidence(colvar=xvar)
     # analyzer.outbreak_size_over_time()
