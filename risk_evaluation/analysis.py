@@ -606,11 +606,26 @@ class Analysis():
 
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
-        df['value_log'] = np.log2(df['value'])
-        xtmax = int(np.ceil(df['value_log'].max()))
+        # df['value_log'] = np.log2(df['value'])
+        # xtmax = int(np.ceil(df['value_log'].max()))
+        # bins = [0, 1, 2, 5, 10, 20, 50, 100, 200]
+        # bins = list(sc.cat(sc.inclusiverange(0, 10, 1),
+        #                    sc.inclusiverange(11, 50, 2),
+        #                    sc.inclusiverange(51, 100, 5),
+        #                    sc.inclusiverange(101, 200, 10)
+        #                    ))
+        # left_edges = bins[:-1]
+        # n_edges = len(bins)-1
+        # x = range(n_edges)
+        # df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
+
+        # Remove middle column
+        val = df[col].unique()[1]
+        df = df[df[col] != val]
+
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
-        g = sns.catplot(data=df, x='value_log', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
+        g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
         g.set_titles(col_template='{col_name}')
 
         for ax in g.axes.flat:
@@ -620,15 +635,20 @@ class Analysis():
                 print(f'Warning: could not set title ({str(E)})')
             ax.set_ylabel('')
             ax.set_xlabel('')
-            ax.set_xticks(range(xtmax), minor=True)
-            ax.set_xticks(range(0,xtmax,2))
-            ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
+            ax.set_xlim([0,50])
+            # ax.set_xscale('log')
+            # ax.set_xticks(x)
+            # ax.set_xticklabels([f'{bins[b+1]}' for b in range(n_edges)])
+            # ax.set_xticks(range(xtmax), minor=True)
+            # ax.set_xticks(range(0,xtmax,2))
+            # ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
         plt.subplots_adjust(bottom=0.05)
         plt.figtext(0.6,0.01,'Outbreak size', ha='center')
 
         fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+        plt.show()
         return g
 
     def outbreak_R0(self, figsize=(6*1.4,6)):
@@ -656,6 +676,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
+    '''
     def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
         ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
@@ -668,8 +689,37 @@ class Analysis():
         fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
+    '''
 
+    def exports_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
+        ##### Outbreak size
+        cols = [xvar] if huevar is None else [xvar, huevar]
+        ret = self.results.loc['exports_to_hh']
 
+        # Bootstrap
+        resamples = []
+        for i in range(nboot):
+            rows = np.random.randint(low=0, high=ret.shape[0], size=ret.shape[0])
+            resample_mu = ret.iloc[rows].groupby(cols).mean() # Mean estimator
+            resamples.append(resample_mu)
+        df = pd.concat(resamples)
+
+        hue_order = self.screen_order if huevar == 'Dx Screening' else None
+        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        for ax in g.axes.flat:
+            ax.set_ylabel('Number of exports to households')
+
+        if xvar == 'In-school transmission multiplier':
+            xlim = ax.get_xlim()
+            xt = np.linspace(xlim[0], xlim[1], 5)
+            ax.set_xticks( xt )
+            ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+
+        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
+        plt.tight_layout()
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return g
 
     def timeseries(self, channel, label, normalize):
         l = []
