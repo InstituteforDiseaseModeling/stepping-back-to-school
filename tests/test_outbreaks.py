@@ -4,19 +4,17 @@ Copy of outbreak script to use for testing.
 
 import numpy as np
 import sciris as sc
-from risk_evaluation import create_pops as cp
-from risk_evaluation import utils as ut
-from risk_evaluation import config as cfg
-from risk_evaluation.run import Run
+import school_tools as sct
 
 alt_sus = False
 
-class OutbreakBetaSchool(Run):
+
+class OutbreakBetaSchool(sct.Run):
     def build_configs(self):
         # Configure alternate sus
         if alt_sus:
             value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
+            self.builder.add_level('AltSus', value_labels, sct.alternate_symptomaticity)
 
         # Sweep over NPI multipliers
         npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 2)}
@@ -28,12 +26,12 @@ class OutbreakBetaSchool(Run):
 def test_outbreaks():
 
     # Minimal example
-    cfg.sweep_pars.n_reps = 2
-    cfg.sweep_pars.n_seeds = 2
-    cfg.sim_pars.pop_size = 20_000
-    cfg.paths.inputs = sc.thisdir(None, 'inputs')
-    cfg.paths.outputs = sc.thisdir(None, 'outputs')
-    cfg.run_pars.parallel = False # Interferes with coverage otherwise
+    sct.config.sweep_pars.n_reps = 2
+    sct.config.sweep_pars.n_seeds = 2
+    sct.config.sim_pars.pop_size = 20_000
+    sct.config.paths.inputs = sc.thisdir(None, 'inputs')
+    sct.config.paths.outputs = sc.thisdir(None, 'outputs')
+    sct.config.run_pars.parallel = False # Interferes with coverage otherwise
 
     sweep_pars = {
         'n_prev':  1, # Include controller
@@ -43,7 +41,7 @@ def test_outbreaks():
         #'schcfg_keys':  ['with_countermeasures'],
     }
 
-    pop_size = cfg.sim_pars.pop_size
+    pop_size = sct.config.sim_pars.pop_size
     sim_pars = {
         'pop_infected': 0, # Do not seed
         'pop_size': pop_size,
@@ -52,9 +50,9 @@ def test_outbreaks():
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    cp.create_pops(cfg=cfg)
+    sct.create_pops(cfg=sct.config)
 
-    runner = OutbreakBetaSchool(sweep_pars=sweep_pars, sim_pars=sim_pars, cfg=cfg)
+    runner = OutbreakBetaSchool(sweep_pars=sweep_pars, sim_pars=sim_pars, cfg=sct.config)
     runner.run(force=True)
     analyzer = runner.analyze()
 
