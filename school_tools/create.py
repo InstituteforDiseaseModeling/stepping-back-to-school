@@ -27,7 +27,7 @@ def create_pops(cfg=cfg):
     print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
     kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
 
-    if parallelize:
+    if parallelize: # pragma: no cover
         ram = psutil.virtual_memory().available/1e9
         max_cpus = psutil.cpu_count()
         max_parallel = min(max_cpus, n_seeds)

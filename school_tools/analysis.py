@@ -611,7 +611,7 @@ class Analysis(sc.prettyobj):
 
         # Handle non-numeric x axes
         is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
-        if not is_numeric:
+        if not is_numeric: # pragma: no cover
             labels = df[xvar].unique()
             indices = range(len(labels))[::-1]
             labelmap = dict(zip(labels, indices))
@@ -629,7 +629,7 @@ class Analysis(sc.prettyobj):
                 plt_x = xjitter
                 plt_y = y
                 lim_func = plt.ylim
-            else:
+            else: # pragma: no cover
                 plt_x = y
                 plt_y = xjitter
                 lim_func = plt.xlim
@@ -651,7 +651,7 @@ class Analysis(sc.prettyobj):
             set_xticklabels = ax.set_xticklabels
             set_xlabel = ax.set_xlabel
             set_ylabel = ax.set_ylabel
-        else:
+        else: # pragma: no cover
             set_xticks = ax.set_yticks
             set_xticklabels = ax.set_yticklabels
             set_xlabel = ax.set_ylabel
@@ -661,7 +661,7 @@ class Analysis(sc.prettyobj):
             set_xticks(xt)
             set_xticklabels([f'{self.beta0*betamult:.1%}' for betamult in xt])
             set_xlabel('Transmission probability in schools, per-contact per-day')
-        else:
+        else: # pragma: no cover
             set_xticks(indices)
             set_xticklabels(labels)
 
