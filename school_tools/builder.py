@@ -16,7 +16,6 @@ import covasim_schools as cvsch
 
 from . import scenarios as scn
 from . import analysis as an
-from . import utils as ut
 from . import config as cfg
 from . import create_sim as cs
 
@@ -48,7 +47,11 @@ Configuration {self.label}:
  '''
 
 
-class Builder:
+class Builder(sc.prettyobj):
+    '''
+    Build the run configurations
+    '''
+
     def __init__(self, sim_pars, sweep_pars, paths):
 
         self.configs = [Config(sim_pars=sim_pars, tags=dict(school_start_date=sweep_pars.school_start_date))]
@@ -234,7 +237,7 @@ class Run(sc.objdict):
 
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
-            self.sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?
+            self.sims = run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?
         else:
             print(f'Loading {self.cachefn}')
             self.sims = cv.load(self.cachefn) # Use for *.sims
