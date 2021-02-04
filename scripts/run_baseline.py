@@ -19,7 +19,7 @@ if __name__ == '__main__':
     xvar = 'Prevalence Target'
 
     # Create and run
-    mgr = sct.Manager(sweep_pars=None, sim_pars=sim_pars, levels=None)
+    mgr = sct.Manager(name='Baseline', sweep_pars=None, sim_pars=sim_pars, levels=None)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 

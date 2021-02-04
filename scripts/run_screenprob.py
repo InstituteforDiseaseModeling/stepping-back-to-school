@@ -19,7 +19,7 @@ if __name__ == '__main__':
     huevar = 'Prevalence Target'
 
     # Create and run
-    mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=None, levels=levels)
+    mgr = sct.Manager(ame='ScreenProb', sweep_pars=sweep_pars, sim_pars=None, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 

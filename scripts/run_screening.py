@@ -13,7 +13,7 @@ if __name__ == '__main__':
     xvar = 'Prevalence Target'
 
     # Create and run
-    mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=None, levels=None)
+    mgr = sct.Manager(name='Screening', sweep_pars=sweep_pars, sim_pars=None, levels=None)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 

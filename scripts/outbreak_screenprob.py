@@ -38,7 +38,7 @@ if __name__ == '__main__':
     huevar = 'In-school transmission multiplier'
 
     # Create and run
-    mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
+    mgr = sct.Manager(name='OutbreakScreenProb', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
