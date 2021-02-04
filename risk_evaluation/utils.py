@@ -104,25 +104,29 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
-    sc.heading('Choosing correct number of CPUs...') # TODO: merge with create_pops.py
-    if n_cpus is None:
-        cpu_limit = int(mp.cpu_count()*run_cfg['cpu_thresh']) # Don't use more than 75% of available CPUs
-        ram_available = psutil.virtual_memory().available/1e9
-        ram_required = 1.5*pop_size/2.25e5 # Roughly 1.5 GB per 225e3 people
-        ram_limit = int(ram_available/ram_required*run_cfg['mem_thresh'])
-        n_cpus = min(cpu_limit, ram_limit)
-        print(f'{n_cpus} CPUs are being used due to a CPU limit of {cpu_limit} and estimated RAM limit of {ram_limit}')
-    else:
-        print(f'Using user-specified {n_cpus} CPUs')
-
     sc.heading('Running sims...')
     TT = sc.tic()
+    kwargs = dict(n_sims=len(sim_configs), run_config=run_cfg)
     if run_cfg['parallel']:
-        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), run_config=run_cfg), ncpus=n_cpus)
+        print('...running in parallel')
+
+        sc.heading('Choosing correct number of CPUs...') # TODO: merge with create_pops.py
+        if n_cpus is None:
+            cpu_limit = int(mp.cpu_count()*run_cfg['cpu_thresh']) # Don't use more than 75% of available CPUs
+            ram_available = psutil.virtual_memory().available/1e9
+            ram_required = 1.5*pop_size/2.25e5 # Roughly 1.5 GB per 225e3 people
+            ram_limit = int(ram_available/ram_required*run_cfg['mem_thresh'])
+            n_cpus = min(cpu_limit, ram_limit)
+            print(f'{n_cpus} CPUs are being used due to a CPU limit of {cpu_limit} and estimated RAM limit of {ram_limit}')
+        else:
+            print(f'Using user-specified {n_cpus} CPUs')
+
+        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=kwargs, ncpus=n_cpus)
     else:
+        print('...running in serial')
         sims = []
         for sconf in sim_configs:
-            sim = create_run_sim(sconf, n_sims=len(sim_configs))
+            sim = create_run_sim(sconf, **kwargs)
             sims.append(sim)
 
     if filename is not None:

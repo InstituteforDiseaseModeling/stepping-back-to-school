@@ -619,10 +619,6 @@ class Analysis():
         # x = range(n_edges)
         # df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
 
-        # Remove middle column
-        val = df[col].unique()[1]
-        df = df[df[col] != val]
-
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
         g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
@@ -648,7 +644,6 @@ class Analysis():
         fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
-        plt.show()
         return g
 
     def outbreak_R0(self, figsize=(6*1.4,6)):

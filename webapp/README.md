@@ -1,5 +1,3 @@
-# vmselfserve
+# Schools webapp
 
-This repository runs a simple web server to allow control over VMs.
-
-First `pip install scirisweb`, then `run_server`.
+This runs the schools webapp.

@@ -18,16 +18,14 @@ import covasim_schools as cvsch
 import config as cfg
 
 
-# This must be in a main block for parallelization to work on Windows
-if __name__ == '__main__':
-
-    cfg.process_inputs(sys.argv)
+def create_pops(cfg=cfg):
+    ''' Create the population files '''
 
     pop_size = cfg.sim_pars.pop_size
     n_seeds = cfg.sweep_pars.n_seeds
     location = cfg.pop_pars.location
     seeds = np.arange(n_seeds) + cfg.run_pars.base_seed
-    parallelize = True
+    parallelize = cfg.run_pars.parallel
 
     print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
     kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
@@ -48,3 +46,11 @@ if __name__ == '__main__':
     else:
         for seed in seeds:
             cvsch.make_population(**kwargs, rand_seed=seed)
+
+
+# This must be in a main block for parallelization to work on Windows
+if __name__ == '__main__':
+
+    cfg.process_inputs(sys.argv)
+    create_pops()
+
