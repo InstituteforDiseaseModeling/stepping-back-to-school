@@ -5,6 +5,8 @@ Copy of outbreak script to use for testing.
 import numpy as np
 import school_tools as sct
 
+sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise
+
 
 def test_micro():
     ''' Simplest possible test'''
@@ -31,7 +33,6 @@ def test_outbreaks():
     sct.config.sweep_pars.n_reps = 2
     sct.config.sweep_pars.n_seeds = 2
     sct.config.sim_pars.pop_size = 10_000
-    sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise
 
     sweep_pars = {
         'n_prev':  1, # Include controller
