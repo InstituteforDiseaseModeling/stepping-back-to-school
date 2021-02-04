@@ -5,7 +5,7 @@ Copy of outbreak script to use for testing.
 import numpy as np
 import school_tools as sct
 
-sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise
+sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise, even if concurrency = multiprocess is included
 
 
 def test_micro():
@@ -29,11 +29,20 @@ def test_scheduling():
 
 
 def test_testing():
-    ''' Test COVID testing scenarios, plus alternate symptomaticity '''
+    ''' Test COVID testing scenarios '''
     sct.config.set_micro()
-    sct.config.sweep_pars.alt_sus = True
     sweep_pars = dict(screen_keys =  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'PCR every 1w'])
     mgr = sct.Manager(sweep_pars=sweep_pars, cfg=sct.config)
+    mgr.run(force=True)
+    sct.config.set_default() # Back to default
+    return mgr
+
+
+def test_alt_sus():
+    ''' Test alternate symptomaticity '''
+    sct.config.set_micro()
+    sct.config.sweep_pars.alt_sus = True
+    mgr = sct.Manager(cfg=sct.config)
     mgr.run(force=True)
     sct.config.set_default() # Back to default
     sct.config.sweep_pars.alt_sus = False
@@ -102,10 +111,11 @@ def test_trees():
 
 if __name__ == '__main__':
 
-    # mgr1 = test_micro()
-    # mgr2 = test_scheduling()
-    # mgr3 = test_testing()
-    # mgr4 = test_analysis()
-    mgr5 = test_trees()
+    mgr1 = test_micro()
+    mgr2 = test_scheduling()
+    mgr3 = test_testing()
+    mgr4 = test_alt_sus()
+    mgr5 = test_analysis()
+    mgr6 = test_trees()
 
 
