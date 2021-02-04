@@ -7,7 +7,10 @@ import os
 import covasim as cv
 import sciris as sc
 import covasim_schools as cvsch
-import config as cfg
+from . import config as cfg
+
+
+__all__ = ['define_pars', 'create_sim']
 
 
 def define_pars(which='best', kind='default', ):
