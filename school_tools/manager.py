@@ -17,7 +17,7 @@ import covasim_schools as cvsch
 from . import scenarios as scn
 from . import analysis as an
 from . import config as cfg
-from . import create_sim as cs
+from . import create as cr
 
 
 __all__ = ['Config', 'Builder', 'Manager', 'create_run_sim', 'run_configs', 'alternate_symptomaticity']
@@ -274,7 +274,7 @@ def create_run_sim(sconf, n_sims, run_config):
     print(f'Creating and running {label}...')
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label)
+    sim = cr.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)

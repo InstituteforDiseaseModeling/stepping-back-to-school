@@ -2,7 +2,6 @@
 Very simple test of sim creation and input argument handling (without inputs)
 '''
 
-import sys
 import numpy as np
 import sciris as sc
 import covasim as cv
@@ -31,7 +30,7 @@ def test_sims(do_plot=False):
 
 
 def test_inputs():
-    sct.config.process_inputs(sys.argv)
+    sct.config.process_inputs([])
     sct.config.set_full()
     p1 = sc.dcp(sct.config.sweep_pars)
     sct.config.set_debug()
