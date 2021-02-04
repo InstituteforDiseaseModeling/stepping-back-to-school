@@ -3,52 +3,31 @@ Dense sweep of screen_prob at a few fixed prevalence levels.
 '''
 
 import sys
-import os
-import matplotlib.pyplot as plt
-import utils as ut
-import config as cfg
-from run import Run
 import numpy as np
-
-alt_sus = False
-
-class ScreenProb(Run):
-    def build_configs(self):
-        # Configure alternate sus
-        if alt_sus:
-            value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
-
-        # Sweep over symptom screening
-        symp_screens = {p:{'screen_prob': p} for p in np.linspace(0, 1, 10)}
-        self.builder.add_level('Screen prob', symp_screens, self.builder.screenpars_func)
-
-        return super().build_configs()
-
+import school_tools as sct
 
 if __name__ == '__main__':
 
-    args = cfg.process_inputs(sys.argv)
+    # Settings
+    args = sct.config.process_inputs(sys.argv)
+    sweep_pars = dict(prev=[0.005, 0.01])
 
-    # Optional overrides
-    sweep_pars = dict(
-        # n_reps = 5,
-        # n_prev = 20,
-        prev =  [0.005, 0.01],
-    )
-    pop_size = cfg.sim_pars.pop_size
+    symp_screens = {p:{'screen_prob': p} for p in np.linspace(0, 1, 10)}
+    levels = [{'keyname':'Screen prob', 'level':symp_screens, 'func':'screenpars_func'}]
 
-    runner = ScreenProb(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
-    runner.run(args.force)
-    analyzer = runner.analyze()
+    xvar = 'Screen prob'
+    huevar = 'Prevalence Target'
 
-    runner.regplots(xvar='Screen prob', huevar='Prevalence Target')
+    # Create and run
+    mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=None, levels=levels)
+    mgr.run(args.force)
+    analyzer = mgr.analyze()
 
-    #analyzer.introductions_rate(xvar='Screen prob', huevar='Prevalence', height=5, aspect=1.4, ext='_wide')
-
-    analyzer.cum_incidence(colvar='Screen prob')
-    analyzer.introductions_rate_by_stype(xvar='Screen prob')
+    # Plots
+    mgr.regplots(xvar=xvar, huevar=huevar)
+    analyzer.outbreak_reg(xvar=xvar, huevar=huevar, height=5, aspect=2, ext='_wide')
+    analyzer.cum_incidence(colvar=xvar)
+    analyzer.introductions_rate_by_stype(xvar=xvar)
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
-
-    runner.tsplots()
+    mgr.tsplots()

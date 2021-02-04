@@ -15,6 +15,7 @@ if __name__ == '__main__':
     # Settings
     args = sct.config.process_inputs(sys.argv)
     sweep_pars = dict(schcfg_keys = ['k5'])
+    xvar = 'Prevalence Target'
 
     # Create and run
     mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=None, levels=None)
@@ -22,9 +23,9 @@ if __name__ == '__main__':
     analyzer = mgr.analyze()
 
     # Plots
-    # mgr.regplots(xvar='Prevalence Target', huevar='Dx Screening') # CK: doesn't work
-    # analyzer.cum_incidence(colvar='Prevalence Target') # CK: doesn't work
-    # analyzer.introductions_rate_by_stype(xvar='Prevalence Target') # CK: doesn't work
+    mgr.regplots(xvar=xvar, huevar='Dx Screening')
+    analyzer.cum_incidence(colvar=xvar)
+    analyzer.introductions_rate_by_stype(xvar=xvar)
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
     analyzer.source_dow(figsize=(6.5,5))

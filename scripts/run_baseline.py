@@ -16,6 +16,7 @@ if __name__ == '__main__':
     args = sct.config.process_inputs(sys.argv)
     pop_size = sct.config.sim_pars.pop_size
     sim_pars = dict(pop_size=pop_size)
+    xvar = 'Prevalence Target'
 
     # Create and run
     mgr = sct.Manager(sweep_pars=None, sim_pars=sim_pars, levels=None)
@@ -23,8 +24,8 @@ if __name__ == '__main__':
     analyzer = mgr.analyze()
 
     # Plots
-    #mgr.regplots(xvar='Prevalence Target', huevar='Dx Screening') # CK: doesn't work
-    #analyzer.cum_incidence(colvar='Prevalence Target') # CK: doesn't work
+    mgr.regplots(xvar=xvar, huevar='Dx Screening')
+    analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
     analyzer.source_dow(figsize=(8,5)) # 6.5 x 5
