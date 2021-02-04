@@ -18,11 +18,8 @@ import covasim_schools as cvsch
 import config as cfg
 
 
-def create_pops(config=None, parallelize=True):
+def create_pops(parallelize=True, cfg=cfg):
     ''' Create the population files '''
-
-    if config is not None:
-        cfg = config # Replace with config, if supplied
 
     pop_size = cfg.sim_pars.pop_size
     n_seeds = cfg.sweep_pars.n_seeds

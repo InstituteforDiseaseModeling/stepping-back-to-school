@@ -9,7 +9,7 @@ import analysis as an
 import utils as ut
 import config as cfg
 
-class Run:
+class Run(sc.objdict):
     '''
     This is the main class used for commissioning the different testing scenarios
     (defined in testing_scenarios.py) for the paper results. Run this script first
@@ -18,8 +18,18 @@ class Run:
     the test run uses 8.
     '''
 
-    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None):
+    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None, cfg=cfg):
 
+        # Handle inputs
+        input_pars = sc.objdict()
+        input_pars.sim_pars = sim_pars
+        input_pars.sweep_pars = sweep_pars
+        input_pars.run_pars = run_pars
+        input_pars.pop_pars = pop_pars
+        input_pars.paths = paths
+        for k,pars in input_pars.items():
+            defaults = getattr(cfg, k)
+            self[k] = sc.dcp(sc.objdict(sc.mergedicts(defaults, pars))) # Copy the merged objdict
 
         # Check that versions are correct
         sp_gitinfo = sc.gitinfo(sp.__file__)
@@ -34,27 +44,9 @@ class Run:
         self.sims = None  # To be run or loaded by calling run()
         self.analyzer = None
 
-        # TODO: move to defaults
-        self.sim_pars = sc.dcp(cfg.sim_pars)
-        if sim_pars is not None:
-            self.sim_pars.update(sim_pars)
-
-        self.sweep_pars = sc.dcp(cfg.sweep_pars)
-        if sweep_pars is not None:
-            self.sweep_pars.update(sweep_pars)
         if self.sweep_pars.prev is None:
             self.sweep_pars.prev = np.linspace(0.002, 0.02, self.sweep_pars.n_prev) # TODO: this might create subtle bugs and shouldn't be hard-coded
 
-        self.run_pars = sc.dcp(cfg.run_pars)
-        if run_pars is not None:
-            self.run_pars.update(run_pars)
-        self.pop_pars = sc.dcp(cfg.pop_pars)
-        if pop_pars is not None:
-            self.pop_pars.update(pop_pars)
-
-        self.paths = sc.dcp(cfg.paths)
-        if paths is not None:
-            self.paths.update(paths)
         self.stem = f'{self.pop_pars.location}_{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
         self.dir = os.path.join(self.paths.outputs, self.stem)
         self.cachefn = os.path.join(self.dir, 'results.sims') # Might need to change the extension here, depending if combine.py was used
@@ -121,6 +113,8 @@ class Run:
 
     def run(self, force=False):
         ''' Run the sims, or load them from disk '''
+
+        print('WHEN RUN I AM', cfg.sweep_pars)
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
             self.sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?

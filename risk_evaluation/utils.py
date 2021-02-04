@@ -79,13 +79,13 @@ def p2f(x):
 
 
 #%% Running
-def create_run_sim(sconf, n_sims, run_config, config=None):
+def create_run_sim(sconf, n_sims, run_config):
     ''' Create and run the actual simulations '''
     label = f'sim {sconf.count} of {n_sims}'
     print(f'Creating and running {label}...')
 
     T = sc.tic()
-    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label, config=config)
+    sim = cs.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
@@ -100,7 +100,7 @@ def create_run_sim(sconf, n_sims, run_config, config=None):
     return sim
 
 
-def run_configs(sim_configs, stem, run_cfg, filename=None, config=None):
+def run_configs(sim_configs, stem, run_cfg, filename=None):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
@@ -118,7 +118,7 @@ def run_configs(sim_configs, stem, run_cfg, filename=None, config=None):
     sc.heading('Running sims...')
     TT = sc.tic()
     if run_cfg['parallel']:
-        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), run_config=run_cfg, config=config), ncpus=n_cpus)
+        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=dict(n_sims=len(sim_configs), run_config=run_cfg), ncpus=n_cpus)
     else:
         sims = []
         for sconf in sim_configs:

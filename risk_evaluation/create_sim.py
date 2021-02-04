@@ -33,7 +33,7 @@ def define_pars(which='best', kind='default', ):
 
 
 def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, strategy='clustered', load_pop=True, save_pop=False, people=None,
-               label=None, config=None, **kwargs):
+               label=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
     create the sim object.
@@ -55,8 +55,6 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
     Returns:
         A sim instance
     '''
-    if config is not None:
-        cfg = config
 
     # Handle parameters and merge together different sets of defaults
 
