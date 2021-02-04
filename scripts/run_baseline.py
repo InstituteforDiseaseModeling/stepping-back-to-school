@@ -13,9 +13,7 @@ import school_tools as sct
 if __name__ == '__main__':
 
     # Settings
-
     args = sct.config.process_inputs(sys.argv)
-
     pop_size = sct.config.sim_pars.pop_size
     sim_pars = dict(pop_size=pop_size)
 
