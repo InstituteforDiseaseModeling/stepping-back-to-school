@@ -1,3 +1,7 @@
+'''
+Run an SEIR model
+'''
+
 import os
 import sciris as sc
 import numpy as np
@@ -5,77 +9,86 @@ import covasim as cv
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import covasim_controller as cvc
-from risk_evaluation import create_sim as cs
-from risk_evaluation import config as cfg
+import school_tools as sct
 
-# Global plotting styles
-plt.rcParams['font.size'] = 6
-plt.rcParams['font.family'] = 'Roboto Condensed'
-plt.rcParams['lines.linewidth'] = 0.7
 
-cachefn = 'sim_100k.obj'
-force_run = True
+def test_seir():
 
-pop_size = 100_000
-params = {
-    'rand_seed': 0,
-    'pop_infected': 100,
-    'change_beta': 1,
-    'symp_prob': 0.1,
-    #'end_day': '2020-09-05', # TEMP: shorter duration
-}
+    # Global plotting styles
+    plt.rcParams['font.size'] = 6
+    plt.rcParams['font.family'] = 'Roboto Condensed'
+    plt.rcParams['lines.linewidth'] = 0.7
 
-# These come from fit_transmats
-ei = sc.loadobj(cfg.paths.ei)
-ir = sc.loadobj(cfg.paths.ir)
+    cachefn = 'sim_100k.obj'
+    force_run = True
 
-EI = ei.Mopt
-IR = ir.Mopt
+    pop_size = 5_000
+    params = {
+        'rand_seed': 0,
+        'pop_infected': 100,
+        'change_beta': 1,
+        'symp_prob': 0.1,
+        #'end_day': '2020-09-05', # TEMP: shorter duration
+    }
 
-if force_run or not os.path.isfile(cachefn):
-    sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
-    sim.pars['interventions'] = [] # Remove interventions
+    # These come from fit_transmats
+    ei = sc.loadobj(sct.config.paths.ei)
+    ir = sc.loadobj(sct.config.paths.ir)
 
-    sim.run()
-    sim.save(cachefn, keep_people=True)
-else:
-    sim = cv.load(cachefn)
+    EI = ei.Mopt
+    IR = ir.Mopt
 
-seeds = sim.results['n_exposed'][0]
-seir = cvc.SEIR(pop_size, EI, IR, ERR=1, beta=0.365, Ipow=0.925) # 0.365, 0.94
-seir_results = seir.run(seeds, sim.pars['n_days'])
+    if force_run or not os.path.isfile(cachefn):
+        sim = sct.create_sim(params, pop_size=int(pop_size), load_pop=False)
+        sim.pars['interventions'] = [] # Remove interventions
 
-N = sim.scaled_pop_size # don't really care about N vs alive...
-#alive = N - sim.results['cum_deaths']
-S = N - sim.results['cum_infections'].values
-E = sim.results['n_exposed'].values - sim.results['n_infectious'].values
-I = sim.results['n_infectious'].values
-R = sim.results['cum_recoveries']
+        sim.run()
+        sim.save(cachefn, keep_people=True)
+    else:
+        sim = cv.load(cachefn)
 
-fig = plt.figure(constrained_layout=True, figsize=(5,3))
-gs = GridSpec(2, 2, figure=fig)
-ax1 = fig.add_subplot(gs[0, :])
-ax2 = fig.add_subplot(gs[1, 0])
-ax3 = fig.add_subplot(gs[1, 1])
+    seeds = sim.results['n_exposed'][0]
+    seir = cvc.SEIR(pop_size, EI, IR, ERR=1, beta=0.365, Ipow=0.925) # 0.365, 0.94
+    seir_results = seir.run(seeds, sim.pars['n_days'])
 
-ax1.plot(sim.results['date'], np.vstack([S, E, I, R]).T)
+    N = sim.scaled_pop_size # don't really care about N vs alive...
+    #alive = N - sim.results['cum_deaths']
+    S = N - sim.results['cum_infections'].values
+    E = sim.results['n_exposed'].values - sim.results['n_infectious'].values
+    I = sim.results['n_infectious'].values
+    R = sim.results['cum_recoveries']
 
-xx = np.vstack([seir_results['S'], seir_results['E'], seir_results['I'], seir_results['R']])
-ax1.set_prop_cycle(None)
-ax1.plot(sim.results['date'], xx.T, ls='--')
-ax1.legend(['Susceptible', 'Exposed', 'Infectious', 'Recovered'])
+    fig = plt.figure(constrained_layout=True, figsize=(5,3))
+    gs = GridSpec(2, 2, figure=fig)
+    ax1 = fig.add_subplot(gs[0, :])
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax3 = fig.add_subplot(gs[1, 1])
 
-ax2.scatter(S*I/N, sim.results['new_infections'], c=range(len(S)), s=3)
-SI = seir_results['S']*seir_results['I']/N
-ax2.scatter(SI[:-1], -np.diff(seir_results['X'][0]), c=range(len(SI[:-1])), s=3, marker='x')
-ax2.set_xlabel('S*I/N')
-ax2.set_ylabel('New infections')
+    ax1.plot(sim.results['date'], np.vstack([S, E, I, R]).T)
 
-ax3.scatter(E, I, c=range(len(S)), s=3)
-ax3.set_prop_cycle(None)
-ax3.scatter(seir_results['E'], seir_results['I'], c=range(len(S)), s=3, marker='x')
-ax3.set_xlabel('Exposed')
-ax3.set_ylabel('Infectious')
-ax3.legend(['Covasim', 'SEIR'])
+    xx = np.vstack([seir_results['S'], seir_results['E'], seir_results['I'], seir_results['R']])
+    ax1.set_prop_cycle(None)
+    ax1.plot(sim.results['date'], xx.T, ls='--')
+    ax1.legend(['Susceptible', 'Exposed', 'Infectious', 'Recovered'])
 
-fig.savefig('is_covasim_seir.png', dpi=300)
+    ax2.scatter(S*I/N, sim.results['new_infections'], c=range(len(S)), s=3)
+    SI = seir_results['S']*seir_results['I']/N
+    ax2.scatter(SI[:-1], -np.diff(seir_results['X'][0]), c=range(len(SI[:-1])), s=3, marker='x')
+    ax2.set_xlabel('S*I/N')
+    ax2.set_ylabel('New infections')
+
+    ax3.scatter(E, I, c=range(len(S)), s=3)
+    ax3.set_prop_cycle(None)
+    ax3.scatter(seir_results['E'], seir_results['I'], c=range(len(S)), s=3, marker='x')
+    ax3.set_xlabel('Exposed')
+    ax3.set_ylabel('Infectious')
+    ax3.legend(['Covasim', 'SEIR'])
+
+    fig.savefig('is_covasim_seir.png', dpi=300)
+
+    return seir
+
+
+if __name__ == '__main__':
+
+    seir = test_seir()
