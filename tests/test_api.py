@@ -12,8 +12,18 @@ def test_micro():
     mgr = sct.Manager(cfg=sct.config)
     mgr.run(force=True)
     analyzer = mgr.analyze()
-    sct.config.set_debug() # Back to default
+    sct.config.set_default() # Back to default
     return analyzer
+
+
+def test_scheduling():
+    sct.config.set_micro()
+    sweep_pars = dict(schcfg_keys = ['with_countermeasures', 'all_hybrid', 'k5'])
+    mgr = sct.Manager(sweep_pars=sweep_pars, cfg=sct.config)
+    mgr.run(force=True)
+    mgr.analyze()
+    sct.config.set_default() # Back to default
+    return mgr
 
 
 def test_outbreaks():
@@ -49,7 +59,7 @@ def test_outbreaks():
     mgr.run(force=True)
     analyzer = mgr.analyze()
 
-    analyzer.outbreak_size_distribution(row=xvar, col=None)
+    analyzer.outbreak_size_distribution(xvar=xvar)
     analyzer.outbreak_R0()
     analyzer.outbreak_reg(xvar, huevar)
     analyzer.cum_incidence(colvar=xvar)
@@ -64,5 +74,7 @@ def test_outbreaks():
 if __name__ == '__main__':
 
     analyzer = test_micro()
-    mgr = test_outbreaks()
+    mgr1 = test_scheduling()
+    mgr2 = test_outbreaks()
+
 
