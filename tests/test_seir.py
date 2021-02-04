@@ -2,10 +2,8 @@
 Run an SEIR model
 '''
 
-import os
 import sciris as sc
 import numpy as np
-import covasim as cv
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import covasim_controller as cvc
@@ -19,13 +17,14 @@ def test_seir():
     plt.rcParams['font.family'] = 'Roboto Condensed'
     plt.rcParams['lines.linewidth'] = 0.7
 
-    pop_size = 5_000
+    pop_size = 3000
     params = {
         'rand_seed': 0,
         'pop_infected': 100,
         'change_beta': 1,
         'symp_prob': 0.1,
-        #'end_day': '2020-09-05', # TEMP: shorter duration
+        'start_day': '2021-01-01',
+        'end_day': '2021-04-01',
     }
 
     # These come from fit_transmats
@@ -50,7 +49,7 @@ def test_seir():
     I = sim.results['n_infectious'].values
     R = sim.results['cum_recoveries']
 
-    fig = plt.figure(constrained_layout=True, figsize=(5,3))
+    fig = plt.figure(constrained_layout=True, figsize=(9,5))
     gs = GridSpec(2, 2, figure=fig)
     ax1 = fig.add_subplot(gs[0, :])
     ax2 = fig.add_subplot(gs[1, 0])
