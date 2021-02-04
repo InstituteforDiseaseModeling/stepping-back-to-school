@@ -644,7 +644,6 @@ class Analysis():
         fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
-        plt.show()
         return g
 
     def outbreak_R0(self, figsize=(6*1.4,6)):
