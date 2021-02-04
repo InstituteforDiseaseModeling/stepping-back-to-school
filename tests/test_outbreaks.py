@@ -3,7 +3,6 @@ Copy of outbreak script to use for testing.
 '''
 
 import numpy as np
-import sciris as sc
 import school_tools as sct
 
 
@@ -18,13 +17,10 @@ def test_micro():
 
 
 def test_outbreaks():
-
-    # Minimal example
+    ''' Small outbreak example '''
     sct.config.sweep_pars.n_reps = 2
     sct.config.sweep_pars.n_seeds = 2
     sct.config.sim_pars.pop_size = 10_000
-    sct.config.paths.inputs = sc.thisdir(None, 'inputs')
-    sct.config.paths.outputs = sc.thisdir(None, 'outputs')
     sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise
 
     sweep_pars = {
