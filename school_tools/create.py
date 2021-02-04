@@ -4,10 +4,45 @@ Used in calibration and other downstream activities.
 '''
 
 import os
+import psutil
+import numpy as np
 import covasim as cv
 import sciris as sc
 import covasim_schools as cvsch
-import config as cfg
+from . import config as cfg
+
+
+__all__ = ['create_pops', 'define_pars', 'create_sim']
+
+
+def create_pops(cfg=cfg):
+    ''' Create the population files '''
+
+    pop_size = cfg.sim_pars.pop_size
+    n_seeds = cfg.sweep_pars.n_seeds
+    location = cfg.pop_pars.location
+    seeds = np.arange(n_seeds) + cfg.run_pars.base_seed
+    parallelize = cfg.run_pars.parallel
+
+    print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
+    kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
+
+    if parallelize:
+        ram = psutil.virtual_memory().available/1e9
+        max_cpus = psutil.cpu_count()
+        max_parallel = min(max_cpus, n_seeds)
+        required = 1.5*pop_size/223e3 # 1.5 GB per 223e3 people
+        max_required = max_parallel*required
+        if max_required < ram:
+            print(f'You have {ram:0.1f} GB of RAM, and this is estimated to require {max_required:0.1f} GB: you should be fine')
+            ncpus = max_parallel
+        else:
+            ncpus = int(max_parallel*ram/max_required)
+            print(f'You have {ram:0.1f} GB of RAM, but this is estimated to require {max_required:0.1f} GB -- changing from {max_cpus} CPUs to {ncpus}')
+        sc.parallelize(cvsch.make_population, kwargs=kwargs, iterkwargs={'rand_seed':seeds}, ncpus=ncpus) # Run them in parallel
+    else:
+        for seed in seeds:
+            cvsch.make_population(**kwargs, rand_seed=seed)
 
 
 def define_pars(which='best', kind='default', ):
@@ -32,8 +67,8 @@ def define_pars(which='best', kind='default', ):
     return output
 
 
-def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, strategy='clustered', load_pop=True, save_pop=False, people=None,
-               label=None, **kwargs):
+def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, strategy='clustered',
+               load_pop=True, save_pop=False, people=None, label=None, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
     create the sim object.

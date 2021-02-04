@@ -6,6 +6,10 @@ import datetime as dt
 import sciris as sc
 import matplotlib.pyplot as plt
 
+
+__all__ = ['scenario', 'generate_scenarios', 'generate_screening', 'scenario_map', 'screening_map']
+
+
 def scenario(es, ms, hs):
     return {
         'pk': None,
@@ -83,6 +87,7 @@ def generate_scenarios(start_date='2020-11-02', base_beta_s=1.5, seed_date=None)
     scns['all_remote'] = scenario(es=remote, ms=remote, hs=remote)
 
     return scns
+
 
 def generate_screening(start_date='2020-11-02'):
 
@@ -220,6 +225,7 @@ def generate_screening(start_date='2020-11-02'):
         'PCR every 1w': PCR_every_1w_starting_1wprior,
         'PCR every 1d': PCR_every_1d_starting_1wprior,
     }
+
 
 def scenario_map():
     col = plt.cm.get_cmap('tab10')
