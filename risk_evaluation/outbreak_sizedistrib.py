@@ -55,8 +55,14 @@ if __name__ == '__main__':
 
     #runner.regplots(xvar=xvar, huevar=huevar)
 
-    analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
-    analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
+    ####analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
+    g = analyzer.outbreak_size_distribution(huevar, scatter=True, loess=False, landscape=False, aspect=1.7, values=['No diagnostic screening', 'Weekly antigen']
+    g.set_xlabels('')
+    g._legend.set_bbox_to_anchor((0,0,1,1.75))
+
+
+    #analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
+    #analyzer.outbreak_size_plot(huevar, scatter=True, loess=True, landscape=True, ext='Lowess', aspect=1.7)
     #analyzer.outbreak_reg(xvar, huevar)
 
     # analyzer.cum_incidence(colvar=xvar, rowvar=huevar)

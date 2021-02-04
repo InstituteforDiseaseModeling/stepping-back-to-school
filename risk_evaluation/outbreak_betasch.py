@@ -49,18 +49,22 @@ if __name__ == '__main__':
     runner.run(args.force)
     analyzer = runner.analyze()
 
-    analyzer.outbreak_size_distribution(row='In-school transmission multiplier', col=None)
+    xvar='In-school transmission multiplier'
+    huevar=None
+
+    #analyzer.outbreak_size_distribution(huevar, scatter=True, loess=False, landscape=False, aspect=1.7)
+    g = analyzer.outbreak_size_distribution(xvar, ext='asdf', height=6, aspect=1.4, jitter=0.02) # height=10, aspect=0.7
+    #g._legend.set_bbox_to_anchor((0.2,0.5))
+    #analyzer.outbreak_size_distribution(row='In-school transmission multiplier', col=None)
 
     analyzer.outbreak_R0()
 
-    xvar='In-school transmission multiplier'
-    huevar=None
 
     #runner.regplots(xvar=xvar, huevar=huevar)
     analyzer.exports_reg(xvar, huevar)
     analyzer.outbreak_reg(xvar, huevar)
     analyzer.outbreak_size_plot(xvar, scatter=True, loess=False)
-    analyzer.outbreak_size_plot(xvar, scatter=False, loess=True) # Included for completeness but looks weird
+    analyzer.outbreak_size_plot(xvar, scatter=False, loess=True, ext='lowess') # Included for completeness but looks weird
 
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
