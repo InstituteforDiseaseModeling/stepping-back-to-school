@@ -1,48 +1,24 @@
 '''
-Outbreak analysis to sweep in-school transbissibility and screening probability
+Outbreak analysis to sweep in-school transmissibility and screening probability
 '''
 
 import sys
-import os
-import matplotlib.pyplot as plt
-import utils as ut
-import config as cfg
-from run import Run
 import numpy as np
-
-
-alt_sus = False
-
-class OutbreakScreenProb(Run):
-    def build_configs(self):
-        # Configure alternate sus
-        if alt_sus:
-            value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
-
-        # NPI / in-school transmissibility
-        npi_scens = {x:{'beta_s': 1.5*x} for x in [0.5, 0.75, 1.0, 1.25, 1.5]}
-        self.builder.add_level('In-school transmission multiplier', npi_scens, self.builder.screenpars_func)
-
-        # Sweep over symptom screening
-        symp_screens = {p:{'screen_prob': p} for p in np.linspace(0, 1, 10)}
-        self.builder.add_level('Screen prob', symp_screens, self.builder.screenpars_func)
-
-        return super().build_configs()
-
+import school_tools as sct
 
 if __name__ == '__main__':
-    args = cfg.process_inputs(sys.argv)
+
+    # Settings
+
+    args = sct.config.process_inputs(sys.argv)
 
     sweep_pars = {
-        'n_prev':       0, # No controller
+        'n_prev': 0, # No controller
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        #'schcfg_keys':  ['with_countermeasures'],
-        #'screen_keys':  [ 'None' ],
     }
 
-    pop_size = cfg.sim_pars.pop_size
+    pop_size = sct.config.sim_pars.pop_size
     sim_pars = {
         'pop_infected': 0, # Do not seed
         'pop_size': pop_size,
@@ -51,18 +27,24 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    runner = OutbreakScreenProb(sweep_pars=sweep_pars, sim_pars=sim_pars)
-    runner.run(args.force)
-    analyzer = runner.analyze()
+    npi_scens = {x:{'beta_s': 1.5*x} for x in [0.5, 0.75, 1.0, 1.25, 1.5]}
+    symp_screens = {p:{'screen_prob': p} for p in np.linspace(0, 1, 10)}
+    levels = [
+        {'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'},
+        {'keyname':'Screen prob', 'level':symp_screens, 'func':'screenpars_func'},
+    ]
 
-    xvar='Screen prob'
-    huevar='In-school transmission multiplier'
+    xvar = 'Screen prob'
+    huevar = 'In-school transmission multiplier'
 
-    #runner.regplots(xvar=xvar, huevar=huevar)
+    # Create and run
+    mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
+    mgr.run(args.force)
+    analyzer = mgr.analyze()
+
+    # Plots
     analyzer.outbreak_reg(xvar, huevar)
-
     analyzer.cum_incidence(colvar=xvar, rowvar=huevar)
     analyzer.outbreak_size_over_time(colvar=xvar, rowvar=huevar)
     analyzer.source_pie()
-
-    runner.tsplots()
+    mgr.tsplots()
