@@ -1,5 +1,5 @@
 '''
-The covasim_controller relies on a SEIR representation of the system.  The latent and infectious periods are non-exponential, so here we fit a multi-dimensional state transition matrix to capture the exposed (E) to infectious (I) and infectious to recovered (R) durations.  While we have functional forms for these distribution in Covasim, result will depend on the population age structure and other factors. So here we run a large simulation to capture many infections and then fit TransitionMatrix objects to the resulting outputs.  The simulation, as configured, is rather large and takes about a minute to run.
+Test of the SEIR model for the controller
 '''
 
 import covasim_controller as cvc
