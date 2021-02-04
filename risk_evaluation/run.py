@@ -114,7 +114,6 @@ class Run(sc.objdict):
     def run(self, force=False):
         ''' Run the sims, or load them from disk '''
 
-        print('WHEN RUN I AM', cfg.sweep_pars)
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
             self.sims = ut.run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?

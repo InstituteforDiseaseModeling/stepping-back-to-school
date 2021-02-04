@@ -19,7 +19,7 @@ class OutbreakBetaSchool(Run):
             self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
 
         # Sweep over NPI multipliers
-        npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
+        npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 2)}
         self.builder.add_level('In-school transmission multiplier', npi_scens, self.builder.screenpars_func)
 
         return super().build_configs()
@@ -33,6 +33,7 @@ def test_outbreaks():
     cfg.sim_pars.pop_size = 20_000
     cfg.paths.inputs = sc.thisdir(None, 'inputs')
     cfg.paths.outputs = sc.thisdir(None, 'outputs')
+    cfg.run_pars.parallel = False # Interferes with coverage otherwise
 
     sweep_pars = {
         'n_prev':  1, # Include controller
@@ -47,7 +48,7 @@ def test_outbreaks():
         'pop_infected': 0, # Do not seed
         'pop_size': pop_size,
         'start_day': '2021-01-31',
-        'end_day': '2021-08-31',
+        'end_day': '2021-03-31',
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
