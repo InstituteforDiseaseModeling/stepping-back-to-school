@@ -112,9 +112,11 @@ class Analysis(sc.prettyobj):
     This class contains code to store, process, and plot the results.
     '''
 
-    def __init__(self, sims, imgdir):
+    def __init__(self, sims, imgdir, save_outbreaks=True):
         self.sims = sims
         self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
+        self.save_outbreaks = save_outbreaks
+        self.outbreaks = None
 
         self.imgdir = imgdir
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
@@ -145,9 +147,10 @@ class Analysis(sc.prettyobj):
         ''' Process the simulations '''
         results = []
         stypes = {'es':'Elementary', 'ms':'Middle', 'hs':'High'}
+        obdf = sc.objdict(sim=[], school=[], outbreak=[]) # Not a dataframe yet, but will be
 
         # Loop over each simulation and accumulate stats
-        for sim in self.sims:
+        for s,sim in enumerate(self.sims):
             first_school_date = sim.tags['school_start_date']
             first_school_day = sim.day(first_school_date)
 
@@ -221,6 +224,11 @@ class Analysis(sc.prettyobj):
 
                 # Determine the type of the first "observed" case, here using the first diagnosed
                 for ob in outbreaks:
+                    if self.save_outbreaks:
+                        obdf.sim.append(s)
+                        obdf.school.append(sid)
+                        obdf.outbreak.append(ob)
+
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #if not ob['Complete']:
                     #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
@@ -241,6 +249,10 @@ class Analysis(sc.prettyobj):
 
         # Convert results to a dataframe
         self.raw = pd.DataFrame(results)
+        if self.save_outbreaks:
+            self.outbreaks = pd.DataFrame(obdf)
+
+        return
 
     def _wrangle(self, keys, outputs=None):
         # Wrangling - build self.results from self.raw
@@ -471,7 +483,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(fracs)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, height=height, aspect=aspect, legend=legend, hue_order=hue_order)
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
 
@@ -499,7 +511,7 @@ class Analysis(sc.prettyobj):
             bs.append(df)
         bootstrap=pd.concat(bs)
 
-        g = self.gp_reg(bootstrap, xvar, 'stype', height, aspect, legend, cmap=cmap)
+        g = self.gp_reg(bootstrap, xvar=xvar, huevar='stype', height=height, aspect=aspect, legend=legend, cmap=cmap)
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
 
@@ -523,7 +535,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(resamples)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df, xvar=xvar, huevar=huevar, hue_order=hue_order)
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
 
@@ -661,31 +673,6 @@ class Analysis(sc.prettyobj):
         return df
 
 
-    def outbreak_size_distribution_orig(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
-        df = self.results.loc['outbreak_size'].reset_index()
-
-        if row == 'Dx Screening' and row_order is None:
-            row_order = self.screen_order
-        g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
-        g.set_titles(col_template='{col_name}')
-
-        for ax in g.axes.flat:
-            try:
-                ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
-            except Exception as E:
-                print(f'Warning: could not set title ({str(E)})')
-            ax.set_ylabel('')
-            ax.set_xlabel('')
-            ax.set_xlim([0,50])
-        plt.subplots_adjust(bottom=0.05)
-        plt.figtext(0.6,0.01,'Outbreak size', ha='center')
-
-        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
-        plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
-        return g
-
-
     def outbreak_R0(self, figsize=(6*1.4,6)):
         d = self.results_ts.loc['n_infected_by_seed'].reset_index()
         d['value'] = d['value'].astype(int)
@@ -726,7 +713,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(resamples)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, hue_order=hue_order, height=height, aspect=aspect, legend=legend)
         for ax in g.axes.flat:
             ax.set_ylabel('Number of exports to households')
 
@@ -777,13 +764,31 @@ class Analysis(sc.prettyobj):
             self.timeseries(config['channel'], config['label'], config['normalize'])
 
 
-    def plot_tree(self, tree, stats, n_days, do_show=False):
-        ''' Plots an infection tree '''
+    def plot_tree(self, outbreak_ind=None, tree=None, stats=None, n_days=None, do_show=False, verbose=False):
+        '''
+        Plots an infection tree. You can either supply the index of the outbreak,
+        or the tree, stats, and n_days directly.
+        '''
         fig, ax = plt.subplots(figsize=(16,10))
+
+        # Get the right tree and stats objects
+        if tree is None or stats is None:
+            if outbreak_ind is None:
+                outbreak_ind = 0
+
+            row = self.outbreaks.iloc[outbreak_ind]
+            sim_ind = row['sim']
+            sim = self.sims[sim_ind]
+            school_ind = row['school']
+            stats = sim.school_stats[school_ind]
+            tree = row['outbreak']['Tree']
+            if n_days is None:
+                n_days = sim['n_days']
+
         date_range = [n_days, 0]
 
         for j, (u,v) in enumerate(tree.nodes.data()):
-            print('\tNODE', u,v)
+            if verbose: print('\tNODE', u,v)
             if v['type'] == 'Seed':
                 continue
             recovered = n_days if np.isnan(v['date_recovered']) else v['date_recovered']

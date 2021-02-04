@@ -13,23 +13,35 @@ def test_micro():
     sct.config.set_micro()
     mgr = sct.Manager(cfg=sct.config)
     mgr.run(force=True)
-    analyzer = mgr.analyze()
-    sct.config.set_default() # Back to default
-    return analyzer
-
-
-def test_scheduling():
-    sct.config.set_micro()
-    sweep_pars = dict(schcfg_keys = ['with_countermeasures', 'all_hybrid', 'k5'])
-    mgr = sct.Manager(sweep_pars=sweep_pars, cfg=sct.config)
-    mgr.run(force=True)
     mgr.analyze()
     sct.config.set_default() # Back to default
     return mgr
 
 
-def test_outbreaks():
-    ''' Small outbreak example '''
+def test_scheduling():
+    ''' Test classroom scheduling scenarios '''
+    sct.config.set_micro()
+    sweep_pars = dict(schcfg_keys = ['with_countermeasures', 'all_hybrid', 'k5'])
+    mgr = sct.Manager(sweep_pars=sweep_pars, cfg=sct.config)
+    mgr.run(force=True)
+    sct.config.set_default() # Back to default
+    return mgr
+
+
+def test_testing():
+    ''' Test COVID testing scenarios, plus alternate symptomaticity '''
+    sct.config.set_micro()
+    sct.config.sweep_pars.alt_sus = True
+    sweep_pars = dict(screen_keys =  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'PCR every 1w'])
+    mgr = sct.Manager(sweep_pars=sweep_pars, cfg=sct.config)
+    mgr.run(force=True)
+    sct.config.set_default() # Back to default
+    sct.config.sweep_pars.alt_sus = False
+    return mgr
+
+
+def test_analysis():
+    ''' Complete outbreak/API/plotting example '''
     sct.config.sweep_pars.n_reps = 2
     sct.config.sweep_pars.n_seeds = 2
     sct.config.sim_pars.pop_size = 10_000
@@ -52,8 +64,8 @@ def test_outbreaks():
     npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 2)}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
-    xvar='In-school transmission multiplier'
-    huevar=None
+    xvar = 'In-school transmission multiplier'
+    huevar = 'Prevalence Target'
 
     sct.create_pops(cfg=sct.config)
     mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels, cfg=sct.config)
@@ -66,16 +78,34 @@ def test_outbreaks():
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
+    analyzer.source_dow()
+    analyzer.introductions_rate(xvar, huevar)
+    analyzer.introductions_rate_by_stype(xvar)
+    analyzer.outbreak_size_plot(xvar, loess=True, scatter=True)
+    analyzer.exports_reg(xvar, huevar)
 
     mgr.tsplots()
 
     return mgr
 
 
+def test_trees():
+    ''' Test tree plotting '''
+    sct.config.set_micro()
+    mgr = sct.Manager(cfg=sct.config)
+    mgr.run(force=True)
+    analyzer = mgr.analyze()
+    analyzer.plot_tree()
+    sct.config.set_default() # Back to default
+    return mgr
+
+
 if __name__ == '__main__':
 
-    analyzer = test_micro()
-    mgr1 = test_scheduling()
-    mgr2 = test_outbreaks()
+    # mgr1 = test_micro()
+    # mgr2 = test_scheduling()
+    # mgr3 = test_testing()
+    # mgr4 = test_analysis()
+    mgr5 = test_trees()
 
 

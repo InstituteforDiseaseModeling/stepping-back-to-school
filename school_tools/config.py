@@ -18,7 +18,7 @@ def get_defaults():
         symp_prob    = 0.08,
         asymp_factor = 0.8,
         start_day    = '2020-12-15', # First day of sim
-        end_day      = '2021-02-26', #2021-04-30', # Last day of sim
+        end_day      = '2021-02-26', #2021-04-30', # Last day of sim -- usually overridden
         pop_scale    = 1,
         pop_type     = 'synthpops',
         rescale      = False, # True causes problems
@@ -34,8 +34,8 @@ def get_defaults():
         school_start_date = '2021-02-01', # first day of school
         school_seed_date  = None,
         n_reps            = 3,
-        n_seeds           = 5,
-        n_prev            = 5,
+        n_seeds           = 3,
+        n_prev            = 3,
         prev              = None, # Computed in builder.py
         alt_sus           = False,
     )
@@ -116,26 +116,29 @@ def set_default():
 
 def set_full():
     ''' Reset the configuration for the full run '''
-    sweep_pars.n_reps = 5
+    sweep_pars.n_reps  = 5
     sweep_pars.n_seeds = 10
-    sim_pars.pop_size = 223_000
+    sweep_pars.n_prev  = 5
+    sim_pars.pop_size  = 223_000
     print_pars('full')
     return
 
 
 def set_debug():
     ''' Reset the configuration for quick debugging runs '''
-    sweep_pars.n_reps = 3
-    sweep_pars.n_seeds = 5
-    sim_pars.pop_size = 50_000
+    sweep_pars.n_reps  = 3
+    sweep_pars.n_seeds = 3
+    sweep_pars.n_prev  = 3
+    sim_pars.pop_size  = 50_000
     print_pars('debugging')
     return
 
 
 def set_micro():
     ''' Reset the configuration to the smallest possible run '''
-    sweep_pars.n_reps = 1
+    sweep_pars.n_reps  = 1
     sweep_pars.n_seeds = 1
+    sweep_pars.n_prev  = 2
     sim_pars.pop_size = 10_000
     print_pars('micro')
     return
