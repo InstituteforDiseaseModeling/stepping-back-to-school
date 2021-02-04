@@ -13,6 +13,7 @@ def test_micro():
     mgr = sct.Manager(cfg=sct.config)
     mgr.run(force=True)
     analyzer = mgr.analyze()
+    sct.config.set_debug() # Back to default
     return analyzer
 
 
