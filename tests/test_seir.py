@@ -19,9 +19,6 @@ def test_seir():
     plt.rcParams['font.family'] = 'Roboto Condensed'
     plt.rcParams['lines.linewidth'] = 0.7
 
-    cachefn = 'sim_100k.obj'
-    force_run = True
-
     pop_size = 5_000
     params = {
         'rand_seed': 0,
@@ -38,14 +35,9 @@ def test_seir():
     EI = ei.Mopt
     IR = ir.Mopt
 
-    if force_run or not os.path.isfile(cachefn):
-        sim = sct.create_sim(params, pop_size=int(pop_size), load_pop=False)
-        sim.pars['interventions'] = [] # Remove interventions
-
-        sim.run()
-        sim.save(cachefn, keep_people=True)
-    else:
-        sim = cv.load(cachefn)
+    sim = sct.create_sim(params, pop_size=int(pop_size), load_pop=False)
+    sim.pars['interventions'] = [] # Remove interventions
+    sim.run()
 
     seeds = sim.results['n_exposed'][0]
     seir = cvc.SEIR(pop_size, EI, IR, ERR=1, beta=0.365, Ipow=0.925) # 0.365, 0.94
@@ -83,8 +75,6 @@ def test_seir():
     ax3.set_xlabel('Exposed')
     ax3.set_ylabel('Infectious')
     ax3.legend(['Covasim', 'SEIR'])
-
-    fig.savefig('is_covasim_seir.png', dpi=300)
 
     return seir
 
