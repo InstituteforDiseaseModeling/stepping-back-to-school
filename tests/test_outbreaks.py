@@ -7,6 +7,15 @@ import sciris as sc
 import school_tools as sct
 
 
+def test_micro():
+    ''' Simplest possible test'''
+    sct.config.set_micro()
+    mgr = sct.Manager(cfg=sct.config)
+    mgr.run(force=True)
+    analyzer = mgr.analyze()
+    return analyzer
+
+
 def test_outbreaks():
 
     # Minimal example
@@ -57,5 +66,6 @@ def test_outbreaks():
 
 if __name__ == '__main__':
 
-    test_outbreaks()
+    analyzer = test_micro()
+    mgr = test_outbreaks()
 
