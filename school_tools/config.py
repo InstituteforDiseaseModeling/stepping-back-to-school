@@ -34,7 +34,8 @@ sweep_pars = sc.objdict(
     n_reps            = 3,
     n_seeds           = 5,
     n_prev            = 5,
-    prev              = None, # Computed in run.py
+    prev              = None, # Computed in builder.py
+    alt_sus           = False,
 )
 
 run_pars = sc.objdict(

@@ -20,7 +20,7 @@ from . import config as cfg
 from . import create_sim as cs
 
 
-__all__ = ['Config', 'Builder', 'Run', 'create_run_sim', 'run_configs', 'alternate_symptomaticity']
+__all__ = ['Config', 'Builder', 'Manager', 'create_run_sim', 'run_configs', 'alternate_symptomaticity']
 
 
 class Config:
@@ -63,6 +63,10 @@ class Builder(sc.prettyobj):
         all_scen = scn.generate_scenarios(start_date=sweep_pars.school_start_date, seed_date=sweep_pars.school_seed_date) # Can potentially select a subset of scenarios
         scens = {k:v for k,v in all_scen.items() if k in sweep_pars.schcfg_keys}
         self.add_level('scen_key', scens, self.scen_func)
+
+        if sweep_pars.alt_sus:
+            value_labels = {'Yes' if p else 'No':p for p in [True]}
+            self.add_level('AltSus', value_labels, alternate_symptomaticity)
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
@@ -109,6 +113,20 @@ class Builder(sc.prettyobj):
         return config
 
     def add_level(self, keyname, level, func):
+
+        # Map a function name to method
+        if isinstance(func, str):
+            try:
+                func = dict(
+                    scen_func = self.scen_func,
+                    screenpars_func = self.screenpars_func,
+                    simpars_func = self.simpars_func,
+                    prevctr_func = self.prevctr_func,
+                    )[func]
+            except Exception as E:
+                errormsg = f'Could not recognize function "{func}": {str(E)}'
+                raise ValueError(errormsg)
+
         new_configs = []
         for config in self.configs:
             for k,v in level.items():
@@ -130,7 +148,7 @@ class Builder(sc.prettyobj):
         return self.configs
 
 
-class Run(sc.objdict):
+class Manager(sc.objdict):
     '''
     This is the main class used for commissioning the different testing scenarios
     (defined in testing_scenarios.py) for the paper results. Run this script first
@@ -139,7 +157,7 @@ class Run(sc.objdict):
     the test run uses 8.
     '''
 
-    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None, cfg=cfg):
+    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None, levels=None, cfg=cfg):
 
         # Handle inputs
         input_pars = sc.objdict()
@@ -162,6 +180,7 @@ class Run(sc.objdict):
         cv.check_save_version('2.0.2', folder='gitinfo', comments={'SynthPops':sp_gitinfo})
 
         self.name = self.__class__.__name__ if name is None else name
+        self.levels = sc.promotetolist(levels) # The scenario(s) to run
         self.sims = None  # To be run or loaded by calling run()
         self.analyzer = None
 
@@ -181,6 +200,10 @@ class Run(sc.objdict):
         ''' Build simulation configuration '''
 
         sc.heading('Creating sim configurations...')
+
+        # Add custom levels
+        for lvl in self.levels:
+            self.builder.add_level(lvl['keyname'], lvl['level'], lvl['func'])
 
         # Add prevalence levels
         if len(self.sweep_pars['prev']) > 0:
