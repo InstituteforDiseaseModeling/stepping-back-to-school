@@ -1,57 +1,26 @@
 '''
-Run a varitey of sceening scenarios at a few prevalence levels
-
-Example usage, forcing new results and using a 4 different seeds:
-
-    python run_baseline.py --force --n_reps=4
-
+Run a varitey of scheduling scenarios at a few prevalence levels
 '''
 
 import sys
-import os
-import matplotlib.pyplot as plt
-import utils as ut
-import config as cfg
-from run import Run
-
-alt_sus = False
-
-
-class Scheduling(Run):
-    def build_configs(self):
-        # Configure alternate sus
-        if alt_sus:
-            value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
-
-        return super().build_configs()
-
+import school_tools as sct
 
 if __name__ == '__main__':
 
-    args = cfg.process_inputs(sys.argv)
+    # Settings
+    args = sct.config.process_inputs(sys.argv)
+    sweep_pars = dict(schcfg_keys = ['with_countermeasures', 'all_hybrid', 'k5'])
 
-    # Optional overrides
-    sweep_pars = dict(
-        # n_reps = 5,
-        # n_prev = 20,
-        #schcfg_keys = ['as_normal', 'with_countermeasures', 'all_hybrid', 'k5'],
-        schcfg_keys = ['with_countermeasures', 'all_hybrid', 'k5'],
-    )
-    pop_size = cfg.sim_pars.pop_size
+    # Create and run
+    mgr = sct.Manager(sweep_pars=sweep_pars, sim_pars=None, levels=None)
+    mgr.run(args.force)
+    analyzer = mgr.analyze()
 
-    runner = Scheduling(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
-    runner.run(args.force)
-    analyzer = runner.analyze()
-
-    runner.regplots(xvar='Prevalence Target', huevar='Scenario')
-
-    analyzer.introductions_rate(xvar='Prevalence Target', huevar='Scenario', height=5, aspect=2, ext='_wide')
-
-
-    analyzer.cum_incidence(colvar='Prevalence Target')
-    analyzer.introductions_rate_by_stype(xvar='Prevalence Target')
+    # Plots
+    # mgr.regplots(xvar='Prevalence Target', huevar='Scenario') # CK: doesn't work
+    # analyzer.introductions_rate(xvar='Prevalence Target', huevar='Scenario', height=5, aspect=2, ext='_wide') # CK: doesn't work
+    # analyzer.cum_incidence(colvar='Prevalence Target') # CK: doesn't work
+    # analyzer.introductions_rate_by_stype(xvar='Prevalence Target') # CK: doesn't work
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
-
-    runner.tsplots()
+    mgr.tsplots()
