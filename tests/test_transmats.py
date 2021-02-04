@@ -3,9 +3,9 @@ Test of the SEIR model for the controller
 '''
 
 import covasim_controller as cvc
-from risk_evaluation import create_sim as cs
+import school_tools as sct
 
-pop_size = 5_000
+pop_size = 3000
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
@@ -18,7 +18,7 @@ params = {
 
 def test_fit(force_run=True):
 
-    sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
+    sim = sct.create_sim(params, pop_size=int(pop_size), load_pop=False)
     sim.pars['interventions'] = [] # Remove interventions
     sim.run()
 

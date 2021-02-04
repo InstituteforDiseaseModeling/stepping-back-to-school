@@ -34,7 +34,8 @@ sweep_pars = sc.objdict(
     n_reps            = 3,
     n_seeds           = 5,
     n_prev            = 5,
-    prev              = None, # Computed in run.py
+    prev              = None, # Computed in builder.py
+    alt_sus           = False,
 )
 
 run_pars = sc.objdict(
@@ -60,8 +61,9 @@ def process_inputs(argv):
     ''' Handle command-line input arguments '''
     parser = argparse.ArgumentParser()
     parser.add_argument('--force', action='store_true')
-    parser.add_argument('--debug', action='store_true')
     parser.add_argument('--full', action='store_true')
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--micro', action='store_true')
     parser.add_argument('--pop_size', type=int, default=0)
     parser.add_argument('--n_reps', type=int, default=0)
     parser.add_argument('--n_seeds', type=int, default=0)
@@ -69,10 +71,12 @@ def process_inputs(argv):
     parser.add_argument('--location', type=str, default='')
     args = parser.parse_args(argv[1:])
 
-    if args.debug:
-        set_debug()
-    elif args.full:
+    if args.full:
         set_full()
+    elif args.debug:
+        set_debug()
+    elif args.micro:
+        set_micro()
 
     if args.pop_size:
         if args.pop_size < 1000: # Allow e.g. 223 or 223000
@@ -91,6 +95,15 @@ def process_inputs(argv):
     return args
 
 
+def set_full():
+    ''' Reset the configuration for the full run '''
+    print('Setting run parameters for a full run...')
+    sweep_pars.n_reps = 5
+    sweep_pars.n_seeds = 10
+    sim_pars.pop_size = 223_000
+    return
+
+
 def set_debug():
     ''' Reset the configuration for quick debugging runs '''
     print('Setting run parameters for a small debugging run...')
@@ -100,10 +113,10 @@ def set_debug():
     return
 
 
-def set_full():
-    ''' Reset the configuration for the full run '''
-    print('Setting run parameters for a full run...')
-    sweep_pars.n_reps = 5
-    sweep_pars.n_seeds = 10
-    sim_pars.pop_size = 223_000
+def set_micro():
+    ''' Reset the configuration to the smallest possible run '''
+    print('Setting run parameters for a micro run...')
+    sweep_pars.n_reps = 1
+    sweep_pars.n_seeds = 1
+    sim_pars.pop_size = 10_000
     return

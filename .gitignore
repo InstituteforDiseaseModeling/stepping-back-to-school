@@ -1,3 +1,10 @@
 __pycache__
 gitinfo
 *egg-info*
+*.png
+*.obj
+*.ppl
+htmlcov
+.coverage
+results
+outputs

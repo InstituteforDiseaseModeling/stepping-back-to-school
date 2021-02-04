@@ -1,24 +1,29 @@
 '''
-Analyze covasim simulation results and produce plots
+Analyze Covasim simulation results and produce plots
 '''
+
+#%% Imports
 
 import os
 from pathlib import Path
-import matplotlib.pyplot as plt
-import matplotlib as mplt
-import matplotlib.ticker as mtick
+
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import sciris as sc
 import covasim as cv
-import scenarios as scn
-import utils as ut
+
+import scipy
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 from statsmodels.nonparametric.smoothers_lowess import lowess
-import scipy
+
 import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib as mplt
+import matplotlib.ticker as mtick
+import seaborn as sns
+
+from . import scenarios as scn
 
 import warnings
 warnings.simplefilter('ignore', np.RankWarning)
@@ -32,6 +37,11 @@ mplt.rcParams['font.family'] = font_style
 mplt.rcParams['legend.fontsize'] = 16
 mplt.rcParams['legend.title_fontsize'] = 16
 
+
+__all__ = ['curved_arrow', 'loess_bound', 'Analysis']
+
+
+#%% Helper functions
 
 def curved_arrow(x, y, style=None, text='', ax=None, color='k', **kwargs):
     '''
@@ -90,7 +100,17 @@ def loess_bound(x, y, frac=0.2, it=5, n_bootstrap=80, sample_frac=1.0, quantiles
     return res
 
 
-class Analysis():
+def p2f(x):
+    ''' Percentage to float '''
+    return float(x.strip('%'))/100
+
+
+#%% The analysis class
+
+class Analysis(sc.prettyobj):
+    '''
+    This class contains code to store, process, and plot the results.
+    '''
 
     def __init__(self, sims, imgdir):
         self.sims = sims
@@ -114,17 +134,21 @@ class Analysis():
             keys.append('Prevalence Target')
         self._wrangle(keys)
 
+        # Settings used for plotting
+        self.stypes = ['High', 'Middle', 'Elementary']
+        self.factor = 100_000
+
+        return
+
 
     def _process(self):
-        ## Process the simulations
+        ''' Process the simulations '''
         results = []
         stypes = {'es':'Elementary', 'ms':'Middle', 'hs':'High'}
-        grp_dict = {'Students': ['students'], 'Teachers & Staff': ['teachers', 'staff'], 'Students, Teachers, and Staff': ['students', 'teachers', 'staff']}
 
         # Loop over each simulation and accumulate stats
         for sim in self.sims:
             first_school_date = sim.tags['school_start_date']
-            last_school_date = sim.pars['end_day'].strftime('%Y-%m-%d')
             first_school_day = sim.day(first_school_date)
 
             # Map the scenario name and type of diagnostic screening, if any, to friendly names
@@ -138,7 +162,7 @@ class Analysis():
 
             if 'Prevalence' in sim.tags:
                 # Prevalence appears as a string, e.g. 1%, so convert to a float for plotting
-                ret['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
+                ret['Prevalence Target'] = p2f(sim.tags['Prevalence'])
 
             # Initialize a dictionary that will be later transformed into a dataframe.
             # Each simulation will get one value for each key, but not that sometimes the value is a list of values
@@ -178,9 +202,9 @@ class Analysis():
                 ret['n_introductions'] += len(outbreaks)
                 ret['cum_incidence'].append(100 * stats['cum_incidence'] / (stats['num']['students'] + stats['num']['teachers'] + stats['num']['staff']))
                 ret['in_person_days'] += np.sum([v for v in stats['in_person'].values()])
-                ret[f'introductions'].append( len(outbreaks) )
+                ret['introductions'].append( len(outbreaks) )
                 ret[f'introductions_{stype}'].append( len(outbreaks) )
-                ret[f'susceptible_person_days'].append( stats['susceptible_person_days'] )
+                ret['susceptible_person_days'].append( stats['susceptible_person_days'] )
                 ret[f'susceptible_person_days_{stype}'].append( stats['susceptible_person_days'] )
 
                 # Insert at beginning for efficiency
@@ -265,7 +289,7 @@ class Analysis():
         g.set(xlim=(start_day, None))
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'SchoolCumInc.png'), dpi=dpi)
+        cv.savefig(os.path.join(self.imgdir, 'SchoolCumInc.png'), dpi=dpi)
         return g
 
     def outbreak_size_over_time(self, rowvar=None, colvar=None):
@@ -275,7 +299,7 @@ class Analysis():
 
         g = sns.lmplot(data=d.reset_index(), x='first_infectious_day_at_school', y='outbreak_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'OutbreakSizeOverTime.png'), dpi=dpi)
+        cv.savefig(os.path.join(self.imgdir, 'OutbreakSizeOverTime.png'), dpi=dpi)
         return g
 
     def source_dow(self, figsize=(6,6)):
@@ -289,8 +313,12 @@ class Analysis():
         ax.set_xlabel('Day of week')
         ax.set_ylabel('Proportion of introductions')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
-        ax.set_xticks(np.arange(*np.round(ax.get_xlim())))
-        ax.set_xticklabels(['S', 'S', 'M', 'T', 'W', 'T', 'F']*4 + ['S'])
+        days = np.arange(*np.round(ax.get_xlim()))
+        n_days = len(days)
+        labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(n_days/7)))[:n_days]
+        ax.set_xticks(days)
+        ax.set_xticklabels(labels)
+        ax.set_xlim([days[0], days[27]]) # Don't show more than 4 weeks
         ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
 
@@ -299,7 +327,7 @@ class Analysis():
         curved_arrow(ax=ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
 
         # Finish up
-        cv.savefig(os.path.join(self.imgdir, f'IntroductionDayOfWeek.png'), dpi=dpi)
+        cv.savefig(os.path.join(self.imgdir, 'IntroductionDayOfWeek.png'), dpi=dpi)
         return fig
 
     def source_pie(self):
@@ -337,7 +365,7 @@ class Analysis():
 
         def pie(**kwargs):
             data = kwargs['data']
-            p = plt.pie(data[['Student', 'Teacher', 'Staff']].values[0], explode=[0.05]*3, autopct='%.0f%%', normalize=True)
+            plt.pie(data[['Student', 'Teacher', 'Staff']].values[0], explode=[0.05]*3, autopct='%.0f%%', normalize=True)
             #plt.legend(p, ['Student', 'Teacher', 'Staff'], bbox_to_anchor=(0.0,-0.2), loc='lower center', ncol=3, frameon=True)
 
         g = sns.FacetGrid(data=intr_src.reset_index(), row='Kind', row_order=['Per-person', 'Overall'], col='Introductions', margin_titles=True, despine=False, legend_out=True, height=4)
@@ -345,7 +373,7 @@ class Analysis():
         g.set_titles(col_template="{col_name}", row_template="{row_name}")
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'SourcePie.png'), dpi=dpi)
+        cv.savefig(os.path.join(self.imgdir, 'SourcePie.png'), dpi=dpi)
         return g
 
 
@@ -361,11 +389,7 @@ class Analysis():
         gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9, normalize_y=True)
 
         # Fit to data using Maximum Likelihood Estimation of the parameters
-        fit = gp.fit(data[xvar].values.reshape(-1, 1), data[yvar])
-
-        # Increase the length scale a bit for a smoother fit
-        #p = fit.kernel_.get_params()
-        #fit.kernel_.set_params(**{'k1__length_scale': 1.0*p['k1__length_scale']})
+        gp.fit(data[xvar].values.reshape(-1, 1), data[yvar])
 
         # Make the prediction on the meshed x-axis
         xmin = data[xvar].min()
@@ -433,7 +457,6 @@ class Analysis():
 
 
     def introductions_rate(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
-        factor = 100_000
         cols = [xvar] if huevar is None else [xvar, huevar]
         num = self.results.loc['introductions']
         den = self.results.loc['susceptible_person_days']
@@ -442,7 +465,7 @@ class Analysis():
         fracs = []
         for i in range(nboot):
             rows = np.random.randint(low=0, high=num.shape[0], size=num.shape[0])
-            top = factor*num.iloc[rows].groupby(cols).sum()
+            top = self.factor*num.iloc[rows].groupby(cols).sum()
             bot = den.iloc[rows].groupby(cols).sum()
             fracs.append(top/bot)
         df = pd.concat(fracs)
@@ -450,7 +473,7 @@ class Analysis():
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
         g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
         for ax in g.axes.flat:
-            ax.set_ylabel(f'School introduction rate per {factor:,}')
+            ax.set_ylabel(f'School introduction rate per {self.factor:,}')
 
         fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
         plt.tight_layout()
@@ -459,18 +482,16 @@ class Analysis():
 
 
     def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Dark2'):
-        stypes = ['High', 'Middle', 'Elementary']
-        factor = 100_000
 
         bs = []
-        for idx, stype in enumerate(stypes):
+        for idx, stype in enumerate(self.stypes):
             num = self.results.loc[f'introductions_{stype}']
             den = self.results.loc[f'susceptible_person_days_{stype}']
 
             fracs = []
             for i in range(nboot):
                 rows = np.random.randint(low=0, high=num.shape[0], size=num.shape[0])
-                top = factor*num.iloc[rows].groupby(xvar).sum()
+                top = self.factor*num.iloc[rows].groupby(xvar).sum()
                 bot = den.iloc[rows].groupby(xvar).sum()
                 fracs.append(top/bot)
             df = pd.concat(fracs)
@@ -480,7 +501,7 @@ class Analysis():
 
         g = self.gp_reg(bootstrap, xvar, 'stype', height, aspect, legend, cmap=cmap)
         for ax in g.axes.flat:
-            ax.set_ylabel(f'School introduction rate per {factor:,}')
+            ax.set_ylabel(f'School introduction rate per {self.factor:,}')
 
         fn = 'IntroductionRateStype.png' if ext is None else f'IntroductionRateStype_{ext}.png'
         plt.tight_layout()
@@ -606,18 +627,6 @@ class Analysis():
 
     def outbreak_size_distribution(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index()
-        # df['value_log'] = np.log2(df['value'])
-        # xtmax = int(np.ceil(df['value_log'].max()))
-        # bins = [0, 1, 2, 5, 10, 20, 50, 100, 200]
-        # bins = list(sc.cat(sc.inclusiverange(0, 10, 1),
-        #                    sc.inclusiverange(11, 50, 2),
-        #                    sc.inclusiverange(51, 100, 5),
-        #                    sc.inclusiverange(101, 200, 10)
-        #                    ))
-        # left_edges = bins[:-1]
-        # n_edges = len(bins)-1
-        # x = range(n_edges)
-        # df['value_bin'] = np.array(pd.cut(df['value'], bins=bins, labels=x))
 
         if row == 'Dx Screening' and row_order is None:
             row_order = self.screen_order
@@ -632,12 +641,6 @@ class Analysis():
             ax.set_ylabel('')
             ax.set_xlabel('')
             ax.set_xlim([0,50])
-            # ax.set_xscale('log')
-            # ax.set_xticks(x)
-            # ax.set_xticklabels([f'{bins[b+1]}' for b in range(n_edges)])
-            # ax.set_xticks(range(xtmax), minor=True)
-            # ax.set_xticks(range(0,xtmax,2))
-            # ax.set_xticklabels([f'{2**x:.0f}' for x in range(0,xtmax,2)])
         plt.subplots_adjust(bottom=0.05)
         plt.figtext(0.6,0.01,'Outbreak size', ha='center')
 
@@ -671,20 +674,6 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
-    '''
-    def exports_reg(self, xvar, huevar, order=2, height=10, aspect=1, ext=None):
-        ##### Outbreak size
-        cols = [xvar] if huevar is None else [xvar, huevar]
-        d = self.results.loc['exports_to_hh'].reset_index(cols)#[[xvar, huevar, 'value']]
-        g = sns.lmplot(data=d, x=xvar, y='value', hue=huevar, height=height, aspect=aspect, x_estimator=np.mean, order=order, legend_out=False)
-        g.set(ylim=(0,None))
-        g.set_ylabels('Exports to HH')
-        plt.tight_layout()
-
-        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
-        return g
-    '''
 
     def exports_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
         ##### Outbreak size
@@ -716,6 +705,7 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
+
     def timeseries(self, channel, label, normalize):
         l = []
         for sim in self.sims:
@@ -726,7 +716,7 @@ class Analysis():
             d = pd.DataFrame({label: y}, index=pd.Index(data=t, name='Date'))
             huevar=None
             if 'Prevalence' in sim.tags:
-                d['Prevalence Target'] = ut.p2f(sim.tags['Prevalence'])
+                d['Prevalence Target'] = p2f(sim.tags['Prevalence'])
                 huevar='Prevalence Target'
             d['Scenario'] = f'{sim.tags["scen_key"]} + {sim.tags["dxscrn_key"]}'
             d['Replicate'] = sim.tags['Replicate']
@@ -744,20 +734,17 @@ class Analysis():
         cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=dpi)
         return fig
 
+
     def plot_several_timeseries(self, configs):
         for config in configs:
             self.timeseries(config['channel'], config['label'], config['normalize'])
 
 
-    # Tree plotting
     def plot_tree(self, tree, stats, n_days, do_show=False):
+        ''' Plots an infection tree '''
         fig, ax = plt.subplots(figsize=(16,10))
         date_range = [n_days, 0]
 
-        #print(f'Tree {i}', sid, sim.key1, sim.key2, sim.key2)
-        #for u,v,w in tree.edges.data():
-            #print('\tEDGE', u,v,w)
-        #print(f'N{i}', sid, sim.key1, sim.key2, sim.key2, tree.nodes.data())
         for j, (u,v) in enumerate(tree.nodes.data()):
             print('\tNODE', u,v)
             if v['type'] == 'Seed':

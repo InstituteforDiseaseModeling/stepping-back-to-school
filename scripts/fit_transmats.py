@@ -6,8 +6,7 @@ import argparse
 import os
 import sciris as sc
 import covasim_controller as cvc
-from risk_evaluation import create_sim as cs
-import config as cfg
+import school_tools as sct
 
 cachefn = 'sim.obj'
 pop_size = 500_000
@@ -23,7 +22,7 @@ params = {
 def fit(force_run=False):
 
     if force_run or not os.path.isfile(cachefn):
-        sim = cs.create_sim(params, pop_size=int(pop_size), load_pop=False)
+        sim = sct.create_sim(params, pop_size=int(pop_size), load_pop=False)
         sim.pars['interventions'] = [] # Remove interventions
 
         sim.run()
@@ -39,7 +38,7 @@ def fit(force_run=False):
     e_to_i = sim.people.date_infectious[inds] - sim.people.date_exposed[inds]
     ei = cvc.TransitionMatrix(e_to_i, 3)
     ei.fit()
-    sc.saveobj(cfg.paths.ei, ei)
+    sc.saveobj(sct.config.paths.ei, ei)
     fig = ei.plot()
 
     etoi_fn = 'EtoI.png'
@@ -50,12 +49,13 @@ def fit(force_run=False):
     i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
     ir = cvc.TransitionMatrix(i_to_r, 7)
     ir.fit()
-    sc.saveobj(cfg.paths.ir, ir)
+    sc.saveobj(sct.config.paths.ir, ir)
     fig = ir.plot()
 
     itor_fn = 'ItoR.png'
     print(f'Saving I-->R figure to {itor_fn}')
     fig.savefig(itor_fn, dpi=300)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

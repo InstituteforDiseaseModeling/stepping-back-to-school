@@ -11,13 +11,13 @@ import covasim_schools as cvsch
 # Custom configuration
 figsize = (24,20) # Customize to your screen resolution -- overwritten if maximize is true
 dpi = 90 # Ditto, make smaller for smaller fonts etc
-to_json = True # Save results to JSON
+to_json = False # Save results to JSON
 outfile = 'school_pop_results.json' # Filename to save to, if JSON is saved
 
-def test_school_pop(do_plot=False):
+def test_school_pop(pop_size=5e3, do_plot=False):
     ''' Test basic population creation '''
 
-    pop = cvsch.make_population(pop_size=20e3, rand_seed=1, do_save=False)
+    pop = cvsch.make_population(pop_size=pop_size, rand_seed=1, do_save=False)
 
     if do_plot:
         pop.plot()
@@ -47,7 +47,7 @@ def plot_schools(pop):
         results[sc_id] = thisres
 
     # Do plotting
-    fig = pl.figure(figsize=figsize, dpi=dpi)
+    pl.figure(figsize=figsize, dpi=dpi)
     pl.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, hspace=0.5, wspace=0.5)
     n_schools = len(results)
     n_cols = len(ppl_keys) + 1
@@ -79,6 +79,6 @@ def plot_schools(pop):
 
 
 if __name__ == '__main__':
-    pop = test_school_pop(do_plot=False)
+    pop = test_school_pop(pop_size=20e3, do_plot=False)
     results = plot_schools(pop)
 
