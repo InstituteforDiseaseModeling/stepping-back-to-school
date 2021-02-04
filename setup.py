@@ -41,5 +41,6 @@ setup(
         "sciris>=1.0.0",
         "covasim>=2.0.0",
         "synthpops>=1.4.0",
+        "sklearn",
     ],
 )

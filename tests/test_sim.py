@@ -1,5 +1,5 @@
 '''
-Very simple test of sim creation -- not part of the main library
+Very simple test of sim creation and input argument handling (without inputs)
 '''
 
 import sys
@@ -7,6 +7,7 @@ import numpy as np
 import sciris as sc
 import covasim as cv
 import school_tools as sct
+
 
 def test_sims(do_plot=False):
     s1 = sct.create_sim(pop_size=3e3, load_pop=False, label='Default')
