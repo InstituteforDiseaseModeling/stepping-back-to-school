@@ -7,10 +7,9 @@ import os
 import sciris as sc
 import covasim_controller as cvc
 from risk_evaluation import create_sim as cs
-from risk_evaluation import config as cfg
 
 cachefn = 'sim.obj'
-pop_size = 50_000
+pop_size = 20_000
 params = {
     'rand_seed': 0,
     'pop_infected': 100,
@@ -39,7 +38,6 @@ def test_fit(force_run=True):
     e_to_i = sim.people.date_infectious[inds] - sim.people.date_exposed[inds]
     ei = cvc.TransitionMatrix(e_to_i, 3)
     ei.fit()
-    sc.saveobj(cfg.paths.ei, ei)
     fig = ei.plot()
 
     etoi_fn = 'EtoI.png'
@@ -50,7 +48,6 @@ def test_fit(force_run=True):
     i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
     ir = cvc.TransitionMatrix(i_to_r, 7)
     ir.fit()
-    sc.saveobj(cfg.paths.ir, ir)
     fig = ir.plot()
 
     itor_fn = 'ItoR.png'
