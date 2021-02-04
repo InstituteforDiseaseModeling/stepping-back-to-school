@@ -8,52 +8,27 @@ Example usage, forcing new results and using a 4 different seeds:
 '''
 
 import sys
-import utils as ut
-import config as cfg
-from run import Run
-
-alt_sus = False
-
-
-class Baseline(Run):
-    def build_configs(self):
-        # Configure alternate sus
-        if alt_sus:
-            value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.builder.add_level('AltSus', value_labels, ut.alternate_symptomaticity)
-
-        return super().build_configs()
-
+import school_tools as sct
 
 if __name__ == '__main__':
 
-    args = cfg.process_inputs(sys.argv)
+    # Settings
 
-    # Optional overrides
-    sweep_pars = dict(
-        # n_reps = 5,
-        # n_prev = 20,
-        # screen_keys = ['None'],
-    )
-    pop_size = cfg.sim_pars.pop_size
+    args = sct.config.process_inputs(sys.argv)
 
-    runner = Baseline(sweep_pars=sweep_pars, sim_pars=dict(pop_size=pop_size))
-    runner.run(args.force)
-    analyzer = runner.analyze()
+    pop_size = sct.config.sim_pars.pop_size
+    sim_pars = dict(pop_size=pop_size)
 
-    runner.regplots(xvar='Prevalence Target', huevar='Dx Screening')
+    # Create and run
+    mgr = sct.Manager(sweep_pars=None, sim_pars=sim_pars, levels=None)
+    mgr.run(args.force)
+    analyzer = mgr.analyze()
 
-    # One-off plot for the introduction rate
-    #ext='sm'
-    #g = analyzer.introductions_rate(xvar='Prevalence Target', huevar='Dx Screening', height=6, aspect=1, ext=ext, legend=False)
-    #fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
-    #print(f'Saving introduction rate to {os.path.join(analyzer.imgdir, fn)}')
-    #plt.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
-
-    analyzer.cum_incidence(colvar='Prevalence Target')
-    #analyzer.introductions_rate_by_stype(xvar='Prevalence Target')
+    # Plots
+    #mgr.regplots(xvar='Prevalence Target', huevar='Dx Screening') # CK: doesn't work
+    #analyzer.cum_incidence(colvar='Prevalence Target') # CK: doesn't work
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()
     analyzer.source_dow(figsize=(8,5)) # 6.5 x 5
-    runner.tsplots()
+    mgr.tsplots()
 

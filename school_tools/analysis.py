@@ -313,8 +313,12 @@ class Analysis(sc.prettyobj):
         ax.set_xlabel('Day of week')
         ax.set_ylabel('Proportion of introductions')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
-        ax.set_xticks(np.arange(*np.round(ax.get_xlim())))
-        ax.set_xticklabels(['S', 'S', 'M', 'T', 'W', 'T', 'F']*4 + ['S'])
+        days = np.arange(*np.round(ax.get_xlim()))
+        n_days = len(days)
+        labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(n_days/7)))[:n_days]
+        ax.set_xticks(days)
+        ax.set_xticklabels(labels)
+        ax.set_xlim([days[0], days[27]]) # Don't show more than 4 weeks
         ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
 
