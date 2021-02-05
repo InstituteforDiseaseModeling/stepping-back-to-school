@@ -15,7 +15,8 @@ if __name__ == '__main__':
         'n_prev': 0, # No controller
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        'screen_keys':  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
+        #'screen_keys':  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
+        'screen_keys':  ['None', 'Antigen every 2w', 'Antigen every 1w'],
     }
 
     pop_size = sct.config.sim_pars.pop_size
@@ -27,12 +28,12 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    beta_s = [1.61111111] # [0.83333333,1.22222222,1.61111111] # Just show one level
+    beta_s = [0.83333333, 1.61111111] # [0.83333333,1.22222222,1.61111111] # Just show one level
     npi_scens = {x:{'beta_s': 1.5*x} for x in beta_s}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
-    xvar = 'In-school transmission multiplier'
-    huevar = 'Dx Screening'
+    huevar = 'In-school transmission multiplier'
+    xvar = 'Dx Screening'
 
     # Create and run
     mgr = sct.Manager(name='OutbreakScreeningSizeDistrib', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
@@ -42,5 +43,9 @@ if __name__ == '__main__':
 
     #runner.regplots(xvar=xvar, huevar=huevar)
 
-    analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
-    analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
+    #analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
+    #g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.15, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7, 
+
+    analyzer.outbreak_size_plot(xvar, ext=None, height=6, aspect=2, scatter=True, loess=False, landscape=False, jitter=0.6)
+
+    #analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)

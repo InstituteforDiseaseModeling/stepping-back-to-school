@@ -19,12 +19,12 @@ if __name__ == '__main__':
     huevar = 'Prevalence Target'
 
     # Create and run
-    mgr = sct.Manager(ame='ScreenProb', sweep_pars=sweep_pars, sim_pars=None, levels=levels)
+    mgr = sct.Manager(name='ScreenProb', sweep_pars=sweep_pars, sim_pars=None, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
     # Plots
-    mgr.regplots(xvar=xvar, huevar=huevar)
+    mgr.regplots(xvar=xvar, huevar=huevar, height=6, aspect=2.4)
     analyzer.outbreak_reg(xvar=xvar, huevar=huevar, height=5, aspect=2, ext='_wide')
     analyzer.cum_incidence(colvar=xvar)
     analyzer.introductions_rate_by_stype(xvar=xvar)

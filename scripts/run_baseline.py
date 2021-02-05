@@ -24,10 +24,10 @@ if __name__ == '__main__':
     analyzer = mgr.analyze()
 
     # Plots
-    mgr.regplots(xvar=xvar, huevar='Dx Screening')
+    mgr.regplots(xvar=xvar, huevar='Dx Screening', height=6, aspect=2.4)
+    analyzer.source_pie()
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
-    analyzer.source_pie()
     analyzer.source_dow(figsize=(8,5)) # 6.5 x 5
     mgr.tsplots()
 
