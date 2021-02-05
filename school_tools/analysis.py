@@ -671,7 +671,7 @@ class Analysis(sc.prettyobj):
 
 
 
-    def outbreak_size_plot(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012):
+    def outbreak_size_plot_v2(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if pd.api.types.is_numeric_dtype(df[xvar]):
             #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
@@ -704,23 +704,22 @@ class Analysis(sc.prettyobj):
             #ax.invert_yaxis() # Not working
         plt.tight_layout()
 
+        # axv[1].set_xticks(xt)
+        # axv[1].set_xticklabels([])
+        # axv[1].set_xlabel('')
+        # axv[1].set_ylim(1,None)
+        # yt = axv[1].get_yticks()
+        # yt[0] = 1
+        # axv[1].set_yticks(yt)
+
+        # axv[1].set_ylabel('Individual outbreak size')
+
         fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
-        axv[1].set_xticks(xt)
-        axv[1].set_xticklabels([])
-        axv[1].set_xlabel('')
-        axv[1].set_ylim(1,None)
-        yt = axv[1].get_yticks()
-        yt[0] = 1
-        axv[1].set_yticks(yt)
 
-        axv[1].set_ylabel('Individual outbreak size')
-
-        return g
-
-
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
         '''
         Plot outbreak sizes in various ways.
 
