@@ -495,7 +495,7 @@ class Analysis(sc.prettyobj):
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
         g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
 
-        #g.set(ylim=(0,80)) # Consistency across figures
+        g.set(ylim=(0,80)) # Consistency across figures
         if xvar == 'Screen prob':
             g.set(xlim=(0,1)) # Consistency across figures
         for ax in g.axes.flat:
