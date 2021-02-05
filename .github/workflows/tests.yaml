@@ -13,10 +13,10 @@ jobs:
     name: Install and test
     steps:
       - name: Install SynthPops
-        working-directory: ~/.cache
         run: |
+             cd ~
              git clone https://github.com/InstituteforDiseaseModeling/synthpops
-             cd synthpops
+             cd ~/synthpops
              python setup.py develop
       - name: Checkout sources
         uses: actions/checkout@v1
