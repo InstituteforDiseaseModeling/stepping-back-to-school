@@ -113,9 +113,11 @@ class Analysis(sc.prettyobj):
     This class contains code to store, process, and plot the results.
     '''
 
-    def __init__(self, sims, imgdir):
+    def __init__(self, sims, imgdir, save_outbreaks=True):
         self.sims = sims
         self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
+        self.save_outbreaks = save_outbreaks
+        self.outbreaks = None
 
         self.imgdir = imgdir
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
@@ -149,9 +151,10 @@ class Analysis(sc.prettyobj):
         ''' Process the simulations '''
         results = []
         stypes = {'es':'Elementary', 'ms':'Middle', 'hs':'High'}
+        obdf = sc.objdict(sim=[], school=[], outbreak=[]) # Not a dataframe yet, but will be
 
         # Loop over each simulation and accumulate stats
-        for sim in self.sims:
+        for s,sim in enumerate(self.sims):
             first_school_date = sim.tags['school_start_date']
             first_school_day = sim.day(first_school_date)
 
@@ -229,6 +232,11 @@ class Analysis(sc.prettyobj):
 
                 # Determine the type of the first "observed" case, here using the first diagnosed
                 for ob in outbreaks:
+                    if self.save_outbreaks:
+                        obdf.sim.append(s)
+                        obdf.school.append(sid)
+                        obdf.outbreak.append(ob)
+
                     #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
                     #if not ob['Complete']:
                     #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
@@ -249,6 +257,10 @@ class Analysis(sc.prettyobj):
 
         # Convert results to a dataframe
         self.raw = pd.DataFrame(results)
+        if self.save_outbreaks:
+            self.outbreaks = pd.DataFrame(obdf)
+
+        return
 
     def _wrangle(self, keys, outputs=None):
         # Wrangling - build self.results from self.raw
@@ -495,7 +507,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(fracs)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, height=height, aspect=aspect, legend=legend, hue_order=hue_order)
 
         g.set(ylim=(0,80)) # Consistency across figures
         if xvar == 'Screen prob':
@@ -539,7 +551,7 @@ class Analysis(sc.prettyobj):
             bs.append(df)
         bootstrap=pd.concat(bs)
 
-        g = self.gp_reg(bootstrap, xvar, 'stype', height, aspect, legend, cmap=cmap)
+        g = self.gp_reg(bootstrap, xvar=xvar, huevar='stype', height=height, aspect=aspect, legend=legend, cmap=cmap)
         g.set(ylim=(0,80)) # Consistency across figures
         colors = matplotlib.cm.get_cmap(cmap)
         for ax in g.axes.flat:
@@ -553,7 +565,6 @@ class Analysis(sc.prettyobj):
 
 
     def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
-        ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         ret = self.results.loc['outbreak_size']
 
@@ -566,7 +577,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(resamples)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df, xvar=xvar, huevar=huevar, hue_order=hue_order)
         g.set(ylim=(1,None))
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
@@ -584,6 +595,44 @@ class Analysis(sc.prettyobj):
         return g
 
 
+
+    def outbreak_size_distribution(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
+        df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        if values is not None:
+            df = df.loc[df[xvar].isin(values)]
+        else:
+            values = df[xvar].unique()
+
+        if pd.api.types.is_numeric_dtype(df[xvar]):
+            df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
+            cat=False
+        else:
+            df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
+            cat=True
+
+        g = sns.relplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(4, 1000), palette='copper', height=height, aspect=aspect, alpha=0.7, legend=legend, edgecolor='k', zorder=10)
+
+        for ax in g.axes.flat:
+            if cat:
+                ax.set_xticks(range(len(values)))
+                g.set_xticklabels(values)#, rotation=45)
+            res = loess_bound(df[xvar], df['Outbreak Size'], frac=0.5)
+            ax2 = ax.twinx()
+            #ax2.fill_between(res.x, res.low, res.high, alpha=0.3, zorder=-100)
+            ax2.plot(res.x, res.mean, lw=3, zorder=20)
+            ax2.set_ylim(1,None)
+        g.set(ylim=(0,None))
+        if g._legend is not None:
+            g._legend.set(frame_on=1)
+        g.set_xlabels(xvar)
+        plt.tight_layout()
+
+        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return g
+
+
+
     def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if values is not None:
@@ -592,13 +641,9 @@ class Analysis(sc.prettyobj):
             values = df[xvar].unique()
 
         if pd.api.types.is_numeric_dtype(df[xvar]):
-            #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
             df['x_jittered'] = df[xvar] + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
-            cat=False
         else:
-            #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
             df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
-            cat=True
 
         fig, axv = plt.subplots(3,1, figsize=(height*aspect, height), sharex=False)
 
@@ -659,7 +704,7 @@ class Analysis(sc.prettyobj):
 
 
 
-    def outbreak_size_plot(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012):
+    def outbreak_size_plot_v2(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if pd.api.types.is_numeric_dtype(df[xvar]):
             #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
@@ -692,23 +737,22 @@ class Analysis(sc.prettyobj):
             #ax.invert_yaxis() # Not working
         plt.tight_layout()
 
+        # axv[1].set_xticks(xt)
+        # axv[1].set_xticklabels([])
+        # axv[1].set_xlabel('')
+        # axv[1].set_ylim(1,None)
+        # yt = axv[1].get_yticks()
+        # yt[0] = 1
+        # axv[1].set_yticks(yt)
+
+        # axv[1].set_ylabel('Individual outbreak size')
+
         fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
-        axv[1].set_xticks(xt)
-        axv[1].set_xticklabels([])
-        axv[1].set_xlabel('')
-        axv[1].set_ylim(1,None)
-        yt = axv[1].get_yticks()
-        yt[0] = 1
-        axv[1].set_yticks(yt)
 
-        axv[1].set_ylabel('Individual outbreak size')
-
-        return g
-
-
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
         '''
         Plot outbreak sizes in various ways.
 
@@ -731,7 +775,7 @@ class Analysis(sc.prettyobj):
 
         # Handle non-numeric x axes
         is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
-        if not is_numeric:
+        if not is_numeric: # pragma: no cover
             labels = df[xvar].unique()
             indices = range(len(labels))[::-1]
             labelmap = dict(zip(labels, indices))
@@ -749,7 +793,7 @@ class Analysis(sc.prettyobj):
                 plt_x = xjitter
                 plt_y = y
                 lim_func = plt.ylim
-            else:
+            else: # pragma: no cover
                 plt_x = y
                 plt_y = xjitter
                 lim_func = plt.xlim
@@ -771,7 +815,7 @@ class Analysis(sc.prettyobj):
             set_xticklabels = ax.set_xticklabels
             set_xlabel = ax.set_xlabel
             set_ylabel = ax.set_ylabel
-        else:
+        else: # pragma: no cover
             set_xticks = ax.set_yticks
             set_xticklabels = ax.set_yticklabels
             set_xlabel = ax.set_ylabel
@@ -781,7 +825,7 @@ class Analysis(sc.prettyobj):
             set_xticks(xt)
             set_xticklabels([f'{self.beta0*betamult:.1%}' for betamult in xt])
             set_xlabel('Transmission probability in schools, per-contact per-day')
-        else:
+        else: # pragma: no cover
             set_xticks(indices)
             set_xticklabels(labels)
 
@@ -793,28 +837,29 @@ class Analysis(sc.prettyobj):
         return df
 
 
-    def outbreak_size_distribution_orig(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
-        df = self.results.loc['outbreak_size'].reset_index()
-
-        if row == 'Dx Screening' and row_order is None:
-            row_order = self.screen_order
-        g = sns.catplot(data=df, x='value', y=row, order=row_order, col=col, orient='h', kind='boxen', legend=legend, height=height, aspect=aspect)
-        g.set_titles(col_template='{col_name}')
-
+    def outbreak_R0(self, figsize=(6*1.4,6)):
+        d = self.results_ts.loc['n_infected_by_seed'].reset_index()
+        d['value'] = d['value'].astype(int)
+        xv = d['In-school transmission multiplier'].unique()
+        g = sns.catplot(data=d, x='In-school transmission multiplier', y='value', kind='bar', hue=None, height=6, aspect=1.4, palette="ch:.25", zorder=10)
         for ax in g.axes.flat:
-            try:
-                ax.set_title(f'{self.beta0*float(ax.get_title()):.1%}')
-            except Exception as E:
-                print(f'Warning: could not set title ({str(E)})')
-            ax.set_ylabel('')
-            ax.set_xlabel('')
-            ax.set_xlim([0,50])
-        plt.subplots_adjust(bottom=0.05)
-        plt.figtext(0.6,0.01,'Outbreak size', ha='center')
+            for l in ax.lines: # Move the error bars in front of the bars
+                l.set_zorder(20)
+            ax.axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
 
-        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
+            xt = ax.get_xticks()
+            b = xv[0]
+            m = (xv[1]-xv[0]) / (xt[1]-xt[0])
+            ax.set_xticklabels( [f'{m*self.beta0*betamult + b:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+            ax.grid(color='lightgray', axis='y', zorder=-10)
+            sns.despine(right=False, top=False) # Add spines back
+
+        g.set_ylabels('Basic reproduction number in school')
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=300)
+
+        fn = 'OutbreakR0.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
 
@@ -832,7 +877,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(resamples)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, hue_order=hue_order, height=height, aspect=aspect, legend=legend)
         for ax in g.axes.flat:
             ax.set_ylabel('Number of exports to households')
 
@@ -883,13 +928,31 @@ class Analysis(sc.prettyobj):
             self.timeseries(config['channel'], config['label'], config['normalize'])
 
 
-    def plot_tree(self, tree, stats, n_days, do_show=False):
-        ''' Plots an infection tree '''
+    def plot_tree(self, outbreak_ind=None, tree=None, stats=None, n_days=None, do_show=False, verbose=False):
+        '''
+        Plots an infection tree. You can either supply the index of the outbreak,
+        or the tree, stats, and n_days directly.
+        '''
         fig, ax = plt.subplots(figsize=(16,10))
+
+        # Get the right tree and stats objects
+        if tree is None or stats is None:
+            if outbreak_ind is None:
+                outbreak_ind = 0
+
+            row = self.outbreaks.iloc[outbreak_ind]
+            sim_ind = row['sim']
+            sim = self.sims[sim_ind]
+            school_ind = row['school']
+            stats = sim.school_stats[school_ind]
+            tree = row['outbreak']['Tree']
+            if n_days is None:
+                n_days = sim['n_days']
+
         date_range = [n_days, 0]
 
         for j, (u,v) in enumerate(tree.nodes.data()):
-            print('\tNODE', u,v)
+            if verbose: print('\tNODE', u,v)
             if v['type'] == 'Seed':
                 continue
             recovered = n_days if np.isnan(v['date_recovered']) else v['date_recovered']
