@@ -3,6 +3,7 @@ Outbreak analysis to sweep in-school transmissibility while also exploring sever
 '''
 
 import sys
+import numpy as np
 import school_tools as sct
 
 if __name__ == '__main__':
@@ -16,7 +17,7 @@ if __name__ == '__main__':
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
         #'screen_keys':  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
-        'screen_keys':  ['None', 'Antigen every 2w', 'Antigen every 1w'],
+        'location': ['seattle_metro', 'Spokane_County', 'Franklin_County', 'Island_County'],
     }
 
     pop_size = sct.config.sim_pars.pop_size
@@ -28,24 +29,28 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    beta_s = [0.83333333, 1.61111111] # [0.83333333,1.22222222,1.61111111] # Just show one level
-    npi_scens = {x:{'beta_s': 1.5*x} for x in beta_s}
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0.25, 2, 10)}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
-    huevar = 'In-school transmission multiplier'
-    xvar = 'Dx Screening'
+    xvar = 'In-school transmission multiplier'
+    huevar = 'Location'
 
     # Create and run
-    mgr = sct.Manager(name='OutbreakScreeningSizeDistrib', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
+    mgr = sct.Manager(name='OutbreakLocations', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
-
-    #runner.regplots(xvar=xvar, huevar=huevar)
-
-    #analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
-    #g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.15, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7, 
-
-    analyzer.outbreak_size_plot(xvar, rowvar='In-school transmission multiplier', ext=None, height=6, aspect=3, scatter=True, loess=False, landscape=False, jitter=0.6)
-
-    #analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
+    # Plots
+    #analyzer.outbreak_multipanel(row='Dx Screening', col='In-school transmission multiplier')
+    g = analyzer.outbreak_reg(xvar, huevar, aspect=2)
+    #for ax in g.axes.flat:
+    #    ax.set_xlim([0,1])
+    #    ax.set_yticks([1, 5, 10, 15])
+    #fn = 'OutbreakSizeRegression.png'
+    #import os, covasim as cv
+    #cv.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
+    exit()
+    analyzer.cum_incidence(colvar=xvar, rowvar=huevar)
+    analyzer.outbreak_size_over_time(colvar=xvar, rowvar=huevar)
+    analyzer.source_pie()
+    mgr.tsplots()

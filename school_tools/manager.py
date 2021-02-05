@@ -70,7 +70,6 @@ class Builder(sc.prettyobj):
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
-        locations = {k.split('_')[0].capitalize() : k for k in sweep_pars.location}
 
         # Would like to reuse screenpars_func here
         def screen_func(config, key, test):
@@ -81,6 +80,10 @@ class Builder(sc.prettyobj):
             return config
 
         self.add_level('dxscrn_key', screens, screen_func)
+        if 'location' not in sweep_pars:
+            sweep_pars.location = [cfg.pop_pars.location]
+
+        locations = {k.split('_')[0].capitalize() : k for k in sweep_pars.location}
         self.add_level('location', locations, loc_func)
 
     @staticmethod

@@ -657,7 +657,7 @@ class Analysis(sc.prettyobj):
 
 
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+    def outbreak_size_plot(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if pd.api.types.is_numeric_dtype(df[xvar]):
             #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
@@ -665,15 +665,23 @@ class Analysis(sc.prettyobj):
             cat=False
         else:
             #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
-            df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
+            cats = [o for o in self.screen_order if o in df[xvar].unique()]
+            df['x_jittered'] = pd.Categorical(df[xvar], categories=self.screen_order).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
             cat=True
-        g = sns.FacetGrid(data=df, col='In-school transmission multiplier', height=6, aspect=2)
+
+        if rowvar == 'In-school transmission multiplier':
+            df.loc[:,'Transmission probability in schools'] = self.beta0*df[rowvar]
+            rowvar = 'Transmission probability in schools'
+
+        g = sns.FacetGrid(data=df, row=rowvar, height=height, aspect=aspect)
         g.map_dataframe(sns.scatterplot, y='x_jittered', x='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(3, 750), palette='rocket', alpha=0.6)
         for ax in g.axes.flat:
-            ax.set_yticks([0,1,2])
-            ax.set_yticklabels(df[xvar].unique())
+            ax.set_yticks(range(len(cats)))
+            ax.set_yticklabels(cats)
         plt.tight_layout()
-        plt.show()
+
+        fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
         axv[1].set_xticks(xt)
