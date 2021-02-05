@@ -92,6 +92,11 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
         A sim instance
     '''
 
+    if 'location' in params:
+        location = params['location']
+    else:
+        location = cfg.pop_pars.location
+
     # Handle parameters and merge together different sets of defaults
 
     default_pars = dict(
@@ -152,7 +157,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
     #%% Handle population -- NB, although called popfile, might be a People object
     if load_pop: # Load from disk -- normal usage
         pop_seed = p.rand_seed % max_pop_seeds
-        popfile = cvsch.pop_path(popfile=None, location=cfg.pop_pars.location, folder=cfg.paths.inputs, strategy=strategy, n=pop_size, rand_seed=pop_seed)
+        popfile = cvsch.pop_path(popfile=None, location=location, folder=cfg.paths.inputs, strategy=strategy, n=pop_size, rand_seed=pop_seed)
         if os.path.exists(popfile):
             print(f'Loading population from {popfile}')
         else:

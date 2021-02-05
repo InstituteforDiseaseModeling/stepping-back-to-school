@@ -80,6 +80,11 @@ class Builder(sc.prettyobj):
             return config
 
         self.add_level('dxscrn_key', screens, screen_func)
+        if 'location' not in sweep_pars:
+            sweep_pars.location = [cfg.pop_pars.location]
+
+        locations = {k.split('_')[0].capitalize() : k for k in sweep_pars.location}
+        self.add_level('location', locations, loc_func)
 
     @staticmethod
     def scen_func(config, key, school_config):
@@ -187,7 +192,7 @@ class Manager(sc.objdict):
         if self.sweep_pars.prev is None:
             self.sweep_pars.prev = np.linspace(0.002, 0.02, self.sweep_pars.n_prev) # TODO: this might create subtle bugs and shouldn't be hard-coded
 
-        self.stem = f'{self.pop_pars.location}_{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
+        self.stem = f'{self.name}_{self.sim_pars.pop_size}_{self.sweep_pars.n_reps}reps'
         self.dir = os.path.join(self.paths.outputs, self.stem)
         self.cachefn = os.path.join(self.dir, 'results.sims') # Might need to change the extension here, depending if combine.py was used
 
@@ -227,13 +232,13 @@ class Manager(sc.objdict):
             self.analyzer = an.Analysis(self.sims, self.dir)
         return self.analyzer
 
-    def regplots(self, xvar, huevar, ts_plots=None):
+    def regplots(self, xvar, huevar, ts_plots=None, height=6, aspect=1.4):
         ''' Generate regular plots '''
 
         self.analyze(rerun=False)
-        self.analyzer.introductions_rate(xvar, huevar)
-        self.analyzer.introductions_rate_by_stype(xvar)
-        self.analyzer.outbreak_reg(xvar, huevar)
+        self.analyzer.introductions_rate(xvar, huevar, height=height, aspect=aspect)
+        self.analyzer.introductions_rate_by_stype(xvar, height=height, aspect=aspect)
+        self.analyzer.outbreak_reg(xvar, huevar, height=height, aspect=aspect)
 
         return
 
@@ -354,3 +359,10 @@ def alternate_symptomaticity(config, key, value):
     return config
 
 
+def loc_func(config, key, value):
+    print(f'Building location {key}={value}')
+    if not value: # Only build if value is True
+        return config
+
+    config.sim_pars['location'] = value
+    return config

@@ -16,7 +16,7 @@ if __name__ == '__main__':
         'n_prev': 0, # No controller
         'school_start_date': '2021-02-01',
         'school_seed_date': '2021-02-01',
-        'screen_keys':  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
+        'schcfg_keys':  ['with_countermeasures', 'all_hybrid', 'k5'],
     }
 
     pop_size = sct.config.sim_pars.pop_size
@@ -32,10 +32,10 @@ if __name__ == '__main__':
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
-    huevar = 'Dx Screening'
+    huevar = 'Scenario'
 
     # Create and run
-    mgr = sct.Manager(name='OutbreakScreening', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
+    mgr = sct.Manager(name='OutbreakScheduling', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 

@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mplt
 import matplotlib.ticker as mtick
 import seaborn as sns
+import statsmodels.api as sm
 
 from . import scenarios as scn
 
@@ -132,6 +133,9 @@ class Analysis(sc.prettyobj):
         self._process()
         keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening']
         keys.remove('school_start_date')
+        if 'location' in keys:
+            keys.remove('location')
+            keys.append('Location')
         if 'Prevalence' in sims[0].tags.keys():
             keys.append('Prevalence Target')
         self._wrangle(keys)
@@ -160,6 +164,10 @@ class Analysis(sc.prettyobj):
 
             # Tags usually contain the relevant sweep dimensions
             ret = sc.dcp(sim.tags)
+
+            if 'location' in sim.tags:
+                ret['Location'] = sim.tags['location'] # Upper case
+                ret.pop('location')
             ret['Scenario'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
             ret['Dx Screening'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
 
@@ -359,16 +367,16 @@ class Analysis(sc.prettyobj):
         df = pd.concat([intro_by_origin, detected_intro_by_origin], ignore_index=True)
         df = df.set_index('Introductions').rename_axis('Source', axis=1).stack()
         df.name='Count'
-        print(df.head())
         intr_src = df.reset_index().groupby(['Introductions', 'Source'])['Count'].sum().unstack('Source')
 
-        intr_src['Kind'] = 'Overall'
+        intr_src['Kind'] = 'Per-school'
         intr_src.set_index('Kind', append=True, inplace=True)
 
-        d = intr_src.loc[('Actual Source', 'Overall')]
+        print(intr_src)
+        d = intr_src.loc[('Actual Source', 'Per-school')]
         intr_src = intr_src.append(pd.DataFrame({'Staff': d['Staff']/d['number_Staff'], 'Student': d['Student']/d['number_Student'], 'Teacher': d['Teacher']/d['number_Teacher'], 'number_Staff': 1, 'number_Student': 1, 'number_Teacher': 1}, index=pd.MultiIndex.from_tuples([("Actual Source", "Per-person")])))
 
-        d = intr_src.loc[('First Diagnosed', 'Overall')]
+        d = intr_src.loc[('First Diagnosed', 'Per-school')]
         intr_src = intr_src.append(pd.DataFrame({'Staff': d['Staff']/d['number_Staff'], 'Student': d['Student']/d['number_Student'], 'Teacher': d['Teacher']/d['number_Teacher'], 'number_Staff': 1, 'number_Student': 1, 'number_Teacher': 1}, index=pd.MultiIndex.from_tuples([('First Diagnosed', 'Per-person')])))
 
         intr_src.drop(['number_Staff', 'number_Student', 'number_Teacher'], axis=1, inplace=True)
@@ -380,9 +388,15 @@ class Analysis(sc.prettyobj):
             plt.pie(data[['Student', 'Teacher', 'Staff']].values[0], explode=[0.05]*3, autopct='%.0f%%', normalize=True)
             #plt.legend(p, ['Student', 'Teacher', 'Staff'], bbox_to_anchor=(0.0,-0.2), loc='lower center', ncol=3, frameon=True)
 
-        g = sns.FacetGrid(data=intr_src.reset_index(), row='Kind', row_order=['Per-person', 'Overall'], col='Introductions', margin_titles=True, despine=False, legend_out=True, height=4)
+        g = sns.FacetGrid(data=intr_src.reset_index(), row='Kind', row_order=['Per-person', 'Per-school'], col='Introductions', margin_titles=True, despine=False, legend_out=True, height=4)
         g.map_dataframe(pie)
         g.set_titles(col_template="{col_name}", row_template="{row_name}")
+
+        # Add legend
+        lbls = ['Student', 'Teacher', 'Staff']
+        colors = sns.color_palette('tab10').as_hex()[:len(lbls)]
+        h = [matplotlib.patches.Patch(color=col, label=lab) for col, lab in zip(colors, lbls)]
+        plt.figlegend(handles=h, ncol=len(h), loc='lower center', frameon=False)
 
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, 'SourcePie.png'), dpi=dpi)
@@ -409,8 +423,18 @@ class Analysis(sc.prettyobj):
         x = np.linspace(xmin,xmax,50)
         y_pred, sigma = gp.predict(x.reshape(-1, 1), return_std=True)
 
+        data_range = data[xvar].max() - data[xvar].min()
+        nx = data[xvar].nunique()
+        noise = 0.1 * data_range / nx / 2
+        data.loc[:,f'{xvar}_scatter'] = data[xvar] + np.random.uniform(low=-noise, high=noise, size=data.shape[0])
+
+        #mu = data.groupby(xvar)[yvar].mean().reset_index()
+        #std = data.groupby(xvar)[yvar].std().reset_index()
+
         plt.fill_between(x, y_pred+1.96*sigma, y_pred-1.96*sigma, color=color, alpha=0.15, zorder=9)
-        plt.scatter(data[xvar], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
+        plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
+        #plt.plot([mu[xvar], mu[xvar]], [mu[yvar]-1.96*std[yvar], mu[yvar]+1.96*std[yvar]], color=color)
+        #plt.plot(mu[xvar], mu[yvar], 'o', color=color)
         plt.plot(x, y_pred, color=color, zorder=11, lw=2)
 
 
@@ -484,6 +508,10 @@ class Analysis(sc.prettyobj):
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
         g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, height=height, aspect=aspect, legend=legend, hue_order=hue_order)
+
+        g.set(ylim=(0,80)) # Consistency across figures
+        if xvar == 'Screen prob':
+            g.set(xlim=(0,1)) # Consistency across figures
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
 
@@ -493,12 +521,24 @@ class Analysis(sc.prettyobj):
         return g
 
 
-    def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Dark2'):
+    def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Set1'):
 
         bs = []
-        for idx, stype in enumerate(self.stypes):
-            num = self.results.loc[f'introductions_{stype}']
-            den = self.results.loc[f'susceptible_person_days_{stype}']
+        for idx, stype in enumerate(['All Types Combined'] + self.stypes):
+            if stype == 'All Types Combined':
+                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes])
+                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes])
+
+                # Calculate slope
+                frac = 100_000*num/den
+                frac.reset_index('Prevalence Target', inplace=True)
+                mod = sm.OLS(frac['value'], sm.add_constant(1_000 * frac['Prevalence Target']))
+                res = mod.fit()
+                print(res.summary())
+                print(res.params)
+            else:
+                num = self.results.loc[f'introductions_{stype}']
+                den = self.results.loc[f'susceptible_person_days_{stype}']
 
             fracs = []
             for i in range(nboot):
@@ -512,8 +552,11 @@ class Analysis(sc.prettyobj):
         bootstrap=pd.concat(bs)
 
         g = self.gp_reg(bootstrap, xvar=xvar, huevar='stype', height=height, aspect=aspect, legend=legend, cmap=cmap)
+        g.set(ylim=(0,80)) # Consistency across figures
+        colors = matplotlib.cm.get_cmap(cmap)
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
+            ax.text(0.014,5, f'Slope: {res.params["Prevalence Target"]:.1f} per 0.1% increase\n in community prevalence', color=colors(0))
 
         fn = 'IntroductionRateStype.png' if ext is None else f'IntroductionRateStype_{ext}.png'
         plt.tight_layout()
@@ -536,6 +579,7 @@ class Analysis(sc.prettyobj):
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
         g = self.gp_reg(df, xvar=xvar, huevar=huevar, hue_order=hue_order)
+        g.set(ylim=(1,None))
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
 
@@ -552,7 +596,7 @@ class Analysis(sc.prettyobj):
         return g
 
 
-    def outbreak_size_distribution(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
+    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if values is not None:
             df = df.loc[df[xvar].isin(values)]
@@ -560,35 +604,123 @@ class Analysis(sc.prettyobj):
             values = df[xvar].unique()
 
         if pd.api.types.is_numeric_dtype(df[xvar]):
-            df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
+            #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
+            df['x_jittered'] = df[xvar] + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
             cat=False
         else:
-            df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
+            #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
+            df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
             cat=True
 
-        g = sns.relplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(4, 1000), palette='copper', height=height, aspect=aspect, alpha=0.7, legend=legend, edgecolor='k', zorder=10)
+        fig, axv = plt.subplots(3,1, figsize=(height*aspect, height), sharex=False)
 
-        for ax in g.axes.flat:
-            if cat:
-                ax.set_xticks(range(len(values)))
-                g.set_xticklabels(values)#, rotation=45)
-            res = loess_bound(df[xvar], df['Outbreak Size'], frac=0.5)
-            ax2 = ax.twinx()
-            #ax2.fill_between(res.x, res.low, res.high, alpha=0.3, zorder=-100)
-            ax2.plot(res.x, res.mean, lw=3, zorder=20)
-            ax2.set_ylim(1,None)
-        g.set(ylim=(0,None))
-        if g._legend is not None:
-            g._legend.set(frame_on=1)
-        g.set_xlabels(xvar)
+        xt = df[xvar].unique()
+
+        # 0
+        sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
+        axv[0].set_xticks(xt)
+        axv[0].set_xticklabels([])
+        axv[0].set_xlabel('')
+
+        axv[0].set_ylim(1,None)
+        yt = axv[0].get_yticks()
+        yt[0] = 1
+        axv[0].set_yticks(yt)
+        axv[0].set_ylabel('Average outbreak size')
+
+        # 1
+        g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
+
+        axv[1].set_xticks(xt)
+        axv[1].set_xticklabels([])
+        axv[1].set_xlabel('')
+        axv[1].set_ylim(1,None)
+        yt = axv[1].get_yticks()
+        yt[0] = 1
+        axv[1].set_yticks(yt)
+
+        axv[1].set_ylabel('Individual outbreak size')
+
+
+        # Outbreak axv[2]
+        d = self.results_ts.loc['n_infected_by_seed'].reset_index()
+        d['value'] = d['value'].astype(int)
+        xv = d['In-school transmission multiplier'].unique()
+        sns.barplot(data=d, x='In-school transmission multiplier', y='value', palette='crest_r', zorder=10, ax=axv[2]) # ch:.25 magma
+        for l in axv[2].lines: # Move the error bars in front of the bars
+            l.set_zorder(20)
+        axv[2].axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
+
+        #xt = axv[2].get_xticks()
+        #b = xv[0]
+        #m = (xv[1]-xv[0]) / (xt[1]-xt[0])
+        axv[2].set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+        axv[2].set_xlabel('Transmission probability in schools, per-contact per-day')
+        axv[2].grid(color='lightgray', axis='y', zorder=-10)
+        sns.despine(right=False, top=False) # Add spines back
+
+        axv[2].set_ylabel(r'Basic reproduction ($R_{0,s}$)')
+
+        axv[0].set_xlim(axv[1].get_xlim()) # At least make these two line up
+
         plt.tight_layout()
 
-        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
+        fn = 'OutbreakMultiPanel.png' if ext is None else f'OutbreakMultiPanel_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return fig
+
+
+
+    def outbreak_size_plot(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012):
+        df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        if pd.api.types.is_numeric_dtype(df[xvar]):
+            #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
+            df['x_jittered'] = df[xvar] + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
+            cat=False
+        else:
+            #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
+            so = self.screen_order.copy() # Axis goes wrong way
+            so.reverse()
+            cats = [o for o in so if o in df[xvar].unique()]
+            df['x_jittered'] = pd.Categorical(df[xvar], categories=so).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
+            cat=True
+
+        if rowvar == 'In-school transmission multiplier':
+            df.loc[:,'Transmission probability in schools'] = self.beta0*df[rowvar]
+            rowvar = 'Transmission probability in schools'
+
+        row_order = np.flip(df[rowvar].unique())
+
+        g = sns.FacetGrid(data=df, row=rowvar, row_order=row_order, height=height, aspect=aspect, sharex=False)
+        g.map_dataframe(sns.scatterplot, y='x_jittered', x='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.7, linewidths=2, edgecolors='black', vmax=500)
+        g.map_dataframe(sns.scatterplot, y='x_jittered', x='Outbreak Size', size='Outbreak Size', sizes=(1, 750), color='black', linewidths=2, alpha=0, edgecolors='black', vmax=500)
+        #g.map_dataframe(sns.boxenplot, y=xvar, x='Outbreak Size', palette='rocket')
+
+        g.set_xlabels('Individual outbreak size')
+        for ax, v in zip(g.axes.flat, row_order):
+            ax.set_yticks(range(len(cats)))
+            ax.set_yticklabels(cats)
+            ax.set_title(f'Transmission probability in schools: {v:.1%}', fontsize=22)
+            #ax.invert_yaxis() # Not working
+        plt.tight_layout()
+
+        fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
 
+        axv[1].set_xticks(xt)
+        axv[1].set_xticklabels([])
+        axv[1].set_xlabel('')
+        axv[1].set_ylim(1,None)
+        yt = axv[1].get_yticks()
+        yt[0] = 1
+        axv[1].set_yticks(yt)
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+        axv[1].set_ylabel('Individual outbreak size')
+
+        return g
+
+
         '''
         Plot outbreak sizes in various ways.
 
