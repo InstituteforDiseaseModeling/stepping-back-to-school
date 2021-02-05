@@ -40,7 +40,7 @@ setup(
         "seaborn",
         "sciris>=1.0.0",
         "covasim>=2.0.0",
-        "synthpops @ git+https://github.com/institutefordiseasemodeling/synthpops@master",
+        "-e git+https://github.com/institutefordiseasemodeling/synthpops.git",
         "sklearn",
     ],
 )
