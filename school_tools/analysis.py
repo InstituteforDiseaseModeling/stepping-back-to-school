@@ -161,8 +161,10 @@ class Analysis(sc.prettyobj):
 
             # Tags usually contain the relevant sweep dimensions
             ret = sc.dcp(sim.tags)
-            ret['Location'] = sim.tags['location'] # Number of times covid was introduced, cumulative across all schools
-            ret.pop('location')
+
+            if 'location' in sim.tags:
+                ret['Location'] = sim.tags['location'] # Upper case
+                ret.pop('location')
             ret['Scenario'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
             ret['Dx Screening'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
 
@@ -657,7 +659,7 @@ class Analysis(sc.prettyobj):
 
 
 
-    def outbreak_size_plot(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+    def outbreak_size_plot(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if pd.api.types.is_numeric_dtype(df[xvar]):
             #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
@@ -665,19 +667,29 @@ class Analysis(sc.prettyobj):
             cat=False
         else:
             #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
-            cats = [o for o in self.screen_order if o in df[xvar].unique()]
-            df['x_jittered'] = pd.Categorical(df[xvar], categories=self.screen_order).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
+            so = self.screen_order.copy() # Axis goes wrong way
+            so.reverse()
+            cats = [o for o in so if o in df[xvar].unique()]
+            df['x_jittered'] = pd.Categorical(df[xvar], categories=so).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
             cat=True
 
         if rowvar == 'In-school transmission multiplier':
             df.loc[:,'Transmission probability in schools'] = self.beta0*df[rowvar]
             rowvar = 'Transmission probability in schools'
 
-        g = sns.FacetGrid(data=df, row=rowvar, height=height, aspect=aspect)
-        g.map_dataframe(sns.scatterplot, y='x_jittered', x='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(3, 750), palette='rocket', alpha=0.6)
-        for ax in g.axes.flat:
+        row_order = np.flip(df[rowvar].unique())
+
+        g = sns.FacetGrid(data=df, row=rowvar, row_order=row_order, height=height, aspect=aspect, sharex=False)
+        g.map_dataframe(sns.scatterplot, y='x_jittered', x='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.7, linewidths=2, edgecolors='black', vmax=500)
+        g.map_dataframe(sns.scatterplot, y='x_jittered', x='Outbreak Size', size='Outbreak Size', sizes=(1, 750), color='black', linewidths=2, alpha=0, edgecolors='black', vmax=500)
+        #g.map_dataframe(sns.boxenplot, y=xvar, x='Outbreak Size', palette='rocket')
+
+        g.set_xlabels('Individual outbreak size')
+        for ax, v in zip(g.axes.flat, row_order):
             ax.set_yticks(range(len(cats)))
             ax.set_yticklabels(cats)
+            ax.set_title(f'Transmission probability in schools: {v:.1%}', fontsize=22)
+            #ax.invert_yaxis() # Not working
         plt.tight_layout()
 
         fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'

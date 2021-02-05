@@ -46,6 +46,6 @@ if __name__ == '__main__':
     #analyzer.outbreak_size_distribution(row='Dx Screening', col='In-school transmission multiplier', height=12, aspect=0.6)
     #g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.15, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7, 
 
-    analyzer.outbreak_size_plot(xvar, rowvar='In-school transmission multiplier', ext=None, height=6, aspect=3, scatter=True, loess=False, landscape=False, jitter=0.6)
+    analyzer.outbreak_size_plot(xvar, rowvar='In-school transmission multiplier', ext=None, height=6, aspect=3, scatter=True, jitter=0.75)
 
     #analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
