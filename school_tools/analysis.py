@@ -23,6 +23,7 @@ import matplotlib as mplt
 import matplotlib.ticker as mtick
 import seaborn as sns
 import statsmodels.api as sm
+from scipy.interpolate import UnivariateSpline
 
 from . import scenarios as scn
 
@@ -129,7 +130,7 @@ class Analysis(sc.prettyobj):
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
         self._process()
-        keys = list(sims[0].tags.keys()) + ['Scenario', 'Dx Screening']
+        keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening']
         keys.remove('school_start_date')
         if 'location' in keys:
             keys.remove('location')
@@ -165,7 +166,7 @@ class Analysis(sc.prettyobj):
             if 'location' in sim.tags:
                 ret['Location'] = sim.tags['location'] # Upper case
                 ret.pop('location')
-            ret['Scenario'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
+            ret['School Schedule'] = self.scenario_map[skey][0] if skey in self.scenario_map else skey
             ret['Dx Screening'] = self.dxscrn_map[tkey][0] if tkey in self.dxscrn_map else tkey
 
             if 'Prevalence' in sim.tags:
@@ -392,6 +393,35 @@ class Analysis(sc.prettyobj):
 
 
     @staticmethod
+    def splineplot(**kwargs):
+        data = kwargs['data']
+        color = kwargs['color']
+        xvar = kwargs['xvar']
+        yvar = kwargs['yvar']
+
+        mu = data.groupby(xvar).mean().reset_index()
+        std = data.groupby(xvar).std().reset_index()
+        mu_spl = UnivariateSpline(mu[xvar], mu[yvar], s=0.1*mu.shape[0])
+        std_spl = UnivariateSpline(std[xvar], std[yvar], s=0.1*std.shape[0])
+        xmin = mu.iloc[0][xvar]
+        xmax = mu.iloc[-1][xvar]
+        xs = np.linspace(xmin,xmax,50)
+        y_pred = mu_spl(xs)
+        sigma = std_spl(xs)
+        plt.scatter(mu[xvar], mu[yvar], s=20, color=color, alpha=0.8, linewidths=0.5, edgecolors='face', zorder=10)
+
+        #plt.scatter(data[xvar], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
+        data_range = data[xvar].max() - data[xvar].min()
+        nx = data[xvar].nunique()
+        noise = 0.1 * data_range / nx / 2
+        data.loc[:,f'{xvar}_scatter'] = data[xvar] + np.random.uniform(low=-noise, high=noise, size=data.shape[0])
+        plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
+
+        plt.plot(xs, y_pred, color=color, lw=3)
+        plt.fill_between(xs, y_pred+1.96*sigma, y_pred-1.96*sigma, color=color, alpha=0.15, zorder=9)
+
+
+    @staticmethod
     def gpplot(**kwargs):
         data = kwargs['data']
         color = kwargs['color']
@@ -436,7 +466,7 @@ class Analysis(sc.prettyobj):
                 hue_order = df.reset_index()[huevar].unique()
 
         g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, height=height, aspect=aspect, palette=cmap)
-        g.map_dataframe(self.gpplot, xvar=xvar, yvar='value')
+        g.map_dataframe(self.splineplot, xvar=xvar, yvar='value') # Switched from gpplot to splineplot to better capture variance trends
         plt.grid(color='lightgray', zorder=-10)
 
         g.set(xlim=(0,None), ylim=(0,None))
@@ -567,9 +597,16 @@ class Analysis(sc.prettyobj):
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
         g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
-        g.set(ylim=(1,None))
+        g.set(ylim=(0,None))
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
+            #yt = ax.get_yticks()
+            #yt[0]=1
+            #ax.set_yticks(yt)
+            ax.axhline(y=1, ls='--', color='k')
+
+        #if huevar == 'School Schedule':
+        #    g._legend.set_title('School Schedule')
 
         if xvar == 'In-school transmission multiplier':
             xlim = ax.get_xlim()
@@ -610,10 +647,11 @@ class Analysis(sc.prettyobj):
         axv[0].set_xticklabels([])
         axv[0].set_xlabel('')
 
-        axv[0].set_ylim(1,None)
-        yt = axv[0].get_yticks()
-        yt[0] = 1
-        axv[0].set_yticks(yt)
+        #axv[0].set_ylim(1,None)
+        #yt = axv[0].get_yticks()
+        #yt[0] = 1
+        #axv[0].set_yticks(yt)
+        axv[0].axhline(y=1, ls='--', color='k')
         axv[0].set_ylabel('Average outbreak size')
 
         # 1
@@ -861,13 +899,13 @@ class Analysis(sc.prettyobj):
             if 'Prevalence' in sim.tags:
                 d['Prevalence Target'] = p2f(sim.tags['Prevalence'])
                 huevar='Prevalence Target'
-            d['Scenario'] = f'{sim.tags["scen_key"]} + {sim.tags["dxscrn_key"]}'
+            d['School Schedule'] = f'{sim.tags["scen_key"]} + {sim.tags["dxscrn_key"]}'
             d['Replicate'] = sim.tags['Replicate']
             l.append( d )
         d = pd.concat(l).reset_index()
 
         fig, ax = plt.subplots(figsize=(16,10))
-        sns.lineplot(data=d, x='Date', y=label, hue=huevar, style='Scenario', palette='cool', ax=ax, legend=False)
+        sns.lineplot(data=d, x='Date', y=label, hue=huevar, style='School Schedule', palette='cool', ax=ax, legend=False)
         # Y-axis gets messed up when I introduce horizontal lines
         #for prev in d['Prevalence Target'].unique():
         #    ax.axhline(y=prev, ls='--')
