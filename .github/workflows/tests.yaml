@@ -12,28 +12,48 @@ jobs:
         python-version: [ '3.8' ]
     name: Install and test
     steps:
-      - name: Install SynthPops
-        run: |
-             cd ~
-             git clone https://github.com/InstituteforDiseaseModeling/synthpops
-             cd ~/synthpops
-             python setup.py develop
+      - name: Set repo owner env variable
+        shell: python
+        run: print("::set-env name=GITHUB_OWNER::{}".format('${{github.repository}}'.split('/')[0]))
+
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
+
+      - name: Checkout synthpops
+        uses: actions/checkout@v2
+        with:
+            repository: ${{ env.GITHUB_OWNER }}/synthpops
+            # Checking out a private repo requires a Personal Access Token (PAT).  To create one, follow the instructions at:
+            #   https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line#creating-a-token
+            # The (service?) account creating the PAT needs to have access to the private repo, and the PAT should be scoped to "repo".
+            # The account creating the PAT needs to have access to the private repo, and the PAT should be scoped to "repo".
+            # To add the PAT as a Secret, usable by this workflow, follow the instructions at:
+            #   https://help.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets#creating-encrypted-secrets
+            # NOTE: The secret must be named "GitHub_PAT"
+            path: ./synthpops
       - uses: actions/setup-python@master
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
+
+      - name: Install synthpops
+        working-directory: ./synthpops
+        run: python setup.py develop
+
       - name: Install inside-schools
         run: python setup.py develop
+
       - name: Install tests
         run: pip install -r tests/requirements_test.txt
+
       - name: Run API tests
         working-directory: ./tests
         run:  coverage run -m pytest test_* --durations=0 --junitxml=test-results.xml # Run all tests
+
       - name: Create coverage badge
         working-directory: ./tests
         run: coverage-badge -o coverage-badge.svg
+
       - name: Upload test results
         uses: actions/upload-artifact@v1
         if: failure()
@@ -43,6 +63,7 @@ jobs:
       - uses: iterative/setup-cml@v1
         with:
           version: latest 
+
       - name: cml_run
         id: cv
         working-directory: ./tests
