@@ -50,10 +50,8 @@ jobs:
         with:
           name: test_results
           path: tests/test-results.xml
-          
+
       - uses: iterative/setup-cml@v1
-        with:
-          version: latest 
 
       - name: cml_run
         id: cv
