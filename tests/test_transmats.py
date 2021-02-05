@@ -35,7 +35,6 @@ def test_fit(force_run=True):
     i_to_r = sim.people.date_recovered[inds] - sim.people.date_infectious[inds]
     ir = cvc.TransitionMatrix(i_to_r, 7)
     ir.fit()
-    ir.plot()
 
 
 if __name__ == '__main__':

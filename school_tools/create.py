@@ -27,7 +27,7 @@ def create_pops(cfg=cfg):
     print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
     kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
 
-    if parallelize:
+    if parallelize: # pragma: no cover
         ram = psutil.virtual_memory().available/1e9
         max_cpus = psutil.cpu_count()
         max_parallel = min(max_cpus, n_seeds)
@@ -68,7 +68,7 @@ def define_pars(which='best', kind='default', ):
 
 
 def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, strategy='clustered',
-               load_pop=True, save_pop=False, people=None, label=None, **kwargs):
+               load_pop=True, save_pop=False, create_pop=True, people=None, label=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
     create the sim object.
@@ -83,6 +83,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
         strategy (str): the cohorting strategy to use
         load_pop (bool): whether to load people from disk (otherwise, use supplied or create afresh)
         save_pop (bool): if a population is being generated, whether to save
+        create_pop (bool): whether to create a population if one does not exist
         people (People): if supplied, use instead of loading from file
         label (str): a name for the simulation
         kwargs (dict): merged with params
@@ -91,7 +92,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
         A sim instance
     '''
 
-    if 'location' in params:
+    if params and 'location' in params:
         location = params['location']
     else:
         location = cfg.pop_pars.location
@@ -160,8 +161,12 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
         if os.path.exists(popfile):
             print(f'Loading population from {popfile}')
         else:
-            errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
-            raise FileNotFoundError(errormsg)
+            if create_pop:
+                print('Population file {pop_file} does not exist, creating...')
+                create_pops(cfg)
+            else:
+                errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
+                raise FileNotFoundError(errormsg)
     elif people is not None: # People is supplied; use that
         popfile = people
         print('Note: using supplied people')

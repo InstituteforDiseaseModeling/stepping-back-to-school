@@ -301,7 +301,7 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
     sc.heading('Running sims...')
     TT = sc.tic()
     kwargs = dict(n_sims=len(sim_configs), run_config=run_cfg)
-    if run_cfg['parallel']:
+    if run_cfg['parallel']: # pragma: no cover
         print('...running in parallel')
 
         sc.heading('Choosing correct number of CPUs...') # TODO: merge with create_pops.py
