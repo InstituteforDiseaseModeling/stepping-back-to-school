@@ -189,6 +189,7 @@ class Analysis(sc.prettyobj):
             for stype in stypes.values():
                 ret[f'introductions_{stype}'] = [] # Introductions by school type
                 ret[f'susceptible_person_days_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
+                ret[f'outbreak_size_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
 
             for grp in ['Student', 'Teacher', 'Staff']:
                 ret[f'introduction_origin_{grp}'] = 0 # Introduction origin by group
@@ -219,6 +220,8 @@ class Analysis(sc.prettyobj):
                 # Insert at beginning for efficiency
                 ret['first_infectious_day_at_school'][0:0] = [o['First infectious day at school'] for o in outbreaks]
                 ret['outbreak_size'][0:0] = [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in outbreaks]
+                ret[f'outbreak_size_{stype}'][0:0] = [ob['Infected Students'] + ob['Infected Teachers'] + ob['Infected Staff'] for ob in outbreaks]
+
                 ret['complete'][0:0] = [float(ob['Complete']) for ob in outbreaks]
                 ret['n_infected_by_seed'][0:0] = [ob['Num school people infected by seed'] for ob in outbreaks if ob['Seeded']] # Also Num infected by seed
                 ret['exports_to_hh'][0:0] = [ob['Exports to household'] for ob in outbreaks]
@@ -257,6 +260,7 @@ class Analysis(sc.prettyobj):
         if outputs == None:
             outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh']
             outputs += [f'introductions_{stype}' for stype in stypes]
+            outputs += [f'outbreak_size_{stype}' for stype in stypes]
             outputs += [f'susceptible_person_days_{stype}' for stype in stypes]
             outputs += ['first_infectious_day_at_school', 'complete']
 
@@ -417,7 +421,8 @@ class Analysis(sc.prettyobj):
         data.loc[:,f'{xvar}_scatter'] = data[xvar] + np.random.uniform(low=-noise, high=noise, size=data.shape[0])
         plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
 
-        plt.plot(xs, y_pred, color=color, lw=3)
+        label = kwargs['label'] if 'label' in kwargs else None
+        plt.plot(xs, y_pred, color=color, lw=3, label=label)
         plt.fill_between(xs, y_pred+1.96*sigma, y_pred-1.96*sigma, color=color, alpha=0.15, zorder=9)
 
 
@@ -643,10 +648,32 @@ class Analysis(sc.prettyobj):
 
         # 0
         #sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
-        self.splineplot(data=df, xvar=xvar, yvar='Outbreak Size', color='blue') # Switched from gpplot to splineplot to better capture variance trends
+        plt.sca(axv[0])
+
+        colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
+        for idx, stype in enumerate(['All Types Combined'] + self.stypes):
+            if stype == 'All Types Combined':
+                dfs = df
+            else:
+                dfs = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+
+            # Bootstrap
+            frames = []
+            nboot = 80
+            cols = [xvar]
+            for i in range(nboot):
+                rows = np.random.randint(low=0, high=dfs.shape[0], size=dfs.shape[0])
+                frame = dfs.iloc[rows].groupby(cols)['Outbreak Size'].mean()
+                frames.append(frame)
+            bs = pd.concat(frames)
+            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype) # Switched from gpplot to splineplot to better capture variance trends
+
+        axv[0].legend(title='School Type')
+
         axv[0].set_xticks(xt)
         axv[0].set_xticklabels([])
         axv[0].set_xlabel('')
+        #axv[0].grid(color='lightgray', zorder=-10)
 
         #axv[0].set_ylim(1,None)
         #yt = axv[0].get_yticks()
