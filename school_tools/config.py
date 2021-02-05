@@ -65,7 +65,7 @@ sim_pars, pop_pars, sweep_pars, run_pars, paths = get_defaults()
 np.random.seed(run_pars.base_seed) # Reset the global seed on import
 
 
-def process_inputs(argv):
+def process_inputs(argv): # pragma: no cover
     ''' Handle command-line input arguments '''
     parser = argparse.ArgumentParser()
     parser.add_argument('--force', action='store_true')
