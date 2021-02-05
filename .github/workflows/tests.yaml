@@ -12,19 +12,24 @@ jobs:
         python-version: [ '3.8' ]
     name: Install and test
     steps:
+      # - name: Install SynthPops
+      #   run: |
+      #        git clone https://github.com/InstituteforDiseaseModeling/synthpops
+      #        cd synthpops
+      #        python setup.py develop
       - name: Checkout sources
         uses: actions/checkout@v1
       - uses: actions/setup-python@master
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - name: Install synthpops
+      - name: Install inside-schools
         run: python setup.py develop
       - name: Install tests
         run: pip install -r tests/requirements_test.txt
       - name: Run API tests
         working-directory: ./tests
-        run:  coverage run --source=../synthpops --omit=*census* --branch -m pytest --durations=0 --ignore-glob=*manual* . --junitxml=test-results.xml # Run all tests
+        run:  coverage run -m pytest test_* --durations=0 --junitxml=test-results.xml # Run all tests
       - name: Create coverage badge
         working-directory: ./tests
         run: coverage-badge -o coverage-badge.svg
@@ -34,12 +39,6 @@ jobs:
         with:
           name: test_results
           path: tests/test-results.xml
-      - name: Upload report
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: report
-          path: tests/unittests/regression/report/
       - uses: iterative/setup-cml@v1
         with:
           version: latest 
