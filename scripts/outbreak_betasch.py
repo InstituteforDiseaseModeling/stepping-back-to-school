@@ -43,8 +43,7 @@ if __name__ == '__main__':
 
     analyzer.exports_reg(xvar, huevar)
     analyzer.outbreak_reg(xvar, huevar)
-    analyzer.outbreak_size_plot(xvar, scatter=True, loess=False)
-    analyzer.outbreak_size_plot(xvar, scatter=False, loess=True) # Included for completeness but looks weird
+    #analyzer.outbreak_size_plot(xvar) #xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
     analyzer.source_pie()

@@ -642,7 +642,8 @@ class Analysis(sc.prettyobj):
         xt = df[xvar].unique()
 
         # 0
-        sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
+        #sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
+        self.splineplot(data=df, xvar=xvar, yvar='Outbreak Size', color='blue') # Switched from gpplot to splineplot to better capture variance trends
         axv[0].set_xticks(xt)
         axv[0].set_xticklabels([])
         axv[0].set_xlabel('')
@@ -660,10 +661,11 @@ class Analysis(sc.prettyobj):
         axv[1].set_xticks(xt)
         axv[1].set_xticklabels([])
         axv[1].set_xlabel('')
-        axv[1].set_ylim(1,None)
-        yt = axv[1].get_yticks()
-        yt[0] = 1
-        axv[1].set_yticks(yt)
+        #axv[1].set_ylim(1,None)
+        #yt = axv[1].get_yticks()
+        #yt[0] = 1
+        #axv[1].set_yticks(yt)
+        axv[1].axhline(y=1, color='k', ls='--')
 
         axv[1].set_ylabel('Individual outbreak size')
 
@@ -743,92 +745,6 @@ class Analysis(sc.prettyobj):
         axv[1].set_yticks(yt)
 
         axv[1].set_ylabel('Individual outbreak size')
-
-        return g
-
-
-        '''
-        Plot outbreak sizes in various ways.
-
-        Args:
-            xvar (str): the variable to use as the x-axis
-            ext (str): suffix for filename
-            height (float): figure height
-            aspect (float): figure aspect ratio
-            scatter (bool): show scatter of points
-            loess (bool): show loess fit to points
-            landscape (bool): flip orientation so x-axis is y-axis
-            jitter (float): amount of scatter to add to point locations
-        '''
-
-        # Get x and y coordinates of all outbreaks
-        df = self.results.reset_index() # Un-melt (congeal?) results
-        df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
-        x = df[xvar].values # Pull out x values
-        y = df['value'].values # Pull out y values (i.e., outbreak size)
-
-        # Handle non-numeric x axes
-        is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
-        if not is_numeric:
-            labels = df[xvar].unique()
-            indices = range(len(labels))[::-1]
-            labelmap = dict(zip(labels, indices))
-            x = np.array([labelmap[i] for i in x]) # Convert from strings to indices
-
-        plt.figure(figsize=(height*aspect, height))
-
-        # Scatter plots
-        if scatter:
-            dx = x.max() - x.min()
-            noise = dx*jitter*(1+np.random.randn(len(x)))
-            xjitter = x + noise
-            colors = sc.vectocolor(np.sqrt(y), cmap='copper')
-            if landscape:
-                plt_x = xjitter
-                plt_y = y
-                lim_func = plt.ylim
-            else:
-                plt_x = y
-                plt_y = xjitter
-                lim_func = plt.xlim
-
-            plt.scatter(plt_x, plt_y, alpha=0.7, s=800*y/y.max(), c=colors)
-            lim_func([-2, y.max()*1.1])
-
-        # Loess plots
-        if loess:
-            if not landscape: raise NotImplementedError
-            res = loess_bound(x, y, frac=0.5)
-            plt.fill_between(res.x, res.low, res.high, alpha=0.3)
-            plt.plot(res.x, res.mean, lw=3)
-
-        # General settings
-        ax = plt.gca()
-        if landscape:
-            set_xticks = ax.set_xticks
-            set_xticklabels = ax.set_xticklabels
-            set_xlabel = ax.set_xlabel
-            set_ylabel = ax.set_ylabel
-        else:
-            set_xticks = ax.set_yticks
-            set_xticklabels = ax.set_yticklabels
-            set_xlabel = ax.set_ylabel
-            set_ylabel = ax.set_xlabel
-        xt = np.linspace(x.min(), x.max(), 6)
-        if is_numeric:
-            set_xticks(xt)
-            set_xticklabels([f'{self.beta0*betamult:.1%}' for betamult in xt])
-            set_xlabel('Transmission probability in schools, per-contact per-day')
-        else:
-            set_xticks(indices)
-            set_xticklabels(labels)
-
-        set_ylabel('Outbreak size')
-
-        fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
-        plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
-        return df
 
 
     def outbreak_size_distribution_orig(self, row=None, row_order=None, col=None, height=12, aspect=0.7, ext=None, legend=False):
