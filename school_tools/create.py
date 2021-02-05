@@ -92,7 +92,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, str
         A sim instance
     '''
 
-    if 'location' in params:
+    if params and 'location' in params:
         location = params['location']
     else:
         location = cfg.pop_pars.location

@@ -565,7 +565,6 @@ class Analysis(sc.prettyobj):
 
 
     def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
-        ##### Outbreak size
         cols = [xvar] if huevar is None else [xvar, huevar]
         ret = self.results.loc['outbreak_size']
 
@@ -596,6 +595,44 @@ class Analysis(sc.prettyobj):
         return g
 
 
+
+    def outbreak_size_distribution(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
+        df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        if values is not None:
+            df = df.loc[df[xvar].isin(values)]
+        else:
+            values = df[xvar].unique()
+
+        if pd.api.types.is_numeric_dtype(df[xvar]):
+            df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
+            cat=False
+        else:
+            df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
+            cat=True
+
+        g = sns.relplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(4, 1000), palette='copper', height=height, aspect=aspect, alpha=0.7, legend=legend, edgecolor='k', zorder=10)
+
+        for ax in g.axes.flat:
+            if cat:
+                ax.set_xticks(range(len(values)))
+                g.set_xticklabels(values)#, rotation=45)
+            res = loess_bound(df[xvar], df['Outbreak Size'], frac=0.5)
+            ax2 = ax.twinx()
+            #ax2.fill_between(res.x, res.low, res.high, alpha=0.3, zorder=-100)
+            ax2.plot(res.x, res.mean, lw=3, zorder=20)
+            ax2.set_ylim(1,None)
+        g.set(ylim=(0,None))
+        if g._legend is not None:
+            g._legend.set(frame_on=1)
+        g.set_xlabels(xvar)
+        plt.tight_layout()
+
+        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return g
+
+
+
     def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if values is not None:
@@ -604,13 +641,9 @@ class Analysis(sc.prettyobj):
             values = df[xvar].unique()
 
         if pd.api.types.is_numeric_dtype(df[xvar]):
-            #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
             df['x_jittered'] = df[xvar] + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
-            cat=False
         else:
-            #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
             df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
-            cat=True
 
         fig, axv = plt.subplots(3,1, figsize=(height*aspect, height), sharex=False)
 
