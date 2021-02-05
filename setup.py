@@ -40,10 +40,7 @@ setup(
         "seaborn",
         "sciris>=1.0.0",
         "covasim>=2.0.0",
-        "synthpops==1.4.3",
+        "synthpops>=1.4.3",
         "sklearn",
-    ],
-    dependency_links=[
-        'git+https://github.com/institutefordiseasemodeling/synthpops.git#egg=synthpops-1.4.3',
     ],
 )
