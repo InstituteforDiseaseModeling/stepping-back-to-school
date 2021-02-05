@@ -40,64 +40,64 @@ jobs:
         working-directory: ./tests
         run:  coverage run -m pytest test_* --durations=0 --junitxml=test-results.xml # Run all tests
 
-      - name: Create coverage badge
-        working-directory: ./tests
-        run: coverage-badge -o coverage-badge.svg
+      # - name: Create coverage badge
+      #   working-directory: ./tests
+      #   run: coverage-badge -o coverage-badge.svg
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v1
-        if: failure()
-        with:
-          name: test_results
-          path: tests/test-results.xml
+      # - name: Upload test results
+      #   uses: actions/upload-artifact@v1
+      #   if: failure()
+      #   with:
+      #     name: test_results
+      #     path: tests/test-results.xml
 
-      - uses: iterative/setup-cml@v1
+      # - uses: iterative/setup-cml@v1
 
-      - name: cml_run
-        id: cv
-        working-directory: ./tests
-        env:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+      # - name: cml_run
+      #   id: cv
+      #   working-directory: ./tests
+      #   env:
+      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
 
-          # Code coverage report
-          coverage html
-          cml-publish coverage-badge.svg --md >> cov.md
-          # cml-send-comment cov.md
-          echo \<p\> > report.md
-          echo \<div\>\<b\> current code coverage \</b\>\</div\> >> report.md
-          sed -n '/<table class="index">/,/<\/table>/p'  htmlcov/index.html >> report.md
-          echo \</p\>\n >> report.md
-          # get rid of links as they are not available to upload
-          echo $(cat report.md | sed -e 's/<a href=[^>]*>//g' | sed -e 's/<\/a>//g' | sed 's/^[[:space:]]*//g' | tr -d '\n') > report_copy.md
-          cat report_copy.md >> cov.md
-          cml-send-github-check cov.md
-          echo "::set-output name=covdata::$(cat report_copy.md)"
+      #     # Code coverage report
+      #     coverage html
+      #     cml-publish coverage-badge.svg --md >> cov.md
+      #     # cml-send-comment cov.md
+      #     echo \<p\> > report.md
+      #     echo \<div\>\<b\> current code coverage \</b\>\</div\> >> report.md
+      #     sed -n '/<table class="index">/,/<\/table>/p'  htmlcov/index.html >> report.md
+      #     echo \</p\>\n >> report.md
+      #     # get rid of links as they are not available to upload
+      #     echo $(cat report.md | sed -e 's/<a href=[^>]*>//g' | sed -e 's/<\/a>//g' | sed 's/^[[:space:]]*//g' | tr -d '\n') > report_copy.md
+      #     cat report_copy.md >> cov.md
+      #     cml-send-github-check cov.md
+      #     echo "::set-output name=covdata::$(cat report_copy.md)"
         
-      - name: find bot comment
-        uses: peter-evans/find-comment@v1
-        id: fc
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: current code coverage
+      # - name: find bot comment
+      #   uses: peter-evans/find-comment@v1
+      #   id: fc
+      #   with:
+      #     issue-number: ${{ github.event.pull_request.number }}
+      #     comment-author: 'github-actions[bot]'
+      #     body-includes: current code coverage
 
-      - name: create bot comment
-        if: ${{ steps.fc.outputs.comment-id == 0 }}
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ${{ steps.cv.outputs.covdata }}
-          reactions: "rocket"
+      # - name: create bot comment
+      #   if: ${{ steps.fc.outputs.comment-id == 0 }}
+      #   uses: peter-evans/create-or-update-comment@v1
+      #   with:
+      #     issue-number: ${{ github.event.pull_request.number }}
+      #     body: |
+      #       ${{ steps.cv.outputs.covdata }}
+      #     reactions: "rocket"
 
-      - name: update bot comment
-        if: ${{ steps.fc.outputs.comment-id != 0 }}
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          body: |
-            ${{ steps.cv.outputs.covdata }}
-          reactions: "rocket"
-          edit-mode: "replace"
+      # - name: update bot comment
+      #   if: ${{ steps.fc.outputs.comment-id != 0 }}
+      #   uses: peter-evans/create-or-update-comment@v1
+      #   with:
+      #     comment-id: ${{ steps.fc.outputs.comment-id }}
+      #     body: |
+      #       ${{ steps.cv.outputs.covdata }}
+      #     reactions: "rocket"
+      #     edit-mode: "replace"
           
