@@ -469,7 +469,7 @@ class Analysis(sc.prettyobj):
         plt.plot(x, y_pred, color=color, zorder=11, lw=2)
 
 
-    def gp_reg(self, df, xvar, huevar, height=6, aspect=1.4, legend=True, cmap='Set1', hue_order=None):
+    def gp_reg(self, df, xvar, huevar, height=6, aspect=1.4, legend=True, cmap='Set1', hue_order=None, use_spline=True):
         if huevar is None:
             legend = False
         else:
@@ -479,7 +479,10 @@ class Analysis(sc.prettyobj):
                 hue_order = df.reset_index()[huevar].unique()
 
         g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, height=height, aspect=aspect, palette=cmap)
-        g.map_dataframe(self.splineplot, xvar=xvar, yvar='value') # Switched from gpplot to splineplot to better capture variance trends
+        if use_spline:
+            g.map_dataframe(self.splineplot, xvar=xvar, yvar='value') # Switched from gpplot to splineplot to better capture variance trends
+        else:
+            g.map_dataframe(self.gpplot, xvar=xvar, yvar='value') # Previous implementation
         plt.grid(color='lightgray', zorder=-10)
 
         g.set(xlim=(0,None), ylim=(0,None))
@@ -608,7 +611,7 @@ class Analysis(sc.prettyobj):
         df = pd.concat(resamples)
 
         hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df, xvar, huevar, height, aspect, legend, hue_order=hue_order)
+        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, height=height, aspect=aspect, legend=legend, hue_order=hue_order)
         g.set(ylim=(0,None))
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
@@ -671,7 +674,7 @@ class Analysis(sc.prettyobj):
 
 
 
-    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False):
+    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if values is not None:
             df = df.loc[df[xvar].isin(values)]
@@ -687,9 +690,11 @@ class Analysis(sc.prettyobj):
 
         xt = df[xvar].unique()
 
-        # 0
-        #sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
-        self.splineplot(data=df, xvar=xvar, yvar='Outbreak Size', color='blue') # Switched from gpplot to splineplot to better capture variance trends
+        # Panel 0
+        if use_spline:
+            self.splineplot(data=df, xvar=xvar, yvar='Outbreak Size', color='blue') # Switched from gpplot to splineplot to better capture variance trends
+        else:
+            sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
         axv[0].set_xticks(xt)
         axv[0].set_xticklabels([])
         axv[0].set_xlabel('')
@@ -701,7 +706,7 @@ class Analysis(sc.prettyobj):
         axv[0].axhline(y=1, ls='--', color='k')
         axv[0].set_ylabel('Average outbreak size')
 
-        # 1
+        # Panel 1
         g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)
@@ -715,8 +720,7 @@ class Analysis(sc.prettyobj):
 
         axv[1].set_ylabel('Individual outbreak size')
 
-
-        # Outbreak axv[2]
+        # Panel 3
         d = self.results_ts.loc['n_infected_by_seed'].reset_index()
         d['value'] = d['value'].astype(int)
         xv = d['In-school transmission multiplier'].unique()
