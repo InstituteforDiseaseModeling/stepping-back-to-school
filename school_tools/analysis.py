@@ -413,8 +413,9 @@ class Analysis(sc.prettyobj):
 
         mu = data.groupby(xvar).mean().reset_index()
         std = data.groupby(xvar).std().reset_index()
-        mu_spl = UnivariateSpline(mu[xvar], mu[yvar], s=0.1*mu.shape[0])
-        std_spl = UnivariateSpline(std[xvar], std[yvar], s=0.1*std.shape[0])
+        k = min(3, len(mu[xvar])-1) # Don't try to use more points in the spline than there are data points -- NB, will fail for 1 data point
+        mu_spl = UnivariateSpline(mu[xvar], mu[yvar], s=0.1*mu.shape[0], k=k)
+        std_spl = UnivariateSpline(std[xvar], std[yvar], s=0.1*std.shape[0], k=k)
         xmin = mu.iloc[0][xvar]
         xmax = mu.iloc[-1][xvar]
         xs = np.linspace(xmin,xmax,50)
