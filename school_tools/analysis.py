@@ -119,10 +119,14 @@ class Analysis(sc.prettyobj):
         self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
         self.save_outbreaks = save_outbreaks
         self.outbreaks = None
-
         self.imgdir = imgdir
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
 
+        # Settings used for plotting
+        self.stypes = sc.odict({'es':'Elementary', 'ms':'Middle', 'hs':'High'}) # odict so keys(), values() gives a list
+        self.factor = 100_000
+
+        # Scenario settings
         sim_scenario_names = list(set([sim.tags['scen_key'] for sim in sims]))
         self.scenario_map = scn.scenario_map()
         self.scenario_order = [v[0] for k,v in self.scenario_map.items() if k in sim_scenario_names]
@@ -131,6 +135,7 @@ class Analysis(sc.prettyobj):
         self.dxscrn_map = scn.screening_map()
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
+        # Process sims
         self._process()
         keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening']
         keys.remove('school_start_date')
@@ -141,17 +146,12 @@ class Analysis(sc.prettyobj):
             keys.append('Prevalence Target')
         self._wrangle(keys)
 
-        # Settings used for plotting
-        self.stypes = ['High', 'Middle', 'Elementary']
-        self.factor = 100_000
-
         return
 
 
     def _process(self):
         ''' Process the simulations '''
         results = []
-        stypes = {'es':'Elementary', 'ms':'Middle', 'hs':'High'}
         obdf = sc.objdict(sim=[], school=[], outbreak=[]) # Not a dataframe yet, but will be
 
         # Loop over each simulation and accumulate stats
@@ -189,7 +189,7 @@ class Analysis(sc.prettyobj):
             ret['introductions'] = [] # Number of introductions, overall
             ret['susceptible_person_days'] = [] # Susceptible person-days (amongst the school population)
 
-            for stype in stypes.values():
+            for stype in self.stypes.values():
                 ret[f'introductions_{stype}'] = [] # Introductions by school type
                 ret[f'susceptible_person_days_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
                 ret[f'outbreak_size_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
@@ -205,9 +205,9 @@ class Analysis(sc.prettyobj):
 
             # Now loop over each school and collect outbreak stats
             for sid,stats in sim.school_stats.items():
-                if stats['type'] not in stypes.keys():
+                if stats['type'] not in self.stypes.keys():
                     continue
-                stype = stypes[stats['type']]
+                stype = self.stypes[stats['type']]
 
                 # Only count outbreaks in which total infectious days at school is > 0
                 outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
@@ -252,7 +252,7 @@ class Analysis(sc.prettyobj):
                         detected_origin_type = first[1]['type']
                         ret[f'observed_origin_{detected_origin_type}'] += 1
 
-            for stype in stypes.values():
+            for stype in self.stypes.values():
                 # Sums, won't allow for full bootstrap resampling!
                 ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
                 ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
@@ -268,12 +268,11 @@ class Analysis(sc.prettyobj):
 
     def _wrangle(self, keys, outputs=None):
         # Wrangling - build self.results from self.raw
-        stypes = ['Elementary', 'Middle', 'High']
         if outputs == None:
             outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh']
-            outputs += [f'introductions_{stype}' for stype in stypes]
-            outputs += [f'outbreak_size_{stype}' for stype in stypes]
-            outputs += [f'susceptible_person_days_{stype}' for stype in stypes]
+            outputs += [f'introductions_{stype}' for stype in self.stypes.values()]
+            outputs += [f'outbreak_size_{stype}' for stype in self.stypes.values()]
+            outputs += [f'susceptible_person_days_{stype}' for stype in self.stypes.values()]
             outputs += ['first_infectious_day_at_school', 'complete']
 
         self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
@@ -563,10 +562,10 @@ class Analysis(sc.prettyobj):
     def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Set1'):
 
         bs = []
-        for idx, stype in enumerate(['All Types Combined'] + self.stypes):
+        for idx, stype in enumerate(['All Types Combined'] + self.stypes.keys()):
             if stype == 'All Types Combined':
-                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes])
-                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes])
+                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes.keys()])
+                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes.keys()])
 
                 # Calculate slope
                 frac = 100_000*num/den
@@ -679,7 +678,7 @@ class Analysis(sc.prettyobj):
 
 
 
-    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True):
+    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True, by_stype=False):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if values is not None:
             df = df.loc[df[xvar].isin(values)]
@@ -699,7 +698,7 @@ class Analysis(sc.prettyobj):
         if use_spline:
             plt.sca(axv[0])
             colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
-            for idx, stype in enumerate(['All Types Combined'] + self.stypes):
+            for idx, stype in enumerate(['All Types Combined'] + self.stypes.keys()):
                 if stype == 'All Types Combined':
                     dfs = df
                 else:
@@ -729,6 +728,7 @@ class Analysis(sc.prettyobj):
         axv[0].set_ylabel('Average outbreak size')
 
         # Panel 1
+        import traceback; traceback.print_exc(); import pdb; pdb.set_trace()
         g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)

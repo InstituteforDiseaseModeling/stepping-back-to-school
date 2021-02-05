@@ -27,7 +27,7 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 3)} # TEMP
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
@@ -39,12 +39,12 @@ if __name__ == '__main__':
     analyzer = mgr.analyze()
 
     # Plots
-    g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.15, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7, 
+    g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.15, values=None, legend=False, height=12, aspect=1.0, by_stype=True) # height=10, aspect=0.7,
 
-    analyzer.exports_reg(xvar, huevar)
-    analyzer.outbreak_reg(xvar, huevar)
-    #analyzer.outbreak_size_plot(xvar) #xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012
-    analyzer.cum_incidence(colvar=xvar)
-    analyzer.outbreak_size_over_time()
-    analyzer.source_pie()
-    mgr.tsplots()
+    # analyzer.exports_reg(xvar, huevar)
+    # analyzer.outbreak_reg(xvar, huevar)
+    # #analyzer.outbreak_size_plot(xvar) #xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012
+    # analyzer.cum_incidence(colvar=xvar)
+    # analyzer.outbreak_size_over_time()
+    # analyzer.source_pie()
+    # mgr.tsplots()
