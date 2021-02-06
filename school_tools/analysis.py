@@ -135,9 +135,10 @@ class Analysis(sc.prettyobj):
         self.dxscrn_map = scn.screening_map()
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
-        # Process sims
+        # Process sims -- note that only keys explicitly named here will be included after wrangling
         self._process()
         keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening']
+        keys +=['sim_id', 'school_id', 'school_type'] # Additional tracking keys
         keys.remove('school_start_date')
         if 'location' in keys:
             keys.remove('location')
@@ -188,6 +189,9 @@ class Analysis(sc.prettyobj):
             ret['exports_to_hh'] = [] # The number of direct exports from a member of the school community to households. Exclused further spread within HHs and indirect routes to HHs e.g. via the community.
             ret['introductions'] = [] # Number of introductions, overall
             ret['susceptible_person_days'] = [] # Susceptible person-days (amongst the school population)
+            ret['sim_id'] = s # Store the simulation ID
+            ret['school_id'] = [] # School ID
+            ret['school_type'] = [] # School type
 
             for stype in self.stypes.values():
                 ret[f'introductions_{stype}'] = [] # Introductions by school type
@@ -208,6 +212,8 @@ class Analysis(sc.prettyobj):
                 if stats['type'] not in self.stypes.keys():
                     continue
                 stype = self.stypes[stats['type']]
+                ret['school_id'].append(sid)
+                ret['school_type'].append(stype)
 
                 # Only count outbreaks in which total infectious days at school is > 0
                 outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
@@ -562,10 +568,10 @@ class Analysis(sc.prettyobj):
     def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Set1'):
 
         bs = []
-        for idx, stype in enumerate(['All Types Combined'] + self.stypes.keys()):
+        for idx, stype in enumerate(['All Types Combined'] + self.stypes.values()):
             if stype == 'All Types Combined':
-                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes.keys()])
-                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes.keys()])
+                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes.values()])
+                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes.values()])
 
                 # Calculate slope
                 frac = 100_000*num/den
@@ -698,7 +704,7 @@ class Analysis(sc.prettyobj):
         if use_spline:
             plt.sca(axv[0])
             colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
-            for idx, stype in enumerate(['All Types Combined'] + self.stypes.keys()):
+            for idx, stype in enumerate(['All Types Combined'] + self.stypes.values()):
                 if stype == 'All Types Combined':
                     dfs = df
                 else:
@@ -728,7 +734,7 @@ class Analysis(sc.prettyobj):
         axv[0].set_ylabel('Average outbreak size')
 
         # Panel 1
-        import traceback; traceback.print_exc(); import pdb; pdb.set_trace()
+        # import traceback; traceback.print_exc(); import pdb; pdb.set_trace()
         g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)

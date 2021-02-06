@@ -27,7 +27,7 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 3)} # TEMP
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 3)}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
