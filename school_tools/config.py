@@ -52,10 +52,10 @@ def get_defaults():
 
 
     paths = sc.objdict(
-        inputs = 'inputs', # Folder for population files
+        inputs  = 'inputs', # Folder for population files
         outputs = 'results', # Folder for figures, sims, etc.
-        ei     = 'fit_EI.obj',
-        ir     = 'fit_IR.obj',
+        ei      = sc.thisdir(None, 'fit_EI.obj'),
+        ir      = sc.thisdir(None, 'fit_IR.obj'),
     )
     return sim_pars, pop_pars, sweep_pars, run_pars, paths
 
