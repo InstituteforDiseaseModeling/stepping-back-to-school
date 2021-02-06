@@ -47,7 +47,7 @@ Configuration {self.label}:
  '''
 
 
-class Builder(sc.prettyobj):
+class Builder:
     '''
     Build the run configurations
     '''
