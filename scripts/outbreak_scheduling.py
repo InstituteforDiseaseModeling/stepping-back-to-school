@@ -32,7 +32,7 @@ if __name__ == '__main__':
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
-    huevar = 'Scenario'
+    huevar = 'School Schedule'
 
     # Create and run
     mgr = sct.Manager(name='OutbreakScheduling', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
@@ -40,15 +40,9 @@ if __name__ == '__main__':
     analyzer = mgr.analyze()
 
     # Plots
-    #analyzer.outbreak_multipanel(row='Dx Screening', col='In-school transmission multiplier')
     g = analyzer.outbreak_reg(xvar, huevar, aspect=2)
-    #for ax in g.axes.flat:
-    #    ax.set_xlim([0,1])
-    #    ax.set_yticks([1, 5, 10, 15])
-    #fn = 'OutbreakSizeRegression.png'
-    #import os, covasim as cv
-    #cv.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
     exit()
+    #analyzer.outbreak_multipanel(row='Dx Screening', col='In-school transmission multiplier')
     analyzer.cum_incidence(colvar=xvar, rowvar=huevar)
     analyzer.outbreak_size_over_time(colvar=xvar, rowvar=huevar)
     analyzer.source_pie()
