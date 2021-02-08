@@ -28,6 +28,6 @@ if __name__ == '__main__':
     analyzer.source_pie()
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
-    analyzer.source_dow(figsize=(8,5)) # 6.5 x 5
+    analyzer.source_dow(figsize=(10,5)) # 6.5 x 5
     mgr.tsplots()
 

@@ -38,6 +38,8 @@ if __name__ == '__main__':
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
+    g = analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
+
     # Plots
     g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.15, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7, 
 

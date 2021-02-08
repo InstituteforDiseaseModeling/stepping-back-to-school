@@ -812,6 +812,36 @@ class Analysis(sc.prettyobj):
         return g
 
 
+    def outbreak_size_stacked_distrib(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4):
+        df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size Float'}, axis=1)
+
+        df['Outbreak Size'] = pd.cut(df['Outbreak Size Float'], bins=[1,2,5,10,25,10000], right=False, include_lowest=True, labels=['Source only', '2-4', '5-9', '10-24', '25+'])
+
+        sz = df.groupby([xvar, 'Outbreak Size']).size()
+        sz.name='Count'
+        sz = sz.unstack('Outbreak Size')
+        sz = sz.div(sz.sum(axis=1), axis=0)
+        fig, ax = plt.subplots(figsize=(height*aspect, height))
+        sz.plot(stacked=True, kind='area', ax=ax, colormap='RdYlBu_r') # coolwarm parula, inferno
+
+        ax.set_xlim(sz.index[0], sz.index[-1])
+        if xvar == 'In-school transmission multiplier':
+            xlim = ax.get_xlim()
+            xt = np.linspace(xlim[0], xlim[-1], 5)
+            ax.set_xticks( xt )
+            ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+        ax.set_ylim(0,1)
+        ax.set_ylabel('Percent of outbreaks')
+        plt.tight_layout()
+
+        fn = 'OutbreakSizeStacked.png' if ext is None else f'OutbreakSizeStacked_{ext}.png'
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return fig
+
+
     def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
         '''
         Plot outbreak sizes in various ways.
