@@ -109,7 +109,7 @@ def p2f(x):
 
 #%% The analysis class
 
-class Analysis(sc.prettyobj):
+class Analysis:
     '''
     This class contains code to store, process, and plot the results.
     '''
