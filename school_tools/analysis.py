@@ -880,9 +880,9 @@ class Analysis:
             fig, ax = plt.subplots(figsize=(height*aspect, height))
             do_save = True
 
-        colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
-        cols = {k:colors[8-i] for i,k in enumerate(lbls)}
-        sz.plot(stacked=True, kind='area', ax=ax, colormap='inferno') #color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
+        # colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
+        # cols = {k:colors[8-i] for i,k in enumerate(lbls)}
+        sz.plot(stacked=True, kind='area', ax=ax, colormap='Reds') #color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
 
         ax.set_xlim(sz.index[0], sz.index[-1])
         if xvar == 'In-school transmission multiplier':
