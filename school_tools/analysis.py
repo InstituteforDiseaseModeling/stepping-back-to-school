@@ -771,11 +771,12 @@ class Analysis(sc.prettyobj):
 
         for i in range(4):
             axv[i].set_ylim(0,None)
-            axv[i].set_xlim(axv[1].get_xlim()) # At least make these two line up
+            axv[i].set_xlim(axv[3].get_xlim()) # At least make these two line up
             axv[i].set_xticks(xt)
             if i == 3:
                 axv[i].set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
                 axv[i].set_xlabel('Transmission probability in schools, per-contact per-day')
+        axv[1].set_xlim(df['x_jittered'].min()-0.02, df['x_jittered'].max()+0.02)
 
         plt.tight_layout()
 
@@ -851,7 +852,7 @@ class Analysis(sc.prettyobj):
 
         colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
         cols = {k:colors[8-i] for i,k in enumerate(lbls)}
-        sz.plot(stacked=True, kind='area', ax=ax, color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
+        sz.plot(stacked=True, kind='area', ax=ax, colormap='inferno') #color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
 
         ax.set_xlim(sz.index[0], sz.index[-1])
         if xvar == 'In-school transmission multiplier':
