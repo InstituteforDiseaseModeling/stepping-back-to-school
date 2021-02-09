@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mplt
 import matplotlib.ticker as mtick
 import seaborn as sns
+# import cmasher
 import statsmodels.api as sm
 from scipy.interpolate import UnivariateSpline
 
@@ -131,6 +132,12 @@ class Analysis:
         self.smeta.keylabels = {k:v for k,v in zip(self.smeta.skeys, self.slabels)}
         self.smeta.keyinds = {k:v for v,k in enumerate(self.smeta.skeys)}
         self.smeta.indkeys = {v:k for v,k in enumerate(self.smeta.skeys)}
+        self.smeta.colors = sc.odict({
+            'Elementary': (0.30, 0.68, 0.26, 1.0), # Green elementary schools
+            'Middle':     (0.21, 0.49, 0.74, 1.0), # Blue middle schools
+            'High':       (0.89, 0.10, 0.14, 1.0), # Red high schools
+            'All Types Combined': (0, 0, 0, 1), # Black for all
+            })
 
         # Scenario settings
         sim_scenario_names = list(set([sim.tags['scen_key'] for sim in sims]))
@@ -145,6 +152,7 @@ class Analysis:
         self._process()
         keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening', 'sim_id']
         #keys +=['sim_id', 'school_id', 'school_type'] # Additional tracking keys
+        keys += ['outbreak_sid', 'outbreak_stind']
         keys.remove('school_start_date')
         if 'location' in keys:
             keys.remove('location')
@@ -290,7 +298,7 @@ class Analysis:
 
         # Wrangling - build self.results from self.raw
         if outputs == None:
-            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh', 'outbreak_sid', 'outbreak_stind']
+            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh']
             outputs += [f'introductions_{stype}' for stype in self.slabels]
             outputs += [f'outbreak_size_{stype}' for stype in self.slabels]
             outputs += [f'susceptible_person_days_{stype}' for stype in self.slabels]
@@ -671,7 +679,7 @@ class Analysis:
             fig, ax = plt.subplots(figsize=(height*aspect, height))
             do_save=True
         plt.sca(ax)
-        colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
+        # colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
         types = ['All Types Combined']
         if by_stype:
             types += self.slabels
@@ -694,7 +702,8 @@ class Analysis:
                 frame = dfs.iloc[rows].groupby(cols)['Outbreak Size'].mean()
                 frames.append(frame)
             bs = pd.concat(frames)
-            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype) # Switched from gpplot to splineplot to better capture variance trends
+            color = self.smeta.colors[stype]
+            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=color, label=stype) # Switched from gpplot to splineplot to better capture variance trends
 
         if legend:
             ax.legend(title='School Type')
@@ -784,7 +793,7 @@ class Analysis:
         axv[0].set_ylabel('Average outbreak size')
 
         # Panel 1
-        g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 250), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
+        sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='outbreak_stind', sizes=(1, 250), palette='rocket', alpha=0.7, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)
         axv[1].set_xticklabels([])
@@ -907,6 +916,7 @@ class Analysis:
 
         # colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
         # cols = {k:colors[8-i] for i,k in enumerate(lbls)}
+        # cols = sc.vectocolor(len(lbls)+3, cmap='cmr.flamingo_r')[1:-2]
         cols = sc.vectocolor(len(lbls)+1, cmap='Reds')[1:]
         sz.plot(stacked=True, kind='area', ax=ax, color=cols) # colormap='Reds') # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
 
