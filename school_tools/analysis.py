@@ -428,14 +428,14 @@ class Analysis:
         xs = np.linspace(xmin,xmax,50)
         y_pred = mu_spl(xs)
         sigma = std_spl(xs)
-        plt.scatter(mu[xvar], mu[yvar], s=20, color=color, alpha=0.8, linewidths=0.5, edgecolors='face', zorder=10)
+        plt.scatter(mu[xvar], mu[yvar], s=40, color=color, alpha=0.8, linewidths=0.5, edgecolors='face', zorder=10)
 
         #plt.scatter(data[xvar], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
         data_range = data[xvar].max() - data[xvar].min()
         nx = data[xvar].nunique()
-        noise = 0.1 * data_range / nx / 2
+        noise = 0.2 * data_range / nx / 2
         data.loc[:,f'{xvar}_scatter'] = data[xvar] + np.random.uniform(low=-noise, high=noise, size=data.shape[0])
-        plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
+        plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=8, color=color, alpha=0.2, linewidths=0.5, edgecolors='face', zorder=10)
 
         label = kwargs['label'] if 'label' in kwargs else None
         plt.plot(xs, y_pred, color=color, lw=3, label=label)
@@ -882,7 +882,8 @@ class Analysis:
 
         # colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
         # cols = {k:colors[8-i] for i,k in enumerate(lbls)}
-        sz.plot(stacked=True, kind='area', ax=ax, colormap='Reds') #color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
+        cols = sc.vectocolor(len(lbls)+1, cmap='Reds')[1:]
+        sz.plot(stacked=True, kind='area', ax=ax, color=cols) # colormap='Reds') # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
 
         ax.set_xlim(sz.index[0], sz.index[-1])
         if xvar == 'In-school transmission multiplier':

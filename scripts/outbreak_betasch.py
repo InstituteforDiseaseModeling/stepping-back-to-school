@@ -14,6 +14,8 @@ if __name__ == '__main__':
 
     args = sct.config.process_inputs(sys.argv)
 
+    sct.config.set_full() # TEMP
+
     sweep_pars = {
         'n_prev': 0, # No controller
         'school_start_date': '2021-02-01',
@@ -29,7 +31,7 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 5)}
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 5)} # TEMP
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
@@ -40,7 +42,7 @@ if __name__ == '__main__':
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
-    # g = analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
+    # g = analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2) # TEMP
 
     # Plots
     g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7,
