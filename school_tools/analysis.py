@@ -114,17 +114,23 @@ class Analysis:
     This class contains code to store, process, and plot the results.
     '''
 
-    def __init__(self, sims, imgdir, save_outbreaks=True):
+    def __init__(self, sims, imgdir, save_outbreaks=True, verbose=True):
         self.sims = sims
         self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
         self.save_outbreaks = save_outbreaks
         self.outbreaks = None
         self.imgdir = imgdir
+        self.verbose = verbose
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
 
-        # Settings used for plotting
-        self.stypes = sc.odict({'es':'Elementary', 'ms':'Middle', 'hs':'High'}) # odict so keys(), values() gives a list
+        # Settings used for plotting -- various mappings between keys, labels, and indices
         self.factor = 100_000
+        self.slabels = ['Elementary', 'Middle', 'High']
+        self.smeta = sc.objdict() # Lesser used transformations
+        self.smeta.skeys = ['es', 'ms', 'hs']
+        self.smeta.keylabels = {k:v for k,v in zip(self.smeta.skeys, self.slabels)}
+        self.smeta.keyinds = {k:v for v,k in enumerate(self.smeta.skeys)}
+        self.smeta.indkeys = {v:k for v,k in enumerate(self.smeta.skeys)}
 
         # Scenario settings
         sim_scenario_names = list(set([sim.tags['scen_key'] for sim in sims]))
@@ -137,7 +143,7 @@ class Analysis:
 
         # Process sims -- note that only keys explicitly named here will be included after wrangling
         self._process()
-        keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening']
+        keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening', 'sim_id']
         #keys +=['sim_id', 'school_id', 'school_type'] # Additional tracking keys
         keys.remove('school_start_date')
         if 'location' in keys:
@@ -152,6 +158,8 @@ class Analysis:
 
     def _process(self):
         ''' Process the simulations '''
+        if self.verbose:
+            print('Processing...')
         results = []
         obdf = sc.objdict(sim=[], school=[], outbreak=[]) # Not a dataframe yet, but will be
 
@@ -189,11 +197,11 @@ class Analysis:
             ret['exports_to_hh'] = [] # The number of direct exports from a member of the school community to households. Exclused further spread within HHs and indirect routes to HHs e.g. via the community.
             ret['introductions'] = [] # Number of introductions, overall
             ret['susceptible_person_days'] = [] # Susceptible person-days (amongst the school population)
-            #ret['sim_id'] = s # Store the simulation ID
-            #ret['school_id'] = [] # School ID
-            #ret['school_type'] = [] # School type
+            ret['sim_id'] = s # Store the simulation ID
+            ret['outbreak_sid'] = [] # School ID
+            ret['outbreak_stind'] = [] # School type
 
-            for stype in self.stypes.values():
+            for stype in self.slabels:
                 ret[f'introductions_{stype}'] = [] # Introductions by school type
                 ret[f'susceptible_person_days_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
                 ret[f'outbreak_size_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
@@ -209,9 +217,10 @@ class Analysis:
 
             # Now loop over each school and collect outbreak stats
             for sid,stats in sim.school_stats.items():
-                if stats['type'] not in self.stypes.keys():
+                if stats['type'] not in self.smeta.skeys:
                     continue
-                stype = self.stypes[stats['type']]
+                stype = self.smeta.keylabels[stats['type']]
+                stind = self.smeta.keyinds[stats['type']]
                 #ret['school_id'].append(sid)
                 #ret['school_type'].append(stype)
 
@@ -235,6 +244,10 @@ class Analysis:
                 ret['n_infected_by_seed'][0:0] = [ob['Num school people infected by seed'] for ob in outbreaks if ob['Seeded']] # Also Num infected by seed
                 ret['exports_to_hh'][0:0] = [ob['Exports to household'] for ob in outbreaks]
 
+                # These are the same for all outbreaks, but must be the right length
+                ret['outbreak_sid'][0:0] = [sid for ob in outbreaks]
+                ret['outbreak_stind'][0:0] = [stind for ob in outbreaks]
+
                 grp_map = {'Student':'students', 'Teacher':'teachers', 'Staff':'staff'}
                 for grp in ['Student', 'Teacher', 'Staff']:
                     ret[f'introduction_origin_{grp}'] += len([o for o in outbreaks if grp in o['Origin type']])
@@ -247,10 +260,6 @@ class Analysis:
                         obdf.school.append(sid)
                         obdf.outbreak.append(ob)
 
-                    #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
-                    #if not ob['Complete']:
-                    #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
-
                     date = 'date_diagnosed' # 'date_symptomatic'
                     was_detected = [(int(u),d) for u,d in ob['Tree'].nodes.data() if np.isfinite(u) and d['type'] not in ['Other'] and np.isfinite(d[date])]
                     if len(was_detected) > 0:
@@ -258,7 +267,7 @@ class Analysis:
                         detected_origin_type = first[1]['type']
                         ret[f'observed_origin_{detected_origin_type}'] += 1
 
-            for stype in self.stypes.values():
+            for stype in self.slabels:
                 # Sums, won't allow for full bootstrap resampling!
                 ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
                 ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
@@ -270,15 +279,21 @@ class Analysis:
         if self.save_outbreaks:
             self.outbreaks = pd.DataFrame(obdf)
 
+        if self.verbose:
+            print(f'Processed {len(self.raw)} results.')
+
         return
 
     def _wrangle(self, keys, outputs=None):
+        if self.verbose:
+            print('Wrangling...')
+
         # Wrangling - build self.results from self.raw
         if outputs == None:
-            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh']
-            outputs += [f'introductions_{stype}' for stype in self.stypes.values()]
-            outputs += [f'outbreak_size_{stype}' for stype in self.stypes.values()]
-            outputs += [f'susceptible_person_days_{stype}' for stype in self.stypes.values()]
+            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh', 'outbreak_sid', 'outbreak_stind']
+            outputs += [f'introductions_{stype}' for stype in self.slabels]
+            outputs += [f'outbreak_size_{stype}' for stype in self.slabels]
+            outputs += [f'susceptible_person_days_{stype}' for stype in self.slabels]
             outputs += ['first_infectious_day_at_school', 'complete']
 
         self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
@@ -298,6 +313,11 @@ class Analysis:
             .dropna() \
             .to_frame(name='value')
         self.results_ts.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
+
+        if self.verbose:
+            print(f'Wrangled {len(self.results)} results and {len(self.results_ts)} time series.')
+
+        return
 
 
     def cum_incidence(self, rowvar=None, colvar=None):
@@ -571,10 +591,10 @@ class Analysis:
     def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Set1'):
 
         bs = []
-        for idx, stype in enumerate(['All Types Combined'] + self.stypes.values()):
+        for idx, stype in enumerate(['All Types Combined'] + self.slabels):
             if stype == 'All Types Combined':
-                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes.values()])
-                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes.values()])
+                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.slabels])
+                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.slabels])
 
                 # Calculate slope
                 frac = 100_000*num/den
@@ -654,14 +674,14 @@ class Analysis:
         colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
         types = ['All Types Combined']
         if by_stype:
-            types += self.stypes
+            types += self.slabels
             fn = 'OutbreakSizeStype.png' if ext is None else f'OutbreakSizeStype_{ext}.png'
         else:
             fn = 'OutbreakSize.png' if ext is None else f'OutbreakSize_{ext}.png'
 
         for idx, stype in enumerate(types):
             if stype == 'All Types Combined':
-                dfs = self.results.loc[f'outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+                dfs = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
                 xlim = (dfs[xvar].min(), dfs[xvar].max())
             else:
                 dfs = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
