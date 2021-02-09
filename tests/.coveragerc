@@ -1,7 +1,6 @@
 # .coveragerc to control coverage.py
 [run]
 branch = True
-source = ../covasim_schools,../covasim_controller,../school_tools
 
 [report]
 # Regexes for lines to exclude from consideration

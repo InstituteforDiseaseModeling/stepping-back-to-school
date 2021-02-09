@@ -38,7 +38,7 @@ jobs:
 
       - name: Run API tests
         working-directory: ./tests
-        run:  coverage run -m pytest test_* --durations=0 --junitxml=test-results.xml # Run all tests
+        run: pytest --cov-config=.coveragerc --cov=../covasim_schools --cov=../covasim_controller --cov=../school_tools test_*.py --workers auto --durations=0  --junitxml=test-results.xml # Run all tests
 
       - name: Upload test results
         uses: actions/upload-artifact@v1

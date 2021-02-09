@@ -275,11 +275,19 @@ class Manager(sc.objdict):
 #%% Running
 def create_run_sim(sconf, n_sims, run_config):
     ''' Create and run the actual simulations '''
+
     label = f'sim {sconf.count} of {n_sims}'
     print(f'Creating and running {label}...')
 
     T = sc.tic()
-    sim = cr.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=cfg.sweep_pars.n_seeds, label=label)
+    n_reps = cfg.sweep_pars.n_reps
+    n_pops = cfg.sweep_pars.n_pops
+    if n_pops is None: # Backup value so both don't have to always be set
+        print(f'n_pops not supplied, resetting to n_reps={n_reps}')
+        n_pops = n_reps
+    if n_pops < n_reps:
+        print(f'Note: you are running with n_reps={n_reps} repetitions, but only n_pops={n_pops}: populations will be resampled')
+    sim = cr.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=n_pops, label=label)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)

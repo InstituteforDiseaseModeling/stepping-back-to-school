@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mplt
 import matplotlib.ticker as mtick
 import seaborn as sns
+# import cmasher
 import statsmodels.api as sm
 from scipy.interpolate import UnivariateSpline
 
@@ -114,15 +115,31 @@ class Analysis:
     This class contains code to store, process, and plot the results.
     '''
 
-    def __init__(self, sims, imgdir, save_outbreaks=True):
+    def __init__(self, sims, imgdir, save_outbreaks=True, verbose=True):
         self.sims = sims
         self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
         self.save_outbreaks = save_outbreaks
         self.outbreaks = None
-
         self.imgdir = imgdir
+        self.verbose = verbose
         Path(self.imgdir).mkdir(parents=True, exist_ok=True)
 
+        # Settings used for plotting -- various mappings between keys, labels, and indices
+        self.factor = 100_000
+        self.slabels = ['Elementary', 'Middle', 'High']
+        self.smeta = sc.objdict() # Lesser used transformations
+        self.smeta.skeys = ['es', 'ms', 'hs']
+        self.smeta.keylabels = {k:v for k,v in zip(self.smeta.skeys, self.slabels)}
+        self.smeta.keyinds = {k:v for v,k in enumerate(self.smeta.skeys)}
+        self.smeta.indkeys = {v:k for v,k in enumerate(self.smeta.skeys)}
+        self.smeta.colors = sc.odict({
+            'Elementary': (0.30, 0.68, 0.26, 1.0), # Green elementary schools
+            'Middle':     (0.21, 0.49, 0.74, 1.0), # Blue middle schools
+            'High':       (0.89, 0.10, 0.14, 1.0), # Red high schools
+            'All Types Combined': (0, 0, 0, 1), # Black for all
+            })
+
+        # Scenario settings
         sim_scenario_names = list(set([sim.tags['scen_key'] for sim in sims]))
         self.scenario_map = scn.scenario_map()
         self.scenario_order = [v[0] for k,v in self.scenario_map.items() if k in sim_scenario_names]
@@ -131,8 +148,10 @@ class Analysis:
         self.dxscrn_map = scn.screening_map()
         self.screen_order = [v[0] for k,v in self.dxscrn_map.items() if k in sim_screen_names]
 
+        # Process sims -- note that only keys explicitly named here will be included after wrangling
         self._process()
-        keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening']
+        keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening', 'sim_id']
+        #keys +=['sim_id', 'school_id', 'school_type'] # Additional tracking keys
         keys.remove('school_start_date')
         if 'location' in keys:
             keys.remove('location')
@@ -141,17 +160,14 @@ class Analysis:
             keys.append('Prevalence Target')
         self._wrangle(keys)
 
-        # Settings used for plotting
-        self.stypes = ['High', 'Middle', 'Elementary']
-        self.factor = 100_000
-
         return
 
 
     def _process(self):
         ''' Process the simulations '''
+        if self.verbose:
+            print('Processing...')
         results = []
-        stypes = {'es':'Elementary', 'ms':'Middle', 'hs':'High'}
         obdf = sc.objdict(sim=[], school=[], outbreak=[]) # Not a dataframe yet, but will be
 
         # Loop over each simulation and accumulate stats
@@ -188,8 +204,11 @@ class Analysis:
             ret['exports_to_hh'] = [] # The number of direct exports from a member of the school community to households. Exclused further spread within HHs and indirect routes to HHs e.g. via the community.
             ret['introductions'] = [] # Number of introductions, overall
             ret['susceptible_person_days'] = [] # Susceptible person-days (amongst the school population)
+            ret['sim_id'] = s # Store the simulation ID
+            ret['outbreak_sid'] = [] # School ID
+            ret['outbreak_stind'] = [] # School type
 
-            for stype in stypes.values():
+            for stype in self.slabels:
                 ret[f'introductions_{stype}'] = [] # Introductions by school type
                 ret[f'susceptible_person_days_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
                 ret[f'outbreak_size_{stype}'] = [] # Susceptible person-days (amongst the school population) by school type
@@ -205,9 +224,12 @@ class Analysis:
 
             # Now loop over each school and collect outbreak stats
             for sid,stats in sim.school_stats.items():
-                if stats['type'] not in stypes.keys():
+                if stats['type'] not in self.smeta.skeys:
                     continue
-                stype = stypes[stats['type']]
+                stype = self.smeta.keylabels[stats['type']]
+                stind = self.smeta.keyinds[stats['type']]
+                #ret['school_id'].append(sid)
+                #ret['school_type'].append(stype)
 
                 # Only count outbreaks in which total infectious days at school is > 0
                 outbreaks = [o for o in stats['outbreaks'] if o['Total infectious days at school']>0]
@@ -229,6 +251,10 @@ class Analysis:
                 ret['n_infected_by_seed'][0:0] = [ob['Num school people infected by seed'] for ob in outbreaks if ob['Seeded']] # Also Num infected by seed
                 ret['exports_to_hh'][0:0] = [ob['Exports to household'] for ob in outbreaks]
 
+                # These are the same for all outbreaks, but must be the right length
+                ret['outbreak_sid'][0:0] = [int(sid.lstrip('s')) for ob in outbreaks] # School ID is a string, not a number!
+                ret['outbreak_stind'][0:0] = [stind for ob in outbreaks]
+
                 grp_map = {'Student':'students', 'Teacher':'teachers', 'Staff':'staff'}
                 for grp in ['Student', 'Teacher', 'Staff']:
                     ret[f'introduction_origin_{grp}'] += len([o for o in outbreaks if grp in o['Origin type']])
@@ -241,10 +267,6 @@ class Analysis:
                         obdf.school.append(sid)
                         obdf.outbreak.append(ob)
 
-                    #if to_plot['Debug trees'] and sim.ikey == 'none':# and intr_postscreen > 0:
-                    #if not ob['Complete']:
-                    #    self.plot_tree(ob['Tree'], stats, sim.pars['n_days'], do_show=True)
-
                     date = 'date_diagnosed' # 'date_symptomatic'
                     was_detected = [(int(u),d) for u,d in ob['Tree'].nodes.data() if np.isfinite(u) and d['type'] not in ['Other'] and np.isfinite(d[date])]
                     if len(was_detected) > 0:
@@ -252,7 +274,7 @@ class Analysis:
                         detected_origin_type = first[1]['type']
                         ret[f'observed_origin_{detected_origin_type}'] += 1
 
-            for stype in stypes.values():
+            for stype in self.slabels:
                 # Sums, won't allow for full bootstrap resampling!
                 ret[f'introductions_sum_{stype}'] = np.sum(ret[f'introductions_{stype}'])
                 ret[f'susceptible_person_days_sum_{stype}'] = np.sum(ret[f'susceptible_person_days_{stype}'])
@@ -264,16 +286,21 @@ class Analysis:
         if self.save_outbreaks:
             self.outbreaks = pd.DataFrame(obdf)
 
+        if self.verbose:
+            print(f'Processed {len(self.raw)} results.')
+
         return
 
     def _wrangle(self, keys, outputs=None):
+        if self.verbose:
+            print('Wrangling...')
+
         # Wrangling - build self.results from self.raw
-        stypes = ['Elementary', 'Middle', 'High']
         if outputs == None:
-            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh']
-            outputs += [f'introductions_{stype}' for stype in stypes]
-            outputs += [f'outbreak_size_{stype}' for stype in stypes]
-            outputs += [f'susceptible_person_days_{stype}' for stype in stypes]
+            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh', 'outbreak_sid', 'outbreak_stind']
+            outputs += [f'introductions_{stype}' for stype in self.slabels]
+            outputs += [f'outbreak_size_{stype}' for stype in self.slabels]
+            outputs += [f'susceptible_person_days_{stype}' for stype in self.slabels]
             outputs += ['first_infectious_day_at_school', 'complete']
 
         self.results = pd.melt(self.raw, id_vars=keys, value_vars=outputs, var_name='indicator', value_name='value') \
@@ -293,6 +320,11 @@ class Analysis:
             .dropna() \
             .to_frame(name='value')
         self.results_ts.index.rename('outbreak_idx', level=1+len(keys), inplace=True)
+
+        if self.verbose:
+            print(f'Wrangled {len(self.results)} results and {len(self.results_ts)} time series.')
+
+        return
 
 
     def cum_incidence(self, rowvar=None, colvar=None):
@@ -327,7 +359,7 @@ class Analysis:
         cv.savefig(os.path.join(self.imgdir, 'OutbreakSizeOverTime.png'), dpi=dpi)
         return g
 
-    def source_dow(self, figsize=(6,6), ext=None):
+    def source_dow(self, figsize=(6,6), ext=None, start_day=0, n_days=28):
 
         # Make figure and histogram
         fig, ax = plt.subplots(1,1,figsize=figsize)
@@ -339,11 +371,12 @@ class Analysis:
         ax.set_ylabel('Proportion of introductions')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
         days = np.arange(*np.round(ax.get_xlim()))
-        n_days = len(days)
-        labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(n_days/7)))[:n_days]
+        total_days = len(days)
+        labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(total_days/7)))[:total_days]
         ax.set_xticks(days)
         ax.set_xticklabels(labels)
-        ax.set_xlim([days[0], days[27]+0.5]) # Don't show more than 4 weeks
+        end_day = min(start_day+n_days-1, total_days-1)
+        ax.set_xlim([days[start_day], days[end_day]+0.5]) # Don't show more than 4 weeks
         ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
 
@@ -427,14 +460,14 @@ class Analysis:
         xs = np.linspace(xmin,xmax,50)
         y_pred = mu_spl(xs)
         sigma = std_spl(xs)
-        plt.scatter(mu[xvar], mu[yvar], s=20, color=color, alpha=0.8, linewidths=0.5, edgecolors='face', zorder=10)
+        plt.scatter(mu[xvar], mu[yvar], s=40, color=color, alpha=0.8, linewidths=0.5, edgecolors='face', zorder=10)
 
         #plt.scatter(data[xvar], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
         data_range = data[xvar].max() - data[xvar].min()
         nx = data[xvar].nunique()
-        noise = 0.1 * data_range / nx / 2
+        noise = 0.2 * data_range / nx / 2
         data.loc[:,f'{xvar}_scatter'] = data[xvar] + np.random.uniform(low=-noise, high=noise, size=data.shape[0])
-        plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=4, color=color, alpha=0.05, linewidths=0.5, edgecolors='face', zorder=10)
+        plt.scatter(data[f'{xvar}_scatter'], data[yvar], s=8, color=color, alpha=0.2, linewidths=0.5, edgecolors='face', zorder=10)
 
         label = kwargs['label'] if 'label' in kwargs else None
         plt.plot(xs, y_pred, color=color, lw=3, label=label)
@@ -565,10 +598,10 @@ class Analysis:
     def introductions_rate_by_stype(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, cmap='Set1'):
 
         bs = []
-        for idx, stype in enumerate(['All Types Combined'] + self.stypes):
+        for idx, stype in enumerate(['All Types Combined'] + self.slabels):
             if stype == 'All Types Combined':
-                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.stypes])
-                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.stypes])
+                num = pd.concat([self.results.loc[f'introductions_{st}'] for st in self.slabels])
+                den = pd.concat([self.results.loc[f'susceptible_person_days_{st}'] for st in self.slabels])
 
                 # Calculate slope
                 frac = 100_000*num/den
@@ -643,17 +676,16 @@ class Analysis:
             fig, ax = plt.subplots(figsize=(height*aspect, height))
             do_save=True
         plt.sca(ax)
-        colors = matplotlib.cm.get_cmap('Set1')
         types = ['All Types Combined']
         if by_stype:
-            types += self.stypes
+            types += self.slabels
             fn = 'OutbreakSizeStype.png' if ext is None else f'OutbreakSizeStype_{ext}.png'
         else:
             fn = 'OutbreakSize.png' if ext is None else f'OutbreakSize_{ext}.png'
 
         for idx, stype in enumerate(types):
             if stype == 'All Types Combined':
-                dfs = self.results.loc[f'outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+                dfs = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
                 xlim = (dfs[xvar].min(), dfs[xvar].max())
             else:
                 dfs = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
@@ -666,7 +698,8 @@ class Analysis:
                 frame = dfs.iloc[rows].groupby(cols)['Outbreak Size'].mean()
                 frames.append(frame)
             bs = pd.concat(frames)
-            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype)
+            color = self.smeta.colors[stype]
+            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=color, label=stype)
 
         if legend:
             ax.legend(title='School Type')
@@ -725,8 +758,9 @@ class Analysis:
         return g
 
 
-    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True):
+    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True, by_stype=True):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        df['outbreak_stind'] = self.results.loc['outbreak_stind'].reset_index()['value'] # CK: Must be a better way
         if values is not None:
             df = df.loc[df[xvar].isin(values)]
         else:
@@ -756,7 +790,15 @@ class Analysis:
         axv[0].set_ylabel('Average outbreak size')
 
         # Panel 1
-        g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 250), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
+        if by_stype:
+            palette = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
+            hue = 'outbreak_stind'
+            for c,label in enumerate(self.slabels):
+                axv[1].scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
+        else:
+            palette = 'rocket'
+            hue = 'Outbreak Size'
+        sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue=hue, sizes=(10, 250), palette=palette, alpha=0.6, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)
         axv[1].set_xticklabels([])
@@ -764,6 +806,7 @@ class Analysis:
         axv[1].axhline(y=1, color='k', ls='--')
 
         axv[1].set_ylabel('Individual outbreak size')
+        axv[1].legend()
 
         # Panel 2
         self.outbreak_size_stacked_distrib(xvar, ax=axv[2])
@@ -877,9 +920,11 @@ class Analysis:
             fig, ax = plt.subplots(figsize=(height*aspect, height))
             do_save = True
 
-        colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
-        cols = {k:colors[8-i] for i,k in enumerate(lbls)}
-        sz.plot(stacked=True, kind='area', ax=ax, colormap='inferno') #color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
+        # colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
+        # cols = {k:colors[8-i] for i,k in enumerate(lbls)}
+        # cols = sc.vectocolor(len(lbls)+3, cmap='cmr.flamingo_r')[1:-2]
+        cols = sc.vectocolor(len(lbls)+1, cmap='Reds')[1:]
+        sz.plot(stacked=True, kind='area', ax=ax, color=cols) # colormap='Reds') # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
 
         ax.set_xlim(sz.index[0], sz.index[-1])
         if xvar == 'In-school transmission multiplier':
