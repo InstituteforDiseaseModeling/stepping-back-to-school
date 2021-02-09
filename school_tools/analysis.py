@@ -605,8 +605,7 @@ class Analysis:
         return g
 
 
-    '''
-    def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
+    def outbreak_reg_facet(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
         cols = [xvar] if huevar is None else [xvar, huevar]
         ret = self.results.loc['outbreak_size']
 
@@ -636,7 +635,6 @@ class Analysis:
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
-    '''
 
 
     def outbreak_reg(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, ax=None, by_stype=False):
@@ -645,7 +643,7 @@ class Analysis:
             fig, ax = plt.subplots(figsize=(height*aspect, height))
             do_save=True
         plt.sca(ax)
-        colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
+        colors = matplotlib.cm.get_cmap('Set1')
         types = ['All Types Combined']
         if by_stype:
             types += self.stypes
@@ -668,7 +666,7 @@ class Analysis:
                 frame = dfs.iloc[rows].groupby(cols)['Outbreak Size'].mean()
                 frames.append(frame)
             bs = pd.concat(frames)
-            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype) # Switched from gpplot to splineplot to better capture variance trends
+            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype)
 
         if legend:
             ax.legend(title='School Type')
