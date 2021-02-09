@@ -34,7 +34,7 @@ def get_defaults():
         school_start_date = '2021-02-01', # first day of school
         school_seed_date  = None,
         n_reps            = 3,
-        n_seeds           = 3,
+        n_pops            = None,
         n_prev            = 3,
         prev              = None, # Computed in builder.py
         alt_sus           = False,
@@ -74,7 +74,7 @@ def process_inputs(argv): # pragma: no cover
     parser.add_argument('--micro', action='store_true')
     parser.add_argument('--pop_size', type=int, default=0)
     parser.add_argument('--n_reps', type=int, default=0)
-    parser.add_argument('--n_seeds', type=int, default=0)
+    parser.add_argument('--n_pops', type=int, default=0)
     parser.add_argument('--n_prev', type=int, default=0)
     parser.add_argument('--location', type=str, default='')
     args = parser.parse_args(argv[1:])
@@ -93,8 +93,8 @@ def process_inputs(argv): # pragma: no cover
         sim_pars.pop_size = args.pop_size
     if args.n_reps:
         sweep_pars.n_reps = args.n_reps
-    if args.n_seeds:
-        sweep_pars.n_seeds = args.n_seeds
+    if args.n_pops:
+        sweep_pars.n_pops = args.n_pops
     if args.n_prev:
         sweep_pars.n_prev = args.n_prev
     if args.location:
@@ -105,7 +105,7 @@ def process_inputs(argv): # pragma: no cover
 
 def print_pars(label):
     ''' Helper function to print the name '''
-    print(f'Resetting parameters for a {label} run: n_reps={sweep_pars.n_reps}, n_seeds={sweep_pars.n_seeds}, pop_size={sim_pars.pop_size}')
+    print(f'Resetting parameters for a {label} run: n_reps={sweep_pars.n_reps}, n_pops={sweep_pars.n_pops}, pop_size={sim_pars.pop_size}')
     return
 
 
@@ -117,7 +117,7 @@ def set_default():
 def set_full():
     ''' Reset the configuration for the full run '''
     sweep_pars.n_reps  = 5
-    sweep_pars.n_seeds = 10
+    sweep_pars.n_pops  = None
     sweep_pars.n_prev  = 5
     sim_pars.pop_size  = 223_000
     print_pars('full')
@@ -127,7 +127,7 @@ def set_full():
 def set_debug():
     ''' Reset the configuration for quick debugging runs '''
     sweep_pars.n_reps  = 3
-    sweep_pars.n_seeds = 3
+    sweep_pars.n_pops  = None
     sweep_pars.n_prev  = 3
     sim_pars.pop_size  = 50_000
     print_pars('debugging')
@@ -137,7 +137,7 @@ def set_debug():
 def set_micro():
     ''' Reset the configuration to the smallest possible run '''
     sweep_pars.n_reps  = 1
-    sweep_pars.n_seeds = 1
+    sweep_pars.n_pops  = None
     sweep_pars.n_prev  = 2
     sim_pars.pop_size = 10_000
     print_pars('micro')
