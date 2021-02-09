@@ -111,7 +111,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
         rand_seed      = 1,
     )
 
-    p = sc.objdict(sc.mergedicts(default_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
+    p = sc.objdict(sc.mergedicts(default_pars, cfg.sim_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
     if 'pop_size' not in p:
         raise Exception('You must provide "pop_size" to create_sim')
     pop_size = p.pop_size
@@ -159,6 +159,10 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
 
     #%% Handle population -- NB, although called popfile, might be a People object
     if load_pop: # Load from disk -- normal usage
+        if max_pop_seeds is None: # TODO: make logic here simpler
+            max_pop_seeds = cfg.sweep_pars.n_pops
+        if max_pop_seeds is None:
+            max_pop_seeds = cfg.sweep_pars.n_reps
         pop_seed = p.rand_seed % max_pop_seeds
         popfile = cvsch.pop_path(popfile=None, location=location, folder=cfg.paths.inputs, strategy=strategy, n=pop_size, rand_seed=pop_seed)
         if os.path.exists(popfile):
