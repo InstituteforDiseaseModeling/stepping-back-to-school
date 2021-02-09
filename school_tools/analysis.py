@@ -761,7 +761,7 @@ class Analysis:
         return g
 
 
-    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True, by_stype=False):
+    def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True, by_stype=True):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         df['outbreak_stind'] = self.results.loc['outbreak_stind'].reset_index()['value'] # CK: Must be a better way
         if values is not None:
@@ -793,10 +793,15 @@ class Analysis:
         axv[0].set_ylabel('Average outbreak size')
 
         # Panel 1
-        colors = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
-        sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='outbreak_stind', sizes=(10, 250), palette=colors, alpha=0.6, legend=legend, ax=axv[1])
-        for c,label in enumerate(self.slabels):
-            axv[1].scatter([np.nan], [np.nan], s=100, c=[colors[c]], label=label)
+        if by_stype:
+            palette = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
+            hue = 'outbreak_stind'
+            for c,label in enumerate(self.slabels):
+                axv[1].scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
+        else:
+            palette = 'rocket'
+            hue = 'Outbreak Size'
+        sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue=hue, sizes=(10, 250), palette=palette, alpha=0.6, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)
         axv[1].set_xticklabels([])
