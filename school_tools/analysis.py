@@ -245,7 +245,7 @@ class Analysis:
                 ret['exports_to_hh'][0:0] = [ob['Exports to household'] for ob in outbreaks]
 
                 # These are the same for all outbreaks, but must be the right length
-                ret['outbreak_sid'][0:0] = [sid for ob in outbreaks]
+                ret['outbreak_sid'][0:0] = [int(sid.lstrip('s')) for ob in outbreaks] # School ID is a string, not a number!
                 ret['outbreak_stind'][0:0] = [stind for ob in outbreaks]
 
                 grp_map = {'Student':'students', 'Teacher':'teachers', 'Staff':'staff'}
