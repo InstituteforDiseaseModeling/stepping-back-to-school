@@ -691,7 +691,7 @@ class Analysis(sc.prettyobj):
         else:
             df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
 
-        fig, axv = plt.subplots(3,1, figsize=(height*aspect, height), sharex=False)
+        fig, axv = plt.subplots(4,1, figsize=(height*aspect, height), sharex=False)
 
         xt = df[xvar].unique()
 
@@ -729,7 +729,7 @@ class Analysis(sc.prettyobj):
         axv[0].set_ylabel('Average outbreak size')
 
         # Panel 1
-        g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 750), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
+        g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 250), palette='rocket', alpha=0.6, legend=legend, ax=axv[1])
 
         axv[1].set_xticks(xt)
         axv[1].set_xticklabels([])
@@ -738,23 +738,44 @@ class Analysis(sc.prettyobj):
 
         axv[1].set_ylabel('Individual outbreak size')
 
+        # Panel 2
+        self.outbreak_size_stacked_distrib(xvar, ax=axv[2])
+        axv[2].set_xticks(xt)
+        axv[2].set_xticklabels([])
+        axv[2].set_xlabel('')
+
         # Panel 3
+        '''
         d = self.results_ts.loc['n_infected_by_seed'].reset_index()
         d['value'] = d['value'].astype(int)
         xv = d['In-school transmission multiplier'].unique()
-        sns.barplot(data=d, x='In-school transmission multiplier', y='value', palette='crest_r', zorder=10, ax=axv[2]) # ch:.25 magma
-        for l in axv[2].lines: # Move the error bars in front of the bars
+        sns.barplot(data=d, x='In-school transmission multiplier', y='value', palette='crest_r', zorder=10, ax=axv[3]) # ch:.25 magma
+        for l in axv[3].lines: # Move the error bars in front of the bars
             l.set_zorder(20)
-        axv[2].axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
+        axv[3].axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
 
-        axv[2].set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
-        axv[2].set_xlabel('Transmission probability in schools, per-contact per-day')
-        axv[2].grid(color='lightgray', axis='y', zorder=-10)
+        axv[3].set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+        axv[3].set_xlabel('Transmission probability in schools, per-contact per-day')
+        axv[3].grid(color='lightgray', axis='y', zorder=-10)
         sns.despine(right=False, top=False) # Add spines back
 
-        axv[2].set_ylabel(r'Basic reproduction ($R_{0,s}$)')
+        axv[3].set_ylabel(r'Basic reproduction ($R_{0,s}$)')
+        '''
+        # Alternate panel 3:
+        d = self.results_ts.loc['n_infected_by_seed'].reset_index()
+        d['value'] = d['value'].astype(int)
+        sns.regplot(data=d, x=xvar, y='value', scatter=False, order=4, ax=axv[3])
+        axv[3].set_ylabel(r'Basic reproduction ($R_{0,s}$)')
+        axv[3].axhline(y=1, color='k', lw=2, ls='--', zorder=-1)
+        axv[3].grid(color='lightgray', axis='y', zorder=-10)
 
-        axv[0].set_xlim(axv[1].get_xlim()) # At least make these two line up
+        for i in range(4):
+            axv[i].set_ylim(0,None)
+            axv[i].set_xlim(axv[1].get_xlim()) # At least make these two line up
+            axv[i].set_xticks(xt)
+            if i == 3:
+                axv[i].set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+                axv[i].set_xlabel('Transmission probability in schools, per-contact per-day')
 
         plt.tight_layout()
 
@@ -812,17 +833,25 @@ class Analysis(sc.prettyobj):
         return g
 
 
-    def outbreak_size_stacked_distrib(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4):
+    def outbreak_size_stacked_distrib(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, ax=None):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size Float'}, axis=1)
 
-        df['Outbreak Size'] = pd.cut(df['Outbreak Size Float'], bins=[1,2,5,10,25,10000], right=False, include_lowest=True, labels=['Source only', '2-4', '5-9', '10-24', '25+'])
+        lbls = ['Source only', '2-4', '5-9', '10-24', '25+']
+        df['Outbreak Size'] = pd.cut(df['Outbreak Size Float'], bins=[1,2,5,10,25,10000], right=False, include_lowest=True, labels=lbls)
 
         sz = df.groupby([xvar, 'Outbreak Size']).size()
         sz.name='Count'
         sz = sz.unstack('Outbreak Size')
         sz = sz.div(sz.sum(axis=1), axis=0)
-        fig, ax = plt.subplots(figsize=(height*aspect, height))
-        sz.plot(stacked=True, kind='area', ax=ax, colormap='RdYlBu_r') # coolwarm parula, inferno
+
+        do_save = False
+        if ax == None:
+            fig, ax = plt.subplots(figsize=(height*aspect, height))
+            do_save = True
+
+        colors = sns.color_palette('Pastel1').as_hex() # Set2_r skips first, using Set2_r as colormap skips every other.
+        cols = {k:colors[8-i] for i,k in enumerate(lbls)}
+        sz.plot(stacked=True, kind='area', ax=ax, color=cols) # colormap = coolwarm, parula, inferno, RdYlBu_r # Set2_r
 
         ax.set_xlim(sz.index[0], sz.index[-1])
         if xvar == 'In-school transmission multiplier':
@@ -837,9 +866,10 @@ class Analysis(sc.prettyobj):
         ax.set_ylabel('Percent of outbreaks')
         plt.tight_layout()
 
-        fn = 'OutbreakSizeStacked.png' if ext is None else f'OutbreakSizeStacked_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
-        return fig
+        if do_save:
+            fn = 'OutbreakSizeStacked.png' if ext is None else f'OutbreakSizeStacked_{ext}.png'
+            cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return ax
 
 
     def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
