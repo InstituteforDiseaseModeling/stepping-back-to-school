@@ -4,6 +4,7 @@ Test the covasim_schools module directly
 
 import covasim_schools as cvsch
 import school_tools as sct
+import pylab as pl
 
 
 def test_schools(pop_size=5e3, do_plot=False, debug=True):
