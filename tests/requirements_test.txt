@@ -1,4 +1,5 @@
 pytest
 pytest-parallel
+pytest-cov
 coverage>=5.3
 coverage-badge>=1.0.1

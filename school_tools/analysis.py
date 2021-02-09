@@ -327,7 +327,7 @@ class Analysis:
         cv.savefig(os.path.join(self.imgdir, 'OutbreakSizeOverTime.png'), dpi=dpi)
         return g
 
-    def source_dow(self, figsize=(6,6), ext=None):
+    def source_dow(self, figsize=(6,6), ext=None, start_day=0, n_days=28):
 
         # Make figure and histogram
         fig, ax = plt.subplots(1,1,figsize=figsize)
@@ -339,11 +339,12 @@ class Analysis:
         ax.set_ylabel('Proportion of introductions')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
         days = np.arange(*np.round(ax.get_xlim()))
-        n_days = len(days)
-        labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(n_days/7)))[:n_days]
+        total_days = len(days)
+        labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(total_days/7)))[:total_days]
         ax.set_xticks(days)
         ax.set_xticklabels(labels)
-        ax.set_xlim([days[0], days[27]+0.5]) # Don't show more than 4 weeks
+        end_day = min(start_day+n_days-1, total_days-1)
+        ax.set_xlim([days[start_day], days[end_day]+0.5]) # Don't show more than 4 weeks
         ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
 
