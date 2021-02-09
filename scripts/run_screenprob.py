@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
     # Plots
     mgr.regplots(xvar=xvar, huevar=huevar, height=6, aspect=2.4)
+    analyzer.introductions_rate(xvar=xvar, huevar=huevar, height=6, aspect=1.4, ext='ppt')
     analyzer.cum_incidence(colvar=xvar)
     analyzer.introductions_rate_by_stype(xvar=xvar)
     analyzer.outbreak_size_over_time()

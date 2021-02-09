@@ -327,11 +327,11 @@ class Analysis(sc.prettyobj):
         cv.savefig(os.path.join(self.imgdir, 'OutbreakSizeOverTime.png'), dpi=dpi)
         return g
 
-    def source_dow(self, figsize=(6,6)):
+    def source_dow(self, figsize=(6,6), ext=None):
 
         # Make figure and histogram
         fig, ax = plt.subplots(1,1,figsize=figsize)
-        color = '#9B6875' # One of the colors from the other bar graph
+        color = '#006692' # From IDM ppt theme
         sns.histplot(np.hstack(self.results.loc['first_infectious_day_at_school']['value']), discrete=True, stat='probability', ax=ax, color=color, edgecolor='w')
 
         # Basic annotations
@@ -343,7 +343,7 @@ class Analysis(sc.prettyobj):
         labels = (['S', 'S', 'M', 'T', 'W', 'T', 'F']*int(np.ceil(n_days/7)))[:n_days]
         ax.set_xticks(days)
         ax.set_xticklabels(labels)
-        ax.set_xlim([days[0], days[27]]) # Don't show more than 4 weeks
+        ax.set_xlim([days[0], days[27]+0.5]) # Don't show more than 4 weeks
         ax.tick_params(axis='x', which='major', labelsize=16)
         fig.tight_layout()
 
@@ -352,7 +352,9 @@ class Analysis(sc.prettyobj):
         curved_arrow(ax=ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
 
         # Finish up
-        cv.savefig(os.path.join(self.imgdir, 'IntroductionDayOfWeek.png'), dpi=dpi)
+        fn = 'IntroductionDayOfWeek.png' if ext is None else f'IntroductionDayOfWeek_{ext}.png'
+        plt.tight_layout()
+        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return fig
 
     def source_pie(self):
@@ -595,7 +597,7 @@ class Analysis(sc.prettyobj):
         colors = matplotlib.cm.get_cmap(cmap)
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
-            ax.text(0.014,5, f'Slope: {res.params["Prevalence Target"]:.1f} per 0.1% increase\n in community prevalence', color=colors(0))
+            ax.text(0.01,5, f'Slope: {res.params["Prevalence Target"]:.1f} per 0.1% increase\n in community prevalence', color=colors(0))
 
         fn = 'IntroductionRateStype.png' if ext is None else f'IntroductionRateStype_{ext}.png'
         plt.tight_layout()
@@ -603,6 +605,7 @@ class Analysis(sc.prettyobj):
         return g
 
 
+    '''
     def outbreak_reg(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
         cols = [xvar] if huevar is None else [xvar, huevar]
         ret = self.results.loc['outbreak_size']
@@ -620,13 +623,7 @@ class Analysis(sc.prettyobj):
         g.set(ylim=(0,None))
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
-            #yt = ax.get_yticks()
-            #yt[0]=1
-            #ax.set_yticks(yt)
             ax.axhline(y=1, ls='--', color='k')
-
-        #if huevar == 'School Schedule':
-        #    g._legend.set_title('School Schedule')
 
         if xvar == 'In-school transmission multiplier':
             xlim = ax.get_xlim()
@@ -639,6 +636,58 @@ class Analysis(sc.prettyobj):
         plt.tight_layout()
         cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
         return g
+    '''
+
+
+    def outbreak_reg(self, xvar, height=6, aspect=1.4, ext=None, nboot=50, legend=True, ax=None, by_stype=False):
+        do_save = False
+        if ax == None:
+            fig, ax = plt.subplots(figsize=(height*aspect, height))
+            do_save=True
+        plt.sca(ax)
+        colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
+        types = ['All Types Combined']
+        if by_stype:
+            types += self.stypes
+            fn = 'OutbreakSizeStype.png' if ext is None else f'OutbreakSizeStype_{ext}.png'
+        else:
+            fn = 'OutbreakSize.png' if ext is None else f'OutbreakSize_{ext}.png'
+
+        for idx, stype in enumerate(types):
+            if stype == 'All Types Combined':
+                dfs = self.results.loc[f'outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+                xlim = (dfs[xvar].min(), dfs[xvar].max())
+            else:
+                dfs = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+
+            # Bootstrap
+            frames = []
+            cols = [xvar]
+            for i in range(nboot):
+                rows = np.random.randint(low=0, high=dfs.shape[0], size=dfs.shape[0])
+                frame = dfs.iloc[rows].groupby(cols)['Outbreak Size'].mean()
+                frames.append(frame)
+            bs = pd.concat(frames)
+            self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype) # Switched from gpplot to splineplot to better capture variance trends
+
+        if legend:
+            ax.legend(title='School Type')
+
+        ax.set_ylabel('Outbreak size, including source')
+        ax.set_ylim(0,None)
+        ax.axhline(y=1, ls='--', color='k')
+
+        if xvar == 'In-school transmission multiplier':
+            xlim = ax.set_xlim(xlim)
+            xt = np.linspace(xlim[0], xlim[1], 5)
+            ax.set_xticks( xt )
+            ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+
+        plt.tight_layout()
+        if do_save:
+            cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        return ax
 
 
 
@@ -678,7 +727,6 @@ class Analysis(sc.prettyobj):
         return g
 
 
-
     def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         if values is not None:
@@ -697,26 +745,7 @@ class Analysis(sc.prettyobj):
 
         # Panel 0
         if use_spline:
-            plt.sca(axv[0])
-            colors = matplotlib.cm.get_cmap('Set1') #.as_hex()
-            for idx, stype in enumerate(['All Types Combined'] + self.stypes):
-                if stype == 'All Types Combined':
-                    dfs = df
-                else:
-                    dfs = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
-
-                # Bootstrap
-                frames = []
-                nboot = 80
-                cols = [xvar]
-                for i in range(nboot):
-                    rows = np.random.randint(low=0, high=dfs.shape[0], size=dfs.shape[0])
-                    frame = dfs.iloc[rows].groupby(cols)['Outbreak Size'].mean()
-                    frames.append(frame)
-                bs = pd.concat(frames)
-                self.splineplot(data=bs.reset_index(), xvar=xvar, yvar='Outbreak Size', color=colors(idx), label=stype) # Switched from gpplot to splineplot to better capture variance trends
-
-            axv[0].legend(title='School Type')
+            self.outbreak_reg(xvar, nboot=50, legend=True, ax=axv[0], by_stype=True)
 
         else:
             sns.regplot(data=df, x=xvar, y='Outbreak Size', scatter=False, order=4, ax=axv[0])
