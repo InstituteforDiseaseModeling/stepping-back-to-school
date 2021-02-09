@@ -152,7 +152,6 @@ class Analysis:
         self._process()
         keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening', 'sim_id']
         #keys +=['sim_id', 'school_id', 'school_type'] # Additional tracking keys
-        keys += ['outbreak_sid', 'outbreak_stind']
         keys.remove('school_start_date')
         if 'location' in keys:
             keys.remove('location')
@@ -298,7 +297,7 @@ class Analysis:
 
         # Wrangling - build self.results from self.raw
         if outputs == None:
-            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh']
+            outputs = ['introductions', 'susceptible_person_days', 'outbreak_size', 'exports_to_hh', 'outbreak_sid', 'outbreak_stind']
             outputs += [f'introductions_{stype}' for stype in self.slabels]
             outputs += [f'outbreak_size_{stype}' for stype in self.slabels]
             outputs += [f'susceptible_person_days_{stype}' for stype in self.slabels]
@@ -764,6 +763,7 @@ class Analysis:
 
     def outbreak_multipanel(self, xvar, ext=None, height=10, aspect=0.7, jitter=0.125, values=None, legend=False, use_spline=True, by_stype=False):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        df['outbreak_stind'] = [self.smeta.colors[:][int(i)] for i in self.results.loc['outbreak_stind'].reset_index()['value'].values] # CK: Must be a better way
         if values is not None:
             df = df.loc[df[xvar].isin(values)]
         else:
