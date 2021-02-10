@@ -171,7 +171,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
             print(f'Loading population from {popfile}')
         else:
             if create_pop:
-                print('Population file {pop_file} does not exist, creating...')
+                print(f'Population file {pop_file} does not exist, creating...')
                 create_pops(cfg=cfg, seeds=[pop_seed], parallelize=False)
             else:
                 errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
