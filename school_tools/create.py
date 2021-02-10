@@ -15,7 +15,7 @@ from . import config as cfg
 __all__ = ['create_pops', 'define_pars', 'create_sim']
 
 
-def create_pops(cfg=cfg):
+def create_pops(cfg=cfg, seeds=None, parallelize=None, **kwargs):
     ''' Create the population files '''
 
     pop_size = cfg.sim_pars.pop_size
@@ -24,11 +24,13 @@ def create_pops(cfg=cfg):
     if n_pops is None:
         n_pops = n_reps
     location = cfg.pop_pars.location
-    seeds = np.arange(n_pops) + cfg.run_pars.base_seed
-    parallelize = cfg.run_pars.parallel
+    if seeds is None:
+        seeds = np.arange(n_pops) + cfg.run_pars.base_seed
+    if parallelize is None:
+        parallelize = cfg.run_pars.parallel
 
-    print(f'Creating {n_pops} populations of size {pop_size} for {location}...')
-    kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
+    print(f'Creating {len(seeds)} populations of size {pop_size} for {location}...')
+    kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs, **kwargs)
 
     if parallelize: # pragma: no cover
         ram = psutil.virtual_memory().available/1e9
@@ -170,7 +172,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
         else:
             if create_pop:
                 print('Population file {pop_file} does not exist, creating...')
-                create_pops(cfg)
+                create_pops(cfg=cfg, seeds=[pop_seed], parallelize=False)
             else:
                 errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
                 raise FileNotFoundError(errormsg)
