@@ -19,6 +19,8 @@ def test_school_pop(pop_size=5e3, do_plot=False):
 
 
 def test_pop_equality(pop_size=5e3):
+    ''' Confirm that populations created with the same seed are identical, and one with a different seed is different '''
+
     pops = sc.objdict()
     pops.seed1a = cvsch.make_population(pop_size=pop_size, rand_seed=1, do_save=False)
     pops.seed1b = cvsch.make_population(pop_size=pop_size, rand_seed=1, do_save=False)
