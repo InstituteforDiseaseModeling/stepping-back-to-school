@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     # Plots
     mgr.regplots(xvar=xvar, huevar='School Schedule', height=6, aspect=2.4)
-    analyzer.introductions_rate(xvar=xvar, huevar='School Schedule', height=5, aspect=2, ext='_wide')
+    analyzer.introductions_rate(xvar=xvar, huevar='School Schedule', height=6, aspect=1.4, ext='_ppt')
     analyzer.cum_incidence(colvar=xvar)
     analyzer.introductions_rate_by_stype(xvar=xvar)
     analyzer.outbreak_size_over_time()

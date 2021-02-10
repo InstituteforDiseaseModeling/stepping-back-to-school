@@ -19,18 +19,21 @@ def create_pops(cfg=cfg):
     ''' Create the population files '''
 
     pop_size = cfg.sim_pars.pop_size
-    n_seeds = cfg.sweep_pars.n_seeds
+    n_pops = cfg.sweep_pars.n_pops
+    n_reps = cfg.sweep_pars.n_reps
+    if n_pops is None:
+        n_pops = n_reps
     location = cfg.pop_pars.location
-    seeds = np.arange(n_seeds) + cfg.run_pars.base_seed
+    seeds = np.arange(n_pops) + cfg.run_pars.base_seed
     parallelize = cfg.run_pars.parallel
 
-    print(f'Creating {n_seeds} populations of size {pop_size} for {location}...')
+    print(f'Creating {n_pops} populations of size {pop_size} for {location}...')
     kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
 
     if parallelize: # pragma: no cover
         ram = psutil.virtual_memory().available/1e9
         max_cpus = psutil.cpu_count()
-        max_parallel = min(max_cpus, n_seeds)
+        max_parallel = min(max_cpus, n_pops)
         required = 1.5*pop_size/223e3 # 1.5 GB per 223e3 people
         max_required = max_parallel*required
         if max_required < ram:
@@ -67,7 +70,7 @@ def define_pars(which='best', kind='default', ):
     return output
 
 
-def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=5, strategy='clustered',
+def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, strategy='clustered',
                load_pop=True, save_pop=False, create_pop=True, people=None, label=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to

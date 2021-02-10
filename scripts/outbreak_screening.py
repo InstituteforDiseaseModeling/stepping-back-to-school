@@ -28,7 +28,7 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0.25, 2, 10)}
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
@@ -40,15 +40,9 @@ if __name__ == '__main__':
     analyzer = mgr.analyze()
 
     # Plots
-    #analyzer.outbreak_multipanel(row='Dx Screening', col='In-school transmission multiplier')
-    g = analyzer.outbreak_reg(xvar, huevar, aspect=2)
-    #for ax in g.axes.flat:
-    #    ax.set_xlim([0,1])
-    #    ax.set_yticks([1, 5, 10, 15])
-    #fn = 'OutbreakSizeRegression.png'
-    #import os, covasim as cv
-    #cv.savefig(os.path.join(analyzer.imgdir, fn), dpi=300)
-    exit()
+    g = analyzer.outbreak_reg_facet(xvar, huevar, aspect=2)
+    g = analyzer.outbreak_reg_facet(xvar, huevar, aspect=1.4, ext='ppt')
+
     analyzer.cum_incidence(colvar=xvar, rowvar=huevar)
     analyzer.outbreak_size_over_time(colvar=xvar, rowvar=huevar)
     analyzer.source_pie()

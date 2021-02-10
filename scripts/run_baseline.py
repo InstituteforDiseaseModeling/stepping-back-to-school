@@ -25,9 +25,11 @@ if __name__ == '__main__':
 
     # Plots
     mgr.regplots(xvar=xvar, huevar='Dx Screening', height=6, aspect=2.4)
+    analyzer.introductions_rate_by_stype(xvar, height=6, aspect=1.4, ext='ppt')
     analyzer.source_pie()
     analyzer.cum_incidence(colvar=xvar)
     analyzer.outbreak_size_over_time()
-    analyzer.source_dow(figsize=(8,5)) # 6.5 x 5
+    analyzer.source_dow(figsize=(10,5)) # 6.5 x 5
+    analyzer.source_dow(figsize=(6*1.4, 6), ext='ppt') # 6.5 x 5
     mgr.tsplots()
 
