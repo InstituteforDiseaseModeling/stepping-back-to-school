@@ -15,7 +15,7 @@ from . import config as cfg
 __all__ = ['create_pops', 'define_pars', 'create_sim']
 
 
-def create_pops(cfg=cfg):
+def create_pops(cfg=cfg, seeds=None, parallelize=None, **kwargs):
     ''' Create the population files '''
 
     pop_size = cfg.sim_pars.pop_size
@@ -24,11 +24,13 @@ def create_pops(cfg=cfg):
     if n_pops is None:
         n_pops = n_reps
     location = cfg.pop_pars.location
-    seeds = np.arange(n_pops) + cfg.run_pars.base_seed
-    parallelize = cfg.run_pars.parallel
+    if seeds is None:
+        seeds = np.arange(n_pops) + cfg.run_pars.base_seed
+    if parallelize is None:
+        parallelize = cfg.run_pars.parallel
 
-    print(f'Creating {n_pops} populations of size {pop_size} for {location}...')
-    kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs)
+    print(f'Creating {len(seeds)} populations of size {pop_size} for {location}...')
+    kwargs = dict(pop_size=pop_size, location=location, folder=cfg.paths.inputs, **kwargs)
 
     if parallelize: # pragma: no cover
         ram = psutil.virtual_memory().available/1e9
@@ -111,7 +113,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
         rand_seed      = 1,
     )
 
-    p = sc.objdict(sc.mergedicts(default_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
+    p = sc.objdict(sc.mergedicts(default_pars, cfg.sim_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
     if 'pop_size' not in p:
         raise Exception('You must provide "pop_size" to create_sim')
     pop_size = p.pop_size
@@ -159,14 +161,18 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
 
     #%% Handle population -- NB, although called popfile, might be a People object
     if load_pop: # Load from disk -- normal usage
+        if max_pop_seeds is None: # TODO: make logic here simpler
+            max_pop_seeds = cfg.sweep_pars.n_pops
+        if max_pop_seeds is None:
+            max_pop_seeds = cfg.sweep_pars.n_reps
         pop_seed = p.rand_seed % max_pop_seeds
         popfile = cvsch.pop_path(popfile=None, location=location, folder=cfg.paths.inputs, strategy=strategy, n=pop_size, rand_seed=pop_seed)
         if os.path.exists(popfile):
             print(f'Loading population from {popfile}')
         else:
             if create_pop:
-                print('Population file {pop_file} does not exist, creating...')
-                create_pops(cfg)
+                print(f'Population file {popfile} does not exist, creating...')
+                create_pops(cfg=cfg, seeds=[pop_seed], parallelize=False)
             else:
                 errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
                 raise FileNotFoundError(errormsg)

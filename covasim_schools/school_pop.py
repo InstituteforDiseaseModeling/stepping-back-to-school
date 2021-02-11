@@ -10,14 +10,13 @@ import covasim as cv
 import synthpops as sp
 
 
-
-n_brackets = 20 # This is required...maybe
+n_brackets = 20 # This is required to load the correct age distributions
 
 
 class SchoolPeople(cv.People):
     ''' Subclass of People to add an additional plotting method '''
 
-    def plot_schools(self, figsize=None, dpi=None, to_json=False, outfile=None):
+    def plot_schools(self, figsize=None, dpi=None, to_json=False, outfile=None, do_plot=True, do_show=True, return_results=True):
         ''' Sanity check for school distributions '''
 
         # Custom configuration
@@ -41,35 +40,43 @@ class SchoolPeople(cv.People):
             results[sc_id] = thisres
 
         # Do plotting
-        pl.figure(figsize=figsize, dpi=dpi)
-        pl.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, hspace=0.5, wspace=0.5)
-        n_schools = len(results)
-        n_cols = len(ppl_keys) + 1
-        count = 0
-        for sc_id in results.keys():
-            count += 1
-            school_type = school_types_by_ind[sc_id]
-            ax = pl.subplot(n_schools, n_cols, count)
-            thisres = results[sc_id]
-            thisres.people_counts = [len(thisres[k]) for k in ppl_keys]
-            ax.bar(xpeople, thisres.people_counts)
-            ax.set_xticks(xpeople)
-            ax.set_xticklabels(ppl_keys)
-            title = f'School ID {sc_id}, school type {school_type}, total size: {len(thisres.all)}'
-            ax.set_title(title)
-
-            thisres.ages = sc.objdict()
-            for key in ppl_keys:
+        if do_plot:
+            fig = pl.figure(figsize=figsize, dpi=dpi)
+            pl.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, hspace=0.5, wspace=0.5)
+            n_schools = len(results)
+            n_cols = len(ppl_keys) + 1
+            count = 0
+            for sc_id in results.keys():
                 count += 1
+                school_type = school_types_by_ind[sc_id]
                 ax = pl.subplot(n_schools, n_cols, count)
-                thisres.ages[key] = self.age[thisres[key]]
-                pl.hist(thisres.ages[key])
-                ax.set_title(f'Ages for {key} in school {sc_id} ({school_type})')
+                thisres = results[sc_id]
+                thisres.people_counts = [len(thisres[k]) for k in ppl_keys]
+                ax.bar(xpeople, thisres.people_counts)
+                ax.set_xticks(xpeople)
+                ax.set_xticklabels(ppl_keys)
+                title = f'School ID {sc_id}, school type {school_type}, total size: {len(thisres.all)}'
+                ax.set_title(title)
+
+                thisres.ages = sc.objdict()
+                for key in ppl_keys:
+                    count += 1
+                    ax = pl.subplot(n_schools, n_cols, count)
+                    thisres.ages[key] = self.age[thisres[key]]
+                    pl.hist(thisres.ages[key])
+                    ax.set_title(f'Ages for {key} in school {sc_id} ({school_type})')
 
         if to_json:
             sc.savejson(outfile, results, indent=2)
 
-        return results
+        if do_show:
+            pl.show()
+
+        if return_results:
+            return results
+        elif do_plot:
+            return fig
+        return
 
 
 def pop_path(popfile=None, location=None, folder=None, strategy=None, n=None, rand_seed=None):

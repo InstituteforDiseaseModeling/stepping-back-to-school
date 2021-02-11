@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 # Get version
 cwd = os.path.abspath(os.path.dirname(__file__))
-versionpath = os.path.join(cwd, 'covasim_controller', 'version.py')
+versionpath = os.path.join(cwd, 'school_tools', 'version.py')
 version = runpy.run_path(versionpath)['__version__']
 
 # Get the documentation
