@@ -37,7 +37,8 @@ def get_defaults():
         n_pops            = None,
         n_prev            = 3,
         prev              = None, # Computed in builder.py
-        alt_sus           = False,
+        alt_symp          = [False],
+        alt_sus           = [False],
     )
 
     run_pars = sc.objdict(

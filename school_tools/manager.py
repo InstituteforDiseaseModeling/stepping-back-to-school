@@ -20,7 +20,7 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'create_run_sim', 'run_configs', 'alternate_symptomaticity']
+__all__ = ['Config', 'Builder', 'Manager', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
 
 
 class Config:
@@ -64,9 +64,11 @@ class Builder:
         scens = {k:v for k,v in all_scen.items() if k in sweep_pars.schcfg_keys}
         self.add_level('scen_key', scens, self.scen_func)
 
-        if sweep_pars.alt_sus:
-            value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.add_level('AltSus', value_labels, alternate_symptomaticity)
+        value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_symp}
+        self.add_level('AltSymp', value_labels, alternate_symptomaticity)
+
+        value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
+        self.add_level('AltSus', value_labels, alternate_susceptibility)
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
@@ -238,7 +240,7 @@ class Manager(sc.objdict):
         self.analyze(rerun=False)
         self.analyzer.introductions_rate(xvar, huevar, height=height, aspect=aspect)
         self.analyzer.introductions_rate_by_stype(xvar, height=height, aspect=aspect)
-        self.analyzer.outbreak_reg(xvar, huevar, height=height, aspect=aspect)
+        self.analyzer.outbreak_reg_facet(xvar, huevar, height=height, aspect=aspect)
 
         return
 
@@ -362,7 +364,27 @@ def alternate_symptomaticity(config, key, value):
     symp_probs[ages<20] = 0.1809
     prog['symp_probs'] = symp_probs
 
-    config.sim_pars['prognoses'] = sc.dcp(prog) # Ugh
+    config.sim_pars['prognoses'] = sc.dcp(prog)
+
+    return config
+
+
+def alternate_susceptibility(config, key, value):
+    print(f'Building alternate symptomaticity {key}={value}')
+    if not value: # Only build if value is True
+        return config
+    if 'prognoses' in config.sim_pars:
+        prog = config.sim_pars['prognoses']
+    else:
+        pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **config.sim_pars)
+        prog = pars['prognoses']
+
+    ages = prog['age_cutoffs']
+    sus_ORs = prog['sus_ORs']
+    sus_ORs[ages<20] = 1-0.44 # Make children <10 44% less susceptible.  Paper says "lower odds of secondary infection" - 
+    prog['sus_ORs'] = sus_ORs
+
+    config.sim_pars['prognoses'] = sc.dcp(prog)
 
     return config
 
