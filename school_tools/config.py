@@ -117,9 +117,9 @@ def set_default():
 
 def set_full():
     ''' Reset the configuration for the full run '''
-    sweep_pars.n_reps  = 5
+    sweep_pars.n_reps  = 20
     sweep_pars.n_pops  = None
-    sweep_pars.n_prev  = 5
+    sweep_pars.n_prev  = 10
     sim_pars.pop_size  = 223_000
     print_pars('full')
     return
