@@ -70,6 +70,9 @@ class Builder:
         value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
         self.add_level('AltSus', value_labels, alternate_susceptibility)
 
+        print('ADDING VACCINATION')
+        self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
+
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
 
@@ -102,6 +105,13 @@ class Builder:
                 spec.update(screenpar)
         return config
 
+    @staticmethod
+    def add_intervention_func(config, key, intv):
+        print(f'Building intervention {key}')
+        if intv is not None:
+            print(f'Adding {intv} to interventions')
+            config.interventions += sc.dcp(sc.sc_utils.promotetolist(intv))
+        return config
 
     @staticmethod
     def simpars_func(config, key, simpar): # Generic to screen pars, move to builder
