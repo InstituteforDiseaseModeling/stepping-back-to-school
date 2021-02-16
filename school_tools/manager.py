@@ -20,7 +20,7 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
+__all__ = ['Config', 'Builder', 'Manager', 'Vaccine', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
 
 
 class Config:
@@ -282,6 +282,28 @@ class Manager(sc.objdict):
             print(f'Loading {self.cachefn}')
             self.sims = cv.load(self.cachefn) # Use for *.sims
         return
+
+
+class Vaccine(cv.Intervention):
+    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0):
+        self._store_args()
+        self.cov = dict(teachers=teacher_cov, staff=staff_cov, students=student_cov)
+        self.mult = dict(rel_sus=rel_sus_mult, symp_prob=symp_prob_mult) # Could range check
+
+    def initialize(self, sim):
+        sch_ids = [sid for st in ['es', 'ms', 'hs'] for sid in sim.people.school_types[st]]
+        schoolpeople_uids = [uid for sid in sch_ids for uid in sim.people.schools[sid]]
+
+        for role, flag in zip(['students', 'teachers', 'staff'], [sim.people.student_flag, sim.people.teacher_flag, sim.people.staff_flag]):
+            cov = self.cov[role]
+            role_uids = [u for u in schoolpeople_uids if flag[u]]
+            # Choose who to vx
+            tovx = np.random.choice(role_uids, size=np.random.binomial(len(role_uids),cov), replace=False)
+            sim.people.rel_sus[tovx] *= self.mult['rel_sus']
+            sim.people.symp_prob[tovx] *= self.mult['symp_prob']
+
+    def apply(self, sim):
+        pass
 
 
 #%% Running
