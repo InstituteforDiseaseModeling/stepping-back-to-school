@@ -7,6 +7,7 @@ import psutil
 import multiprocessing as mp
 
 import numpy as np
+import pandas as pd
 import sciris as sc
 import covasim as cv
 import synthpops as sp
@@ -20,7 +21,7 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'Vaccine', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
+__all__ = ['Config', 'Builder', 'Manager', 'Vaccine', 'CohortRewiring', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
 
 
 class Config:
@@ -70,7 +71,8 @@ class Builder:
         value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
         self.add_level('AltSus', value_labels, alternate_susceptibility)
 
-        print('ADDING VACCINATION')
+        self.add_level('Cohort Rewiring', sweep_pars.cohort_rewiring, self.add_intervention_func)
+
         self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
@@ -304,6 +306,67 @@ class Vaccine(cv.Intervention):
 
     def apply(self, sim):
         pass
+
+
+class CohortRewiring(cv.Intervention):
+    ''' Break up student cohort "bubbles" to represent after-school care, transportation, etc '''
+
+    def __init__(self, frac_edges_to_rewire=0.5):
+        self._store_args()
+        self.frac_edges_to_rewire = frac_edges_to_rewire
+
+    def initialize(self, sim):
+        if self.frac_edges_to_rewire == 0:
+            return
+
+        school_contacts = []
+
+        sdf = sim.people.contacts['s'].to_df() # Must happen before School classes parts out the 's' network
+        student_flag = np.array(sim.people.student_flag, dtype=bool)
+        sdf['p1_student'] = student_flag[sdf['p1']]
+        sdf['p2_student'] = student_flag[sdf['p2']]
+        school_types = sim.people.school_types
+        for school_type, scids in school_types.items():
+            for school_id in scids:
+                uids = sim.people.schools[school_id] # Dict with keys of school_id and values of uids in that school
+                edges_this_school = sdf.loc[ ((sdf['p1'].isin(uids)) | (sdf['p2'].isin(uids))) ]
+                student_to_student_edge_bool = ( edges_this_school['p1_student'] & edges_this_school['p2_student'] )
+                student_to_student_edges = edges_this_school.loc[ student_to_student_edge_bool ]
+                inds_to_rewire = np.random.choice(student_to_student_edges.index, size=int(self.frac_edges_to_rewire*student_to_student_edges.shape[0]), replace=False)
+                if len(inds_to_rewire) == 0:
+                    # Nothing to do here!
+                    continue
+                inds_to_keep = np.setdiff1d(student_to_student_edges.index, inds_to_rewire)
+
+                edges_to_rewire = student_to_student_edges.loc[inds_to_rewire]
+                stublist = np.concatenate(( edges_to_rewire['p1'], edges_to_rewire['p2'] ))
+
+                p1_inds = np.random.choice(len(stublist), size=len(stublist)//2, replace=False)
+                p2_inds = np.setdiff1d(range(len(stublist)), p1_inds)
+                p1 = stublist[p1_inds]
+                p2 = stublist[p2_inds]
+                new_edges = pd.DataFrame({'p1':p1, 'p2':p2})
+                new_edges['beta'] = cv.defaults.default_float(1.0)
+                # Remove self loops
+                new_edges = new_edges.loc[new_edges['p1'] != new_edges['p2']]
+
+                rewired_student_to_student_edges = pd.concat([
+                    student_to_student_edges.loc[inds_to_keep, ['p1', 'p2', 'beta']], # Keep these
+                    new_edges])
+
+                print(f'During rewiring, the number of student-student edges went from {student_to_student_edges.shape[0]} to {rewired_student_to_student_edges.shape[0]}')
+
+                other_edges = edges_this_school.loc[ (~edges_this_school['p1_student']) | (~edges_this_school['p2_student']) ]
+                rewired_edges_this_school = pd.concat([rewired_student_to_student_edges, other_edges])
+                school_contacts.append(rewired_edges_this_school)
+
+        if len(school_contacts) > 0:
+            all_school_contacts = pd.concat(school_contacts)
+            sim.people.contacts['s'] = cv.Layer().from_df(all_school_contacts)
+
+    def apply(self, sim):
+        pass
+
 
 
 #%% Running
