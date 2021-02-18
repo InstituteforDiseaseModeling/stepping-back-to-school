@@ -39,6 +39,8 @@ def get_defaults():
         prev              = None, # Computed in builder.py
         alt_symp          = [False],
         alt_sus           = [False],
+        vaccine           = {'None':None},
+        cohort_rewiring   = {'None':None},
     )
 
     run_pars = sc.objdict(
