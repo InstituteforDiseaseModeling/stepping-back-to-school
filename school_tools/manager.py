@@ -67,11 +67,12 @@ class Builder:
         value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_symp}
         self.add_level('AltSymp', value_labels, alternate_symptomaticity)
 
-        value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
+        value_labels = {'Yes' if p else 'No':p for p in sc.promotetolist(sweep_pars.alt_sus, keepnone=True)}
         self.add_level('AltSus', value_labels, alternate_susceptibility)
 
-        print('ADDING VACCINATION')
-        self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
+        if 'vaccine' in sweep_pars:
+            print('Note: adding vaccination')
+            self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
