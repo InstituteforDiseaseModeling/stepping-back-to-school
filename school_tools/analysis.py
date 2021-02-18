@@ -421,7 +421,6 @@ class Analysis:
         intr_src['Kind'] = 'Per-school'
         intr_src.set_index('Kind', append=True, inplace=True)
 
-        print(intr_src)
         d = intr_src.loc[('Actual Source', 'Per-school')]
         intr_src = intr_src.append(pd.DataFrame({'Staff': d['Staff']/d['number_Staff'], 'Student': d['Student']/d['number_Student'], 'Teacher': d['Teacher']/d['number_Teacher'], 'number_Staff': 1, 'number_Student': 1, 'number_Teacher': 1}, index=pd.MultiIndex.from_tuples([("Actual Source", "Per-person")])))
 
@@ -429,8 +428,6 @@ class Analysis:
         intr_src = intr_src.append(pd.DataFrame({'Staff': d['Staff']/d['number_Staff'], 'Student': d['Student']/d['number_Student'], 'Teacher': d['Teacher']/d['number_Teacher'], 'number_Staff': 1, 'number_Student': 1, 'number_Teacher': 1}, index=pd.MultiIndex.from_tuples([('First Diagnosed', 'Per-person')])))
 
         intr_src.drop(['number_Staff', 'number_Student', 'number_Teacher'], axis=1, inplace=True)
-
-        print(intr_src)
 
         def pie(**kwargs):
             data = kwargs['data']
@@ -458,8 +455,6 @@ class Analysis:
         color = kwargs['color']
         xvar = kwargs['xvar']
         yvar = kwargs['yvar']
-
-        print(data)
 
         mu = data.groupby(xvar).mean().reset_index()
         std = data.groupby(xvar).std().reset_index()
@@ -531,11 +526,10 @@ class Analysis:
 
 
         g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, col=colvar, col_order=col_order, height=height, aspect=aspect, palette=cmap)
-        # Outbreak Size was 'value'
         if use_spline:
-            g.map_dataframe(self.splineplot, xvar=xvar, yvar='Outbreak Size') # Switched from gpplot to splineplot to better capture variance trends
+            g.map_dataframe(self.splineplot, xvar=xvar, yvar='value') # Switched from gpplot to splineplot to better capture variance trends
         else:
-            g.map_dataframe(self.gpplot, xvar=xvar, yvar='Outbreak Size') # Previous implementation
+            g.map_dataframe(self.gpplot, xvar=xvar, yvar='value') # Previous implementation
 
         g.set(xlim=(0,None), ylim=(0,None))
         if xvar in ['Prevalence Target', 'Screen prob']:
@@ -663,10 +657,10 @@ class Analysis:
         dfs = []
         for idx, stype in enumerate(types):
             if stype == 'All Types Combined':
-                df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+                df = self.results.loc['outbreak_size'].reset_index()##.rename({'value':'Outbreak Size'}, axis=1)
                 #xlim = (dfs[xvar].min(), dfs[xvar].max())
             else:
-                df = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+                df = self.results.loc[f'outbreak_size_{stype}'].reset_index()##.rename({'value':'Outbreak Size'}, axis=1)
             df['School Type'] = stype
             dfs.append( df )
 

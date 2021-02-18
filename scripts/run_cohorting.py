@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
         # Plot by school type
         col_order = ['Elementary', 'Middle']# , 'High'] # Drop high as not cohorted in the first place
-        analyzer.outbreak_reg_facet(xvar, huevar, colvar='School Type', col_order=col_order, hue_order=['None', '10%', '25%'], height=6, aspect=1.2)
+        analyzer.outbreak_reg_facet(xvar, huevar, colvar='School Type', col_order=col_order, hue_order=['None', '10%', '25%'], height=6, aspect=1.2, ext='by_stype')
 
         # Standardized plots
         analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
