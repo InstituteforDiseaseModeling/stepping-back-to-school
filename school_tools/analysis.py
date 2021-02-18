@@ -683,16 +683,17 @@ class Analysis:
         hue_order = self.screen_order if huevar == 'Dx Screening' else hue_order
         g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, hue_order=hue_order, colvar=colvar, col_order=col_order, height=height, aspect=aspect, legend=legend)
         g.set(ylim=(0,None))
-        for ax in g.axes.flat:
-            ax.set_ylabel('Outbreak size, including source')
+        for i, ax in enumerate(g.axes.flat):
+            if i == 0:
+                ax.set_ylabel('Outbreak size, including source')
             ax.axhline(y=1, ls='--', color='k')
 
-        if xvar == 'In-school transmission multiplier':
-            xlim = ax.get_xlim()
-            xt = np.linspace(xlim[0], xlim[1], 5)
-            ax.set_xticks( xt )
-            ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
-            ax.set_xlabel('Transmission probability in schools, per-contact per-day')
+            if xvar == 'In-school transmission multiplier':
+                xlim = ax.get_xlim()
+                xt = np.linspace(xlim[0], xlim[1], 5)
+                ax.set_xticks( xt )
+                ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
+                ax.set_xlabel('Transmission probability in schools, per-contact per-day')
 
         fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
