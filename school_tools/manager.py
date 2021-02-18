@@ -341,18 +341,41 @@ class CohortRewiring(cv.Intervention):
                 edges_to_rewire = student_to_student_edges.loc[inds_to_rewire]
                 stublist = np.concatenate(( edges_to_rewire['p1'], edges_to_rewire['p2'] ))
 
-                p1_inds = np.random.choice(len(stublist), size=len(stublist)//2, replace=False)
-                p2_inds = np.setdiff1d(range(len(stublist)), p1_inds)
-                p1 = stublist[p1_inds]
-                p2 = stublist[p2_inds]
-                new_edges = pd.DataFrame({'p1':p1, 'p2':p2})
-                new_edges['beta'] = cv.defaults.default_float(1.0)
+                def complete_stubs(stublist):
+                    try:
+                        p1_inds = np.random.choice(len(stublist), size=len(stublist)//2, replace=False)
+                        p2_inds = np.setdiff1d(range(len(stublist)), p1_inds)
+                        p1 = stublist[p1_inds]
+                        p2 = stublist[p2_inds]
+                        new_edges = pd.DataFrame({'p1':p1, 'p2':p2})
+                        new_edges['beta'] = cv.defaults.default_float(1.0)
+                        return new_edges
+                    except:
+                        print('EXCEPTION from stublist:\n', stublist)
+                        df = pd.DataFrame({
+                            'p1': pd.Series([], dtype='int32'),
+                            'p2': pd.Series([], dtype='int32'),
+                            'beta': pd.Series([], dtype='float32')})
+                        print(df.dtypes)
+                        print('RETURNING:\n', df)
+                        return df
+
+                new_edges = complete_stubs(stublist)
+
                 # Remove self loops
+                self_loops = new_edges.loc[new_edges['p1'] == new_edges['p2']]
                 new_edges = new_edges.loc[new_edges['p1'] != new_edges['p2']]
+
+                # One pass at redoing self loops
+                stublist = np.concatenate(( self_loops['p1'], self_loops['p2'] ))
+                new_edges2 = complete_stubs(stublist)
+                if new_edges2.shape[0] > 0:
+                    new_edges2 = new_edges2.loc[new_edges2['p1'] != new_edges2['p2']]
 
                 rewired_student_to_student_edges = pd.concat([
                     student_to_student_edges.loc[inds_to_keep, ['p1', 'p2', 'beta']], # Keep these
-                    new_edges])
+                    new_edges,   # From completing stubs
+                    new_edges2]) # From redrawing self loops
 
                 print(f'During rewiring, the number of student-student edges went from {student_to_student_edges.shape[0]} to {rewired_student_to_student_edges.shape[0]}')
 

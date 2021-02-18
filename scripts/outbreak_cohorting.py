@@ -17,10 +17,11 @@ if __name__ == '__main__':
     # Settings
     args = sct.config.process_inputs(sys.argv)
 
+    rewire10  = sct.CohortRewiring(frac_edges_to_rewire = 0.10)
     rewire25  = sct.CohortRewiring(frac_edges_to_rewire = 0.25)
-    rewire50  = sct.CohortRewiring(frac_edges_to_rewire = 0.50)
-    rewire75  = sct.CohortRewiring(frac_edges_to_rewire = 0.75)
-    rewire100 = sct.CohortRewiring(frac_edges_to_rewire = 1.00)
+    #rewire50  = sct.CohortRewiring(frac_edges_to_rewire = 0.50)
+    #rewire75  = sct.CohortRewiring(frac_edges_to_rewire = 0.75)
+    #rewire100 = sct.CohortRewiring(frac_edges_to_rewire = 1.00)
 
     sweep_pars = {
         'n_prev': 0, # No controller
@@ -28,10 +29,8 @@ if __name__ == '__main__':
         'school_seed_date': '2021-02-01',
         'cohort_rewiring': {
             'None': None,
+            '10%':  [rewire10],
             '25%':  [rewire25],
-            '50%':  [rewire50],
-            '75%':  [rewire75],
-            '100%': [rewire100]
         },
     }
 
@@ -44,7 +43,7 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 20)}
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 3)}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
@@ -55,14 +54,17 @@ if __name__ == '__main__':
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
+    analyzer.outbreak_reg_facet(xvar, huevar, colvar='School Type', hue_order=['None', '10%', '25%'], height=6, aspect=1)
+    exit()
+    analyzer.outbreak_reg_facet(xvar, huevar, height=6, aspect=2.4)
+    analyzer.outbreak_reg_facet(xvar, huevar, ext='ppt')
+
     g = analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
 
     # Plots
     g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7,
 
     analyzer.exports_reg(xvar, huevar)
-    analyzer.outbreak_reg_facet(xvar, huevar, height=6, aspect=2.4)
-    analyzer.outbreak_reg_facet(xvar, huevar, ext='ppt')
 
     #analyzer.outbreak_reg_by_stype(xvar, height=6, aspect=1.4, ext='ppt', nboot=50, legend=True)
     #analyzer.outbreak_size_plot(xvar) #xvar, rowvar=None, ext=None, height=6, aspect=1.4, scatter=True, jitter=0.012

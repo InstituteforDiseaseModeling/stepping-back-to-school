@@ -450,6 +450,8 @@ class Analysis:
         xvar = kwargs['xvar']
         yvar = kwargs['yvar']
 
+        print(data)
+
         mu = data.groupby(xvar).mean().reset_index()
         std = data.groupby(xvar).std().reset_index()
         k = min(3, len(mu[xvar])-1) # Don't try to use more points in the spline than there are data points -- NB, will fail for 1 data point
@@ -509,7 +511,7 @@ class Analysis:
         plt.plot(x, y_pred, color=color, zorder=11, lw=2)
 
 
-    def gp_reg(self, df, xvar, huevar, height=6, aspect=1.4, legend=True, cmap='Set1', hue_order=None, use_spline=True):
+    def gp_reg(self, df, xvar, huevar, hue_order=None, colvar=None, col_order=None, height=6, aspect=1.4, legend=True, cmap='Set1', use_spline=True):
         if huevar is None:
             legend = False
         else:
@@ -518,12 +520,13 @@ class Analysis:
             else:
                 hue_order = df.reset_index()[huevar].unique()
 
-        g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, height=height, aspect=aspect, palette=cmap)
+
+        g = sns.FacetGrid(data=df.reset_index(), hue=huevar, hue_order=hue_order, col=colvar, col_order=col_order, height=height, aspect=aspect, palette=cmap)
+        # Outbreak Size was 'value'
         if use_spline:
-            g.map_dataframe(self.splineplot, xvar=xvar, yvar='value') # Switched from gpplot to splineplot to better capture variance trends
+            g.map_dataframe(self.splineplot, xvar=xvar, yvar='Outbreak Size') # Switched from gpplot to splineplot to better capture variance trends
         else:
-            g.map_dataframe(self.gpplot, xvar=xvar, yvar='value') # Previous implementation
-        plt.grid(color='lightgray', zorder=-10)
+            g.map_dataframe(self.gpplot, xvar=xvar, yvar='Outbreak Size') # Previous implementation
 
         g.set(xlim=(0,None), ylim=(0,None))
         if xvar in ['Prevalence Target', 'Screen prob']:
@@ -534,6 +537,7 @@ class Analysis:
         for ax in g.axes.flat:
             ax.spines["top"].set_visible(True)
             ax.spines["right"].set_visible(True)
+            ax.grid(color='lightgray', zorder=-10)
 
         g.set_xlabels(xvar)
         if xvar == 'Prevalence Target':
@@ -638,9 +642,28 @@ class Analysis:
         return g
 
 
-    def outbreak_reg_facet(self, xvar, huevar, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
+    def outbreak_reg_facet(self, xvar, huevar, hue_order=None, colvar=None, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
         cols = [xvar] if huevar is None else [xvar, huevar]
-        ret = self.results.loc['outbreak_size']
+
+        if colvar == 'School Type':
+            types = self.slabels
+            cols += ['School Type']
+            col_order = ['Elementary', 'Middle', 'High']
+        else:
+            types = ['All Types Combined']
+            col_order = None
+
+        dfs = []
+        for idx, stype in enumerate(types):
+            if stype == 'All Types Combined':
+                df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+                #xlim = (dfs[xvar].min(), dfs[xvar].max())
+            else:
+                df = self.results.loc[f'outbreak_size_{stype}'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+            df['School Type'] = stype
+            dfs.append( df )
+
+        ret = pd.concat(dfs)
 
         # Bootstrap
         resamples = []
@@ -650,8 +673,8 @@ class Analysis:
             resamples.append(resample_mu)
         df = pd.concat(resamples)
 
-        hue_order = self.screen_order if huevar == 'Dx Screening' else None
-        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, height=height, aspect=aspect, legend=legend, hue_order=hue_order)
+        hue_order = self.screen_order if huevar == 'Dx Screening' else hue_order
+        g = self.gp_reg(df=df, xvar=xvar, huevar=huevar, hue_order=hue_order, colvar=colvar, col_order=col_order, height=height, aspect=aspect, legend=legend)
         g.set(ylim=(0,None))
         for ax in g.axes.flat:
             ax.set_ylabel('Outbreak size, including source')
