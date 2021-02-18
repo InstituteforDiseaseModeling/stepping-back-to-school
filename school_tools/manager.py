@@ -71,7 +71,7 @@ class Builder:
         value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
         self.add_level('AltSus', value_labels, alternate_susceptibility)
 
-        self.add_level('Cohort Rewiring', sweep_pars.cohort_rewiring, self.add_intervention_func)
+        self.add_level('Cohort Mixing', sweep_pars.cohort_rewiring, self.add_intervention_func)
 
         self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
 

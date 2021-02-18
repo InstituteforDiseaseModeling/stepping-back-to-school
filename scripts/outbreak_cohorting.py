@@ -47,14 +47,15 @@ if __name__ == '__main__':
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
     xvar = 'In-school transmission multiplier'
-    huevar = 'Cohort Rewiring'
+    huevar = 'Cohort Mixing'
 
     # Create and run
     mgr = sct.Manager(name='OutbreakCohorting', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
-    analyzer.outbreak_reg_facet(xvar, huevar, colvar='School Type', hue_order=['None', '10%', '25%'], height=6, aspect=1)
+    col_order = ['Elementary', 'Middle']# , 'High'] # Drop high as not cohorted in the first place
+    analyzer.outbreak_reg_facet(xvar, huevar, colvar='School Type', col_order=col_order, hue_order=['None', '10%', '25%'], height=6, aspect=1.2)
     exit()
     analyzer.outbreak_reg_facet(xvar, huevar, height=6, aspect=2.4)
     analyzer.outbreak_reg_facet(xvar, huevar, ext='ppt')

@@ -153,6 +153,11 @@ class Analysis:
         keys = list(sims[0].tags.keys()) + ['School Schedule', 'Dx Screening', 'sim_id']
         #keys +=['sim_id', 'school_id', 'school_type'] # Additional tracking keys
         keys.remove('school_start_date')
+        if 'Cohort Rewiring' in keys:
+            # Change Rewiring --> Mixing
+            keys.remove('Cohort Rewiring')
+            keys.append('Cohort Mixing')
+
         if 'location' in keys:
             keys.remove('location')
             keys.append('Location')
@@ -181,6 +186,10 @@ class Analysis:
 
             # Tags usually contain the relevant sweep dimensions
             ret = sc.dcp(sim.tags)
+
+            if 'Cohort Rewiring' in ret:
+                # Change Rewiring --> Mixing
+                ret['Cohort Mixing'] = ret.pop('Cohort Rewiring')
 
             if 'location' in sim.tags:
                 ret['Location'] = sim.tags['location'] # Upper case
@@ -642,16 +651,14 @@ class Analysis:
         return g
 
 
-    def outbreak_reg_facet(self, xvar, huevar, hue_order=None, colvar=None, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
+    def outbreak_reg_facet(self, xvar, huevar, hue_order=None, colvar=None, col_order=None, height=6, aspect=1.4, ext=None, nboot=50, legend=True):
         cols = [xvar] if huevar is None else [xvar, huevar]
 
         if colvar == 'School Type':
             types = self.slabels
             cols += ['School Type']
-            col_order = ['Elementary', 'Middle', 'High']
         else:
             types = ['All Types Combined']
-            col_order = None
 
         dfs = []
         for idx, stype in enumerate(types):
