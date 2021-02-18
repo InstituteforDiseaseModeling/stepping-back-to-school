@@ -60,6 +60,7 @@ if __name__ == '__main__':
 
     def two_panel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=12, aspect=1.0):
         df = analyzer.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        df['outbreak_stind'] = analyzer.results.loc['outbreak_stind'].reset_index()['value'] # CK: Must be a better way
         if values is not None:
             df = df.loc[df[xvar].isin(values)]
         else:
@@ -76,30 +77,38 @@ if __name__ == '__main__':
 
         # Panel 1
         ax = axv[0]
-        g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 250), palette='rocket', alpha=0.6, legend=legend, ax=ax)
-
-        ax.set_xticks(xt)
-        ax.set_xticklabels([])
-        ax.set_xlabel('')
-        ax.set_xlim(df['x_jittered'].min()-0.02, df['x_jittered'].max()+0.02)
-        ax.axhline(y=1, color='k', ls='--')
-
-        ax.set_ylabel('Individual outbreak size')
-
-        # Panel 2
-        ax = axv[1]
         analyzer.outbreak_size_stacked_distrib(xvar, ax=ax)
         ax.set_xticks(xt)
         ax.set_xticklabels([])
         ax.set_xlabel('')
         ax.set_xlim(df[xvar].min(), df[xvar].max())
 
+        # Panel 2
+        ax = axv[1]
+        #g = sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue='Outbreak Size', sizes=(1, 250), palette='rocket', alpha=0.6, legend=legend, ax=ax)
+        palette = [analyzer.smeta.colors[:][i] for i in range(len(analyzer.slabels))]
+        hue = 'outbreak_stind'
+        sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue=hue, sizes=(10, 250), palette=palette, alpha=0.6, legend=legend, ax=ax)
+        for c,label in enumerate(analyzer.slabels):
+            ax.scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
+
+        ax.set_xticks(xt)
+        ax.set_xticklabels([])
+        ax.set_xlabel('')
+        ax.set_xlim(df['x_jittered'].min()-0.02, df['x_jittered'].max()+0.02)
+        ax.axhline(y=1, color='k', ls='--')
+        ax.set_ylabel('Individual outbreak size')
+        ax.legend()
+
+        # Fixing axes
         for i in range(2):
             axv[i].set_ylim(0,None)
             axv[i].set_xticks(xt)
             if i == 1:
                 axv[i].set_xticklabels( [f'{analyzer.beta0*betamult:.1%}' for betamult in xt] )
                 axv[i].set_xlabel('Transmission probability in schools, per-contact per-day')
+
+
 
         plt.tight_layout()
 
