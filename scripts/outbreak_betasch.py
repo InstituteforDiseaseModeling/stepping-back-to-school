@@ -18,6 +18,11 @@ if __name__ == '__main__':
 
     args = sct.config.process_inputs(sys.argv)
 
+    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
+    levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
+    xvar = 'In-school transmission multiplier'
+    huevar = None
+
     sweep_pars = {
         'n_prev': 0, # No controller
         'school_start_date': '2021-02-01',
@@ -33,11 +38,7 @@ if __name__ == '__main__':
         'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
     }
 
-    npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
-    levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
-    xvar = 'In-school transmission multiplier'
-    huevar = None
 
     # Create and run
     mgr = sct.Manager(name='OutbreakBetaSchool', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)

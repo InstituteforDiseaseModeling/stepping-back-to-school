@@ -67,11 +67,12 @@ np.random.seed(run_pars.base_seed) # Reset the global seed on import
 
 
 def process_inputs(argv): # pragma: no cover
-    ''' Handle command-line input arguments '''
+    ''' Handle command-line input arguments -- used for most of the scripts. '''
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--force', action='store_true', help='Regenerate files even if they exist')
     parser.add_argument('--full', action='store_true', help='Run with full population sizes and seeds (warning, takes hours!)')
-    parser.add_argument('--debug', action='store_true', help='Run with moderate population sizes and seeds (takes a few minutes)')
+    parser.add_argument('--debug', action='store_true', help='Run with moderate population sizes and seeds (default; takes a few minutes)')
     parser.add_argument('--micro', action='store_true', help='Run with minimal population sizes and seeds (warning, graphs will look strange)')
     parser.add_argument('--outbreak', action='store_true', help='If applicable, run as an outbreak scenario rather than a run scenario')
     parser.add_argument('--pop_size', type=int, default=0, help='Set the population size; if <1000, will automatically multiply, e.g. 25 and 25000 are the same')
