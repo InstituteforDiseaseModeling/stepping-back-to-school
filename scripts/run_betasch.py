@@ -15,7 +15,8 @@ import covasim as cv
 if __name__ == '__main__':
 
     # Settings
-    args = sct.config.process_inputs(sys.argv)
+    outbreak = None # Set to True to force the outbreak version
+    args = sct.config.process_inputs(sys.argv, outbreak=outbreak)
 
     npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]

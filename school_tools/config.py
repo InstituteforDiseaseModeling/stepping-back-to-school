@@ -66,7 +66,7 @@ sim_pars, pop_pars, sweep_pars, run_pars, paths = get_defaults()
 np.random.seed(run_pars.base_seed) # Reset the global seed on import
 
 
-def process_inputs(argv): # pragma: no cover
+def process_inputs(argv, **kwargs): # pragma: no cover
     ''' Handle command-line input arguments -- used for most of the scripts. '''
 
     parser = argparse.ArgumentParser()
@@ -81,6 +81,11 @@ def process_inputs(argv): # pragma: no cover
     parser.add_argument('--n_prev', type=int, default=0, help='Set the number of different prevalence levels used')
     parser.add_argument('--location', type=str, default='', help='Set the location (by default, Seattle)')
     args = parser.parse_args(argv[1:])
+
+    # Handle any kwargs to override command-line options
+    for k,v in kwargs.items():
+        if v is not None:
+            setattr(args, k, v)
 
     if args.full:
         set_full()
