@@ -1,5 +1,5 @@
 '''
-Main script to create a simulation, the base on which analysis is conducted.
+Main functions to create a simulation, the base on which analysis is conducted.
 Used in calibration and other downstream activities.
 '''
 
@@ -16,7 +16,10 @@ __all__ = ['create_pops', 'define_pars', 'create_sim']
 
 
 def create_pops(cfg=cfg, seeds=None, parallelize=None, **kwargs):
-    ''' Create the population files '''
+    '''
+    Create the population files. Can be invoked directly, but is more commonly invoked
+    implicitly by a Manager object.
+    '''
 
     pop_size = kwargs.pop('pop_size', cfg.sim_pars.pop_size)
     n_pops = kwargs.pop('n_pops', cfg.sweep_pars.n_pops)
@@ -76,7 +79,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
                load_pop=True, save_pop=False, create_pop=True, people=None, label=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
-    create the sim object.
+    create the sim object, but is usually not invoked directly.
 
     Args:
         params (dict): the parameters to use for the simulation

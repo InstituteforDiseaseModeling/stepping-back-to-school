@@ -47,10 +47,10 @@ def get_defaults():
         mem_thresh = 0.80, # Don't use more than this amount of available RAM, if number of CPUs is not set
         parallel   = True, # Only switch to False for debugging
         shrink     = True, # Whether to remove the people from the sim objects (makes for smaller files)
-        verbose    = 0.1, # Print progress this fraction of simulated days
-        base_seed  = 0, # Add this seed to all other random seeds
+        verbose    = 0.1,  # Print progress this fraction of simulated days
+        base_seed  = 0,    # Add this offset to all other random seeds
+        outbreak   = False,# Whether to run a script as an outbreak instead of a simple run
     )
-
 
     paths = sc.objdict(
         inputs  = 'inputs', # Folder for population files
@@ -66,19 +66,26 @@ sim_pars, pop_pars, sweep_pars, run_pars, paths = get_defaults()
 np.random.seed(run_pars.base_seed) # Reset the global seed on import
 
 
-def process_inputs(argv): # pragma: no cover
-    ''' Handle command-line input arguments '''
+def process_inputs(argv, **kwargs): # pragma: no cover
+    ''' Handle command-line input arguments -- used for most of the scripts. '''
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--force', action='store_true')
-    parser.add_argument('--full', action='store_true')
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--micro', action='store_true')
-    parser.add_argument('--pop_size', type=int, default=0)
-    parser.add_argument('--n_reps', type=int, default=0)
-    parser.add_argument('--n_pops', type=int, default=0)
-    parser.add_argument('--n_prev', type=int, default=0)
-    parser.add_argument('--location', type=str, default='')
+    parser.add_argument('--force', action='store_true', help='Regenerate files even if they exist')
+    parser.add_argument('--full', action='store_true', help='Run with full population sizes and seeds (warning, takes hours!)')
+    parser.add_argument('--debug', action='store_true', help='Run with moderate population sizes and seeds (default; takes a few minutes)')
+    parser.add_argument('--micro', action='store_true', help='Run with minimal population sizes and seeds (warning, graphs will look strange)')
+    parser.add_argument('--outbreak', action='store_true', help='If applicable, run as an outbreak scenario rather than a run scenario')
+    parser.add_argument('--pop_size', type=int, default=0, help='Set the population size; if <1000, will automatically multiply, e.g. 25 and 25000 are the same')
+    parser.add_argument('--n_reps', type=int, default=0, help='Set the number of repetitions (i.e. random seeds) for each run')
+    parser.add_argument('--n_pops', type=int, default=0, help='Set the number of different populations generated/used (by default, n_reps)')
+    parser.add_argument('--n_prev', type=int, default=0, help='Set the number of different prevalence levels used')
+    parser.add_argument('--location', type=str, default='', help='Set the location (by default, Seattle)')
     args = parser.parse_args(argv[1:])
+
+    # Handle any kwargs to override command-line options
+    for k,v in kwargs.items():
+        if v is not None:
+            setattr(args, k, v)
 
     if args.full:
         set_full()
