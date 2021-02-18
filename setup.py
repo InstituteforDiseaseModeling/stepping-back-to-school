@@ -38,9 +38,9 @@ setup(
     include_package_data=True,
     install_requires=[
         "seaborn",
+        "sklearn",
         "sciris>=1.0.0",
         "covasim>=2.0.0",
         "synthpops>=1.4.3",
-        "sklearn",
     ],
 )
