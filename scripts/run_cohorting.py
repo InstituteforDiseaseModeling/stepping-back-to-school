@@ -1,5 +1,5 @@
 '''
-Explore the impact of the vaccine
+Explore modified cohorting amongst students
 '''
 
 import sys
@@ -11,31 +11,22 @@ if __name__ == '__main__':
     outbreak = None # Set to True to force the outbreak version
     args = sct.config.process_inputs(sys.argv, outbreak=outbreak)
 
-    perfect_vx = sct.SchoolVaccine(rel_sus_mult=0, symp_prob_mult=0, teacher_cov=1, staff_cov=1, student_cov=0)
+    rewire10  = sct.CohortRewiring(frac_edges_to_rewire = 0.10)
+    rewire25  = sct.CohortRewiring(frac_edges_to_rewire = 0.25)
 
     sweep_pars = {
-            'vaccine': {'None':None, 'Optimistic Vaccine':[perfect_vx]},
-        }
+        'cohort_rewiring': {
+            'None': None,
+            '10%':  [rewire10],
+            '25%':  [rewire25],
+        },
+    }
+
     pop_size = sct.config.sim_pars.pop_size
-    huevar = 'Vaccination'
+    huevar = 'Cohort Mixing'
 
     if not args.outbreak:
-
-        xvar = 'Prevalence Target'
-
-        # Create and run
-        mgr = sct.Manager(name='Vaccination', sweep_pars=sweep_pars, sim_pars=None, levels=None)
-        mgr.run(args.force)
-        analyzer = mgr.analyze()
-
-        # Plots
-        mgr.regplots(xvar=xvar, huevar=huevar, height=6, aspect=2.4)
-        analyzer.introductions_rate(xvar=xvar, huevar=huevar, height=6, aspect=1.4, ext='ppt')
-        analyzer.cum_incidence(colvar=xvar)
-        analyzer.introductions_rate_by_stype(xvar=xvar)
-        analyzer.outbreak_size_over_time()
-        analyzer.source_pie()
-        mgr.tsplots()
+        raise NotImplementedError
 
     else:
 
@@ -53,17 +44,22 @@ if __name__ == '__main__':
             'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
         }
 
-        npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 20)}
+
+        npi_scens = {x:{'beta_s': 1.5*x} for x in np.linspace(0, 2, 10)}
         levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
 
         xvar = 'In-school transmission multiplier'
 
         # Create and run
-        mgr = sct.Manager(name='OutbreakVaccine', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
+        mgr = sct.Manager(name='OutbreakCohorting', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
         mgr.run(args.force)
         analyzer = mgr.analyze()
 
-        # Plots
+        # Plot by school type
+        col_order = ['Elementary', 'Middle']# , 'High'] # Drop high as not cohorted in the first place
+        analyzer.outbreak_reg_facet(xvar, huevar, colvar='School Type', col_order=col_order, hue_order=['None', '10%', '25%'], height=6, aspect=1.2)
+
+        # Standardized plots
         analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
         analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7,
         analyzer.exports_reg(xvar, huevar)
