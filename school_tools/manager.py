@@ -494,9 +494,10 @@ def alternate_susceptibility(config, key, value):
         pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **config.sim_pars)
         prog = pars['prognoses']
 
+    # Source: Susceptibility to SARS-CoV-2 Infection Among Children and Adolescents Compared With AdultsA Systematic Review and Meta-analysis
     ages = prog['age_cutoffs']
     sus_ORs = prog['sus_ORs']
-    sus_ORs[ages<20] = 1-0.44 # Make children <10 44% less susceptible.  Paper says "lower odds of secondary infection" - 
+    sus_ORs[ages<20] = 0.56 #  In this meta-analysis, there is preliminary evidence that children and adolescents have lower susceptibility to SARS-CoV-2, with an odds ratio of 0.56 for being an infected contact compared with adults.
     prog['sus_ORs'] = sus_ORs
 
     config.sim_pars['prognoses'] = sc.dcp(prog)
