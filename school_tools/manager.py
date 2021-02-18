@@ -21,21 +21,22 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'Vaccine', 'CohortRewiring', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
+__all__ = ['Config', 'Builder', 'Manager', 'SchoolVaccine', 'CohortRewiring', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
 
 
 class Config:
+    ''' Small class to handle configuration information '''
+
     def __init__(self, sim_pars=None, label=None, tags=None):
         self.label = label # TODO: From tags?
         self.tags = {}
         if tags is not None:
             self.tags.update(tags)
-
-        # TODO: Seems necessary to have access to e.g. prognosis parameters, but can work around
         self.sim_pars = sim_pars #cv.make_pars(set_prognoses=True, prog_by_age=True, **sim_pars)
         self.school_config = None
         self.interventions = []
         self.count = 0
+        return
 
     def __repr__(self):
         return f'''
@@ -50,7 +51,8 @@ Configuration {self.label}:
 
 class Builder:
     '''
-    Build the run configurations
+    Build the run configurations -- usually not invoked directly by the user;
+    see the Manager class
     '''
 
     def __init__(self, sim_pars, sweep_pars, paths):
@@ -68,7 +70,7 @@ class Builder:
         value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_symp}
         self.add_level('AltSymp', value_labels, alternate_symptomaticity)
 
-        value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
+        value_labels = {'Yes' if p else 'No':p for p in sc.promotetolist(sweep_pars.alt_sus, keepnone=True)}
         self.add_level('AltSus', value_labels, alternate_susceptibility)
 
         self.add_level('Cohort Mixing', sweep_pars.cohort_rewiring, self.add_intervention_func)
@@ -112,7 +114,7 @@ class Builder:
         print(f'Building intervention {key}')
         if intv is not None:
             print(f'Adding {intv} to interventions')
-            config.interventions += sc.dcp(sc.sc_utils.promotetolist(intv))
+            config.interventions += sc.dcp(sc.promotetolist(intv))
         return config
 
     @staticmethod
@@ -169,11 +171,8 @@ class Builder:
 
 class Manager(sc.objdict):
     '''
-    This is the main class used for commissioning the different testing scenarios
-    (defined in testing_scenarios.py) for the paper results. Run this script first
-    (preferably on an HPC!), then run the different plotting scripts. Each sim takes
-    about 1 minute to run. With full settings, there are about 1300 scripts to run;
-    the test run uses 8.
+    This is the main class used for commissioning the different scenarios representing
+    different school policies and interventions. See the scripts folder for usage examples.
     '''
 
     def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None, levels=None, cfg=cfg):
@@ -286,26 +285,36 @@ class Manager(sc.objdict):
         return
 
 
-class Vaccine(cv.Intervention):
-    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0):
+class SchoolVaccine(cv.Intervention):
+    ''' Define a school-specific vaccine intervention '''
+
+    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0, days=0, **kwargs):
+        super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args()
         self.cov = dict(teachers=teacher_cov, staff=staff_cov, students=student_cov)
         self.mult = dict(rel_sus=rel_sus_mult, symp_prob=symp_prob_mult) # Could range check
+        self.days = days
+        self.schooltypes = ['es', 'ms', 'hs']
+        return
+
 
     def initialize(self, sim):
-        sch_ids = [sid for st in ['es', 'ms', 'hs'] for sid in sim.people.school_types[st]]
-        schoolpeople_uids = [uid for sid in sch_ids for uid in sim.people.schools[sid]]
+        self.sch_ids = [sid for st in self.schooltypes for sid in sim.people.school_types[st]]
+        self.schoolpeople_uids = [uid for sid in self.sch_ids for uid in sim.people.schools[sid]]
+        self.days = cv.interventions.process_days(sim, self.days)
+        return
 
-        for role, flag in zip(['students', 'teachers', 'staff'], [sim.people.student_flag, sim.people.teacher_flag, sim.people.staff_flag]):
-            cov = self.cov[role]
-            role_uids = [u for u in schoolpeople_uids if flag[u]]
-            # Choose who to vx
-            tovx = np.random.choice(role_uids, size=np.random.binomial(len(role_uids),cov), replace=False)
-            sim.people.rel_sus[tovx] *= self.mult['rel_sus']
-            sim.people.symp_prob[tovx] *= self.mult['symp_prob']
 
     def apply(self, sim):
-        pass
+        for ind in cv.interventions.find_day(self.days, sim.t):
+            for role, flag in zip(['students', 'teachers', 'staff'], [sim.people.student_flag, sim.people.teacher_flag, sim.people.staff_flag]):
+                cov = self.cov[role]
+                role_uids = [u for u in self.schoolpeople_uids if flag[u]]
+                # Choose who to vaccinate
+                tovx = np.random.choice(role_uids, size=np.random.binomial(len(role_uids),cov), replace=False)
+                sim.people.rel_sus[tovx] *= self.mult['rel_sus']
+                sim.people.symp_prob[tovx] *= self.mult['symp_prob']
+        return
 
 
 class CohortRewiring(cv.Intervention):

@@ -1,5 +1,5 @@
 '''
-Main script to create a simulation, the base on which analysis is conducted.
+Main functions to create a simulation, the base on which analysis is conducted.
 Used in calibration and other downstream activities.
 '''
 
@@ -16,11 +16,14 @@ __all__ = ['create_pops', 'define_pars', 'create_sim']
 
 
 def create_pops(cfg=cfg, seeds=None, parallelize=None, **kwargs):
-    ''' Create the population files '''
+    '''
+    Create the population files. Can be invoked directly, but is more commonly invoked
+    implicitly by a Manager object.
+    '''
 
-    pop_size = cfg.sim_pars.pop_size
-    n_pops = cfg.sweep_pars.n_pops
-    n_reps = cfg.sweep_pars.n_reps
+    pop_size = kwargs.pop('pop_size', cfg.sim_pars.pop_size)
+    n_pops = kwargs.pop('n_pops', cfg.sweep_pars.n_pops)
+    n_reps = kwargs.pop('n_reps', cfg.sweep_pars.n_reps)
     if n_pops is None:
         n_pops = n_reps
     location = cfg.pop_pars.location
@@ -76,7 +79,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
                load_pop=True, save_pop=False, create_pop=True, people=None, label=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
-    create the sim object.
+    create the sim object, but is usually not invoked directly.
 
     Args:
         params (dict): the parameters to use for the simulation
@@ -116,7 +119,6 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
     p = sc.objdict(sc.mergedicts(default_pars, cfg.sim_pars, define_pars(which='best', kind='both'), params, kwargs)) # Get default parameter values
     if 'pop_size' not in p:
         raise Exception('You must provide "pop_size" to create_sim')
-    pop_size = p.pop_size
 
     #%% Define interventions
     symp_prob = p.pop('symp_prob')
@@ -166,13 +168,13 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
         if max_pop_seeds is None:
             max_pop_seeds = cfg.sweep_pars.n_reps
         pop_seed = p.rand_seed % max_pop_seeds
-        popfile = cvsch.pop_path(popfile=None, location=location, folder=cfg.paths.inputs, strategy=strategy, n=pop_size, rand_seed=pop_seed)
+        popfile = cvsch.pop_path(popfile=None, location=location, folder=cfg.paths.inputs, strategy=strategy, n=p.pop_size, rand_seed=pop_seed)
         if os.path.exists(popfile):
             print(f'Loading population from {popfile}')
         else:
             if create_pop:
                 print(f'Population file {popfile} does not exist, creating...')
-                create_pops(cfg=cfg, seeds=[pop_seed], parallelize=False)
+                create_pops(cfg=cfg, seeds=[pop_seed], pop_size=p.pop_size, parallelize=False)
             else:
                 errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
                 raise FileNotFoundError(errormsg)
