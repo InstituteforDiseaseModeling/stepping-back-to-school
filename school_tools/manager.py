@@ -351,13 +351,10 @@ class CohortRewiring(cv.Intervention):
                         new_edges['beta'] = cv.defaults.default_float(1.0)
                         return new_edges
                     except:
-                        print('EXCEPTION from stublist:\n', stublist)
                         df = pd.DataFrame({
                             'p1': pd.Series([], dtype='int32'),
                             'p2': pd.Series([], dtype='int32'),
                             'beta': pd.Series([], dtype='float32')})
-                        print(df.dtypes)
-                        print('RETURNING:\n', df)
                         return df
 
                 new_edges = complete_stubs(stublist)
