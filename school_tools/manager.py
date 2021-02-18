@@ -20,7 +20,7 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'Vaccine', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
+__all__ = ['Config', 'Builder', 'Manager', 'SchoolVaccine', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
 
 
 class Config:
@@ -111,7 +111,7 @@ class Builder:
         print(f'Building intervention {key}')
         if intv is not None:
             print(f'Adding {intv} to interventions')
-            config.interventions += sc.dcp(sc.sc_utils.promotetolist(intv))
+            config.interventions += sc.dcp(sc.promotetolist(intv))
         return config
 
     @staticmethod
@@ -285,8 +285,9 @@ class Manager(sc.objdict):
         return
 
 
-class Vaccine(cv.Intervention):
-    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0):
+class SchoolVaccine(cv.Intervention):
+    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0, **kwargs):
+        super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args()
         self.cov = dict(teachers=teacher_cov, staff=staff_cov, students=student_cov)
         self.mult = dict(rel_sus=rel_sus_mult, symp_prob=symp_prob_mult) # Could range check

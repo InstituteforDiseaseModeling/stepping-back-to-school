@@ -18,8 +18,8 @@ if __name__ == '__main__':
     args = sct.config.process_inputs(sys.argv)
 
     # 63% efficacy against infection and 34% efficacy against symptoms _given infection_ are estimates from personal communication with Mike Famulare
-    realistic_vx = sct.Vaccine(rel_sus_mult=1-0.63, symp_prob_mult=1-0.34, teacher_cov=0.8, staff_cov=0.8, student_cov=0)
-    perfect_vx = sct.Vaccine(rel_sus_mult=0, symp_prob_mult=0, teacher_cov=1, staff_cov=1, student_cov=0)
+    realistic_vx = sct.SchoolVaccine(rel_sus_mult=1-0.63, symp_prob_mult=1-0.34, teacher_cov=0.8, staff_cov=0.8, student_cov=0)
+    perfect_vx = sct.SchoolVaccine(rel_sus_mult=0, symp_prob_mult=0, teacher_cov=1, staff_cov=1, student_cov=0)
 
     sweep_pars = {
         'n_prev': 0, # No controller
