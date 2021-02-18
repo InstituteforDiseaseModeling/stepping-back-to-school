@@ -11,9 +11,10 @@ if __name__ == '__main__':
     # Settings
     outbreak = None # Set to True to force the outbreak version
     args = sct.config.process_inputs(sys.argv, outbreak=outbreak)
+    sweep_pars = dict(location =  ['seattle_metro', 'Spokane_County', 'Franklin_County', 'Island_County'])
 
     if not args.outbreak:
-        sweep_pars = dict(location =  ['seattle_metro', 'Spokane_County', 'Franklin_County', 'Island_County'])
+
         xvar = 'Prevalence Target'
 
         # Create and run
@@ -33,13 +34,12 @@ if __name__ == '__main__':
         mgr.tsplots()
 
     else:
-        sweep_pars = {
+        sweep_pars.update({
             'n_prev': 0, # No controller
             'school_start_date': '2021-02-01',
             'school_seed_date': '2021-02-01',
             #'screen_keys':  ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w'],
-            'location': ['seattle_metro', 'Spokane_County', 'Franklin_County', 'Island_County'],
-        }
+        })
 
         pop_size = sct.config.sim_pars.pop_size
         sim_pars = {

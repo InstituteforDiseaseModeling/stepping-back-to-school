@@ -22,15 +22,20 @@ if __name__ == '__main__':
     levels = [{'keyname':'In-school transmission multiplier', 'level':npi_scens, 'func':'screenpars_func'}]
     xvar = 'In-school transmission multiplier'
     huevar = None
+    pop_size = sct.config.sim_pars.pop_size
 
-    if args.outbreak:
+    if not args.outbreak:
+        name = 'BetaSchool'
+        sim_pars = dict(pop_size=pop_size, end_day='2021-04-30')
+        sweep_pars = dict(n_reps=10, prev=[0.002, 0.007, 0.014])
+    else:
+        name = 'OutbreakBetaSchool'
         sweep_pars = {
             'n_prev': 0, # No controller
             'school_start_date': '2021-02-01',
             'school_seed_date': '2021-02-01',
         }
 
-        pop_size = sct.config.sim_pars.pop_size
         sim_pars = {
             'pop_infected': 0, # Do not seed
             'pop_size': pop_size,
@@ -39,12 +44,9 @@ if __name__ == '__main__':
             'beta_layer': dict(w=0, c=0), # Turn off work and community transmission
         }
 
-    else:
-        sim_pars = dict(pop_size=223_000, end_day='2021-04-30')
-        sweep_pars = dict(n_reps=10, prev=[0.002, 0.007, 0.014])
 
     # Create and run
-    mgr = sct.Manager(name='BetaSchool', sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
+    mgr = sct.Manager(name=name, sweep_pars=sweep_pars, sim_pars=sim_pars, levels=levels)
     mgr.run(args.force)
     analyzer = mgr.analyze()
 
