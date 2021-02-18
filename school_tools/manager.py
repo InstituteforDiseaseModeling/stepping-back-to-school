@@ -20,7 +20,7 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'create_run_sim', 'run_configs', 'alternate_symptomaticity']
+__all__ = ['Config', 'Builder', 'Manager', 'Vaccine', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
 
 
 class Config:
@@ -64,9 +64,14 @@ class Builder:
         scens = {k:v for k,v in all_scen.items() if k in sweep_pars.schcfg_keys}
         self.add_level('scen_key', scens, self.scen_func)
 
-        if sweep_pars.alt_sus:
-            value_labels = {'Yes' if p else 'No':p for p in [True]}
-            self.add_level('AltSus', value_labels, alternate_symptomaticity)
+        value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_symp}
+        self.add_level('AltSymp', value_labels, alternate_symptomaticity)
+
+        value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_sus}
+        self.add_level('AltSus', value_labels, alternate_susceptibility)
+
+        print('ADDING VACCINATION')
+        self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
@@ -100,6 +105,13 @@ class Builder:
                 spec.update(screenpar)
         return config
 
+    @staticmethod
+    def add_intervention_func(config, key, intv):
+        print(f'Building intervention {key}')
+        if intv is not None:
+            print(f'Adding {intv} to interventions')
+            config.interventions += sc.dcp(sc.sc_utils.promotetolist(intv))
+        return config
 
     @staticmethod
     def simpars_func(config, key, simpar): # Generic to screen pars, move to builder
@@ -238,7 +250,7 @@ class Manager(sc.objdict):
         self.analyze(rerun=False)
         self.analyzer.introductions_rate(xvar, huevar, height=height, aspect=aspect)
         self.analyzer.introductions_rate_by_stype(xvar, height=height, aspect=aspect)
-        self.analyzer.outbreak_reg(xvar, huevar, height=height, aspect=aspect)
+        self.analyzer.outbreak_reg_facet(xvar, huevar, height=height, aspect=aspect)
 
         return
 
@@ -270,6 +282,28 @@ class Manager(sc.objdict):
             print(f'Loading {self.cachefn}')
             self.sims = cv.load(self.cachefn) # Use for *.sims
         return
+
+
+class Vaccine(cv.Intervention):
+    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0):
+        self._store_args()
+        self.cov = dict(teachers=teacher_cov, staff=staff_cov, students=student_cov)
+        self.mult = dict(rel_sus=rel_sus_mult, symp_prob=symp_prob_mult) # Could range check
+
+    def initialize(self, sim):
+        sch_ids = [sid for st in ['es', 'ms', 'hs'] for sid in sim.people.school_types[st]]
+        schoolpeople_uids = [uid for sid in sch_ids for uid in sim.people.schools[sid]]
+
+        for role, flag in zip(['students', 'teachers', 'staff'], [sim.people.student_flag, sim.people.teacher_flag, sim.people.staff_flag]):
+            cov = self.cov[role]
+            role_uids = [u for u in schoolpeople_uids if flag[u]]
+            # Choose who to vx
+            tovx = np.random.choice(role_uids, size=np.random.binomial(len(role_uids),cov), replace=False)
+            sim.people.rel_sus[tovx] *= self.mult['rel_sus']
+            sim.people.symp_prob[tovx] *= self.mult['symp_prob']
+
+    def apply(self, sim):
+        pass
 
 
 #%% Running
@@ -362,7 +396,27 @@ def alternate_symptomaticity(config, key, value):
     symp_probs[ages<20] = 0.1809
     prog['symp_probs'] = symp_probs
 
-    config.sim_pars['prognoses'] = sc.dcp(prog) # Ugh
+    config.sim_pars['prognoses'] = sc.dcp(prog)
+
+    return config
+
+
+def alternate_susceptibility(config, key, value):
+    print(f'Building alternate symptomaticity {key}={value}')
+    if not value: # Only build if value is True
+        return config
+    if 'prognoses' in config.sim_pars:
+        prog = config.sim_pars['prognoses']
+    else:
+        pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **config.sim_pars)
+        prog = pars['prognoses']
+
+    ages = prog['age_cutoffs']
+    sus_ORs = prog['sus_ORs']
+    sus_ORs[ages<20] = 1-0.44 # Make children <10 44% less susceptible.  Paper says "lower odds of secondary infection" - 
+    prog['sus_ORs'] = sus_ORs
+
+    config.sim_pars['prognoses'] = sc.dcp(prog)
 
     return config
 
