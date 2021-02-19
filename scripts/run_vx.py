@@ -14,7 +14,7 @@ if __name__ == '__main__':
     perfect_vx = sct.SchoolVaccine(rel_sus_mult=0, symp_prob_mult=0, teacher_cov=1, staff_cov=1, student_cov=0)
 
     sweep_pars = {
-            'vaccine': {'None':None, 'Prefect Vaccine':[perfect_vx]},
+            'vaccine': {'None':None, 'Perfect Vaccine':[perfect_vx]},
         }
     pop_size = sct.config.sim_pars.pop_size
     huevar = 'Vaccination'
