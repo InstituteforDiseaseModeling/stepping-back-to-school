@@ -120,14 +120,6 @@ class Builder:
         return config
 
     @staticmethod
-    def add_sus(config, key, val):
-        print(f'Building susceptibility {key}={simpar}')
-        print(key)
-        print(val)
-        exit()
-        return config
-
-    @staticmethod
     def simpars_func(config, key, simpar): # Generic to screen pars, move to builder
         print(f'Building simulation parameter {key}={simpar}')
         config.sim_pars.update(simpar)
