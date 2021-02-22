@@ -86,16 +86,16 @@ class IntroCalc(sc.objdict):
         self.immunity     = immunity
         self.n_days       = n_days
         self.n_samples    = n_samples
-        self.diagnostic   = str(diagnostic)
-        self.scheduling   = str(scheduling)
-        self.symp         = str(symp)
+        self.diagnostic   = str(diagnostic).lower() # Allow None = 'None' = 'none'
+        self.scheduling   = str(scheduling).lower()
+        self.symp         = str(symp).lower()
         self.seed         = seed
 
         # Set efficacies
         self.eff = sc.objdict()
-        self.eff.diagnostic = sc.odict({None:1, 'weekly':0.5, 'fortnightly':0.75})
-        self.eff.scheduling = sc.odict({None:1, 'hybrid':0.75})
-        self.eff.symp = sc.odict({None:1, 'all':0.67})
+        self.eff.diagnostic = sc.odict({'none':1, 'weekly':0.5, 'fortnightly':0.75})
+        self.eff.scheduling = sc.odict({'none':1, 'hybrid':0.75})
+        self.eff.symp       = sc.odict({'none':1, 'all':0.67})
 
         # Finalize
         self.initialize()
