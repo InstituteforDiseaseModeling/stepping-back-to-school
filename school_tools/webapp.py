@@ -194,7 +194,7 @@ def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs
     # Create or load the initial population
     if force or not os.path.isfile(popfile):
         print(f'Recreating population and saving to {popfile}...')
-        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, community_contacts=0, rm_layers=['w','c'], **kwargs)
+        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, community_contacts=0, rm_layers=['w'], **kwargs)
         pop = cvsch.make_population(**kwargs, rand_seed=seed)
     else:
         print(f'Loading population from {popfile}...')

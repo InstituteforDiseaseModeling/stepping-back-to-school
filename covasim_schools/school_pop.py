@@ -218,7 +218,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
 
     if rm_layers is not None:
         for lkey in rm_layers:
-            people.contacts.lkey = cv.Layer() # Replace with an empty layer
+            people.contacts[lkey] = cv.Layer() # Replace with an empty layer -- warning, can cause problems!
 
     if do_save:
         print(f'Saving to "{popfile}"...')
