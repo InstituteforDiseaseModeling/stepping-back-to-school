@@ -205,16 +205,14 @@ def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs
 
 class OutbreakCalc:
 
-    def __init__(self, pop_size=None, prev=None, immunity=None, n_days=None, diagnostic=None, scheduling=None, symp=None, seed=None, force=False, **kwargs):
+    def __init__(self, pop_size=None, prev=None, n_days=None, diagnostic=None, scheduling=None, symp=None, seed=None, force=False, **kwargs):
         '''
         Wrapper for the Manager to handle common tasks.
 
         Args:
             pop_size (int)      : number of people
             prev (float)        : prevalence in the community
-            immunity (float)    : immunity level (fraction)
             n_days (int)        : number of days to calculate over
-            n_samples (int)     : number of trials to calculate per school
             diagnostic (str)    : type of diagnostic testing; options are None, 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None or 'hybrid'
             symp (str)          : type of symptom screening; options are None or 'all'
@@ -224,12 +222,10 @@ class OutbreakCalc:
         '''
         if pop_size is None: pop_size = 20e3
         if prev is None: prev = 0.02
-        if immunity is None: immunity = 0.1
         if n_days is None: n_days = 5
         if seed is None: seed = 1
         self.pop_size = pop_size
         self.prev = prev
-        self.immunity = immunity
         self.n_days = n_days
         self.diagnostic = diagnostic
         self.scheduling = scheduling
