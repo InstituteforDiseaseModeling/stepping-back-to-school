@@ -16,9 +16,9 @@ def test_load_trimmed_pop(**kwargs):
     return pop
 
 
-def test_outbreak_calc(**kwargs):
+def test_outbreak_calc():
     ''' Test tree plotting '''
-    ocalc, fig = sct.plot_outbreaks(**kwargs)
+    ocalc, fig = sct.plot_outbreaks(prev=0.02, diagnostic='none', scheduling='none', symp='none')
     data = ocalc.to_dict()
     return ocalc, fig, data
 

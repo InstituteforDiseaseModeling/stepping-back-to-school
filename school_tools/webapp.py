@@ -15,6 +15,19 @@ import covasim_schools as cvsch
 from . import config as cfg
 from . import manager as man
 
+def get_diagnostic_keys(key=None):
+    ''' Get diagnostic keys, or check that one is valid '''
+    keys = ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w']
+    return keys
+
+def check_diagnostic_key(key):
+    keys = get_diagnostic_keys()
+    if key not in keys:
+        errormsg = f'Key "{key}" not valid; choices are {keys}'
+        raise sc.KeyNotFoundError(errormsg)
+    return key
+
+
 
 def get_school_sizes(es=1, ms=1, hs=1):
     ''' Get school sizes from different schools '''
@@ -53,18 +66,18 @@ class IntroCalc(sc.objdict):
         This is then used as the rate of a Poisson process to calculate a distribution of introductions for each school.
 
         Args:
-            es (int)            : number of elementary schools
-            ms (int)            : number of middle schools
-            hs (int)            : number of high schools
+            es (int)            : number of elementary schools [range: 0,~10]
+            ms (int)            : number of middle schools [range: 0,~10]
+            hs (int)            : number of high schools [range: 0,~10]
             school_sizes (dict) : use these supplied school sizes instead of calculating them
-            prev (float)        : prevalence, i.e. case rate per 100,000 over 14 days
-            immunity (float)    : immunity level (fraction)
-            n_days (int)        : number of days to calculate over
-            n_samples (int)     : number of trials to calculate per school
+            prev (float)        : prevalence, i.e. case rate per 100,000 over 14 days [range: 0,~1000]
+            immunity (float)    : immunity level (fraction) [range: 0,1]
+            n_days (int)        : number of days to calculate over [range: 1,~365]
+            n_samples (int)     : number of trials to calculate per school [range: 1,~1000]
             diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None/'None' or 'hybrid'
             symp (str)          : type of symptom screening; options are None/'None' or 'all'
-            seed (int)          : random seed to use
+            seed (int)          : random seed to use [range:0,~inf]
         '''
         # Set defaults
         if es        is None: es = 2
@@ -217,7 +230,7 @@ class OutbreakCalc:
             prev (float)        : prevalence in the community
             n_days (int)        : number of days to calculate over
             diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None/'none' or 'hybrid'
+            scheduling (str)    : type of scheduling; options are None/'none', 'with_countermeasures', 'all_hybrid', 'k5'
             symp (str)          : type of symptom screening; options are None/'none' or 'all'
             seed (int)          : random seed to use
             force (bool)        : whether to recreate the population
@@ -235,6 +248,7 @@ class OutbreakCalc:
         self.symp = symp
         self.seed = seed
         self.force = force
+        self.kwargs = kwargs
         self.initialize(**kwargs)
         return
 
@@ -246,7 +260,10 @@ class OutbreakCalc:
         cfg.sweep_pars.n_prev = None # ...and prevalence
         cfg.sweep_pars.prev = [self.prev]
         self.pop = load_trimmed_pop(pop_size=self.pop_size, seed=self.seed, force=self.force)
-        self.mgr = man.Manager(cfg=cfg, **kwargs)
+
+        # Make the manager
+        # cfg.sweep_pars.update(dict(screen_keys=[self.diagnostic], schcfg_keys=[self.scheduling]))
+        self.mgr = man.Manager(cfg=cfg, sweep_pars=cfg.sweep_pars, **kwargs)
         return
 
     def run(self):
