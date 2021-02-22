@@ -61,32 +61,35 @@ class IntroCalc(sc.objdict):
             immunity (float)    : immunity level (fraction)
             n_days (int)        : number of days to calculate over
             n_samples (int)     : number of trials to calculate per school
-            diagnostic (str)    : type of diagnostic testing; options are None, 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None or 'hybrid'
-            symp (str)          : type of symptom screening; options are None or 'all'
+            diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
+            scheduling (str)    : type of scheduling; options are None/'None' or 'hybrid'
+            symp (str)          : type of symptom screening; options are None/'None' or 'all'
             seed (int)          : random seed to use
         '''
-        if es is None: es = 2
-        if ms is None: ms = 2
-        if hs is None: hs = 2
-        if prev is None: prev = 50
-        if immunity is None: immunity = 0.1
-        if n_days is None: n_days = 5
+        # Set defaults
+        if es        is None: es = 2
+        if ms        is None: ms = 2
+        if hs        is None: hs = 2
+        if prev      is None: prev = 50
+        if immunity  is None: immunity = 0.1
+        if n_days    is None: n_days = 5
         if n_samples is None: n_samples = 200
         self.stypes = ['es', 'ms', 'hs']
         self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')
-        self.es = es
-        self.ms = ms
-        self.hs = hs
+
+        # Store values
+        self.es           = es
+        self.ms           = ms
+        self.hs           = hs
         self.school_sizes = school_sizes
-        self.prev = prev
-        self.immunity = immunity
-        self.n_days = n_days
-        self.n_samples = n_samples
-        self.diagnostic = diagnostic
-        self.scheduling = scheduling
-        self.symp = symp
-        self.seed = seed
+        self.prev         = prev
+        self.immunity     = immunity
+        self.n_days       = n_days
+        self.n_samples    = n_samples
+        self.diagnostic   = str(diagnostic)
+        self.scheduling   = str(scheduling)
+        self.symp         = str(symp)
+        self.seed         = seed
 
         # Set efficacies
         self.eff = sc.objdict()
@@ -213,9 +216,9 @@ class OutbreakCalc:
             pop_size (int)      : number of people
             prev (float)        : prevalence in the community
             n_days (int)        : number of days to calculate over
-            diagnostic (str)    : type of diagnostic testing; options are None, 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None or 'hybrid'
-            symp (str)          : type of symptom screening; options are None or 'all'
+            diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
+            scheduling (str)    : type of scheduling; options are None/'none' or 'hybrid'
+            symp (str)          : type of symptom screening; options are None/'none' or 'all'
             seed (int)          : random seed to use
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
