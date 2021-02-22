@@ -163,7 +163,10 @@ def create_sim(params=None, folder=None, popfile=None, popfile_stem=None, max_po
 
 
     #%% Handle population -- NB, although called popfile, might be a People object
-    if load_pop: # Load from disk -- normal usage
+    if people is not None: # People is supplied; use that
+        popfile = people
+        print('Note: using supplied people')
+    elif load_pop: # Load from disk -- normal usage
         if max_pop_seeds is None: # TODO: make logic here simpler
             max_pop_seeds = cfg.sweep_pars.n_pops
         if max_pop_seeds is None:
@@ -179,9 +182,6 @@ def create_sim(params=None, folder=None, popfile=None, popfile_stem=None, max_po
             else:
                 errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
                 raise FileNotFoundError(errormsg)
-    elif people is not None: # People is supplied; use that
-        popfile = people
-        print('Note: using supplied people')
     else: # Generate
         print('Note: population not supplied; regenerating...')
         popfile = cvsch.make_population(pop_size=p.pop_size, rand_seed=p.rand_seed, max_pop_seeds=max_pop_seeds, do_save=False)
