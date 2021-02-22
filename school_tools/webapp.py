@@ -2,13 +2,17 @@
 Functions to support the webapp
 '''
 
+import os
 import numpy as np
 import pandas as pd
 import sciris as sc
-import pylab as pl
+# import pylab as pl
 import seaborn as sns
 import synthpops as sp
 import covasim as cv
+import covasim_schools as cvsch
+from . import config as cfg
+from . import manager as man
 
 
 def get_school_sizes(es=1, ms=1, hs=1):
@@ -59,6 +63,7 @@ class IntroCalc(sc.objdict):
             diagnostic (str)    : type of diagnostic testing; options are None, 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None or 'hybrid'
             symp (str)          : type of symptom screening; options are None or 'all'
+            seed (int)          : random seed to use
         '''
         if es is None: es = 2
         if ms is None: ms = 2
@@ -156,9 +161,119 @@ class IntroCalc(sc.objdict):
         return ax
 
 
+    def to_json(self):
+        return self.samples.to_json()
+
+
+    def to_dict(self):
+        return self.samples.to_dict()
+
+
 
 def plot_introductions(**kwargs):
     ''' Plot introduction rate '''
     icalc = IntroCalc(**kwargs)
     ax = icalc.plot()
     return icalc, ax
+
+
+def webapp_popfile(popfile, pop_size, seed):
+    ''' Get a consistent name for the population file '''
+    if popfile is None:
+        popfile = os.path.join(cfg.paths.inputs, f'webapp_{pop_size/1e3:g}k_seed{seed:g}.pop')
+    return popfile
+
+
+def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs):
+    ''' Create a full population, and then trim it down to just the schools '''
+
+    popfile = webapp_popfile(popfile, pop_size, seed)
+
+    # Create or load the initial population
+    if force or not os.path.isfile(popfile):
+        print(f'Recreating population and saving to {popfile}...')
+        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, community_contacts=0, rm_layers=['w','c'], **kwargs)
+        pop = cvsch.make_population(**kwargs, rand_seed=seed)
+    else:
+        print(f'Loading population from {popfile}...')
+        pop = cv.load(popfile)
+
+    return pop
+
+
+class OutbreakCalc:
+
+    def __init__(self, pop_size=None, immunity=None, n_days=None, diagnostic=None, scheduling=None, symp=None, seed=None, force=False, **kwargs):
+        '''
+        Wrapper for the Manager to handle common tasks.
+
+        Args:
+            immunity (float)    : immunity level (fraction)
+            n_days (int)        : number of days to calculate over
+            n_samples (int)     : number of trials to calculate per school
+            diagnostic (str)    : type of diagnostic testing; options are None, 'weekly', 'fortnightly'
+            scheduling (str)    : type of scheduling; options are None or 'hybrid'
+            symp (str)          : type of symptom screening; options are None or 'all'
+            seed (int)          : random seed to use
+            force (bool)        : whether to recreate the population
+            kwargs (dict)       : passed to Manager()
+        '''
+        if pop_size is None: pop_size = 20e3
+        if immunity is None: immunity = 0.1
+        if n_days is None: n_days = 5
+        if seed is None: seed = 1
+        self.stypes = ['es', 'ms', 'hs']
+        self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')
+        self.pop_size = pop_size
+        self.immunity = immunity
+        self.n_days = n_days
+        self.diagnostic = diagnostic
+        self.scheduling = scheduling
+        self.symp = symp
+        self.seed = seed
+        self.force = force
+        self.initialize(**kwargs)
+        return
+
+    def initialize(self, **kwargs):
+        self.is_run = False
+        self.is_analyzed = False
+        cfg.set_micro()
+        cfg.pop_size = self.pop_size
+        self.config = sc.dcp(cfg)
+        self.pop = load_trimmed_pop(pop_size=self.pop_size, seed=self.seed, force=self.force)
+        self.mgr = man.Manager(cfg=self.config, **kwargs)
+        return
+
+    def run(self):
+        ''' Rerun the analysis, with the custom population '''
+        self.mgr.run(force=True, people=self.pop)
+        self.is_run = True
+        return
+
+    def analyze(self):
+        if not self.is_run:
+            self.run()
+        self.analyzer = self.mgr.analyze()
+        self.is_analyzed = True
+        return
+
+    def plot(self):
+        xvar = 'Prevalence Target'
+        if not self.is_analyzed:
+            self.analyze()
+        return self.analyzer.outbreak_size_plot(xvar=xvar)
+
+    def to_json(self):
+        return self.analyzer.outbreaks.to_json()
+
+    def to_dict(self):
+        return self.analyzer.outbreaks.to_dict()
+
+
+
+def plot_outbreaks(**kwargs):
+    ''' Plot introduction rate '''
+    ocalc = OutbreakCalc(**kwargs)
+    fig = ocalc.plot()
+    return ocalc, fig

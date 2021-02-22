@@ -275,12 +275,12 @@ class Manager(sc.objdict):
         return self.analyzer.plot_several_timeseries(ts_plots)
 
 
-    def run(self, force=False):
-        ''' Run the sims, or load them from disk '''
+    def run(self, force=False, **kwargs):
+        ''' Run the sims, or load them from disk. Kwargs are passed to run_configs, then create_run_sim, then create_sim. '''
 
         if force or not os.path.isfile(self.cachefn):
             sim_configs = self.build_configs()
-            self.sims = run_configs(sim_configs, self.stem, self.run_pars, self.cachefn) # why is stem needed here?
+            self.sims = run_configs(sim_configs=sim_configs, run_cfg=self.run_pars, filename=self.cachefn, **kwargs)
         else:
             print(f'Loading {self.cachefn}')
             self.sims = cv.load(self.cachefn) # Use for *.sims
@@ -401,7 +401,7 @@ class CohortRewiring(cv.Intervention):
 
 
 #%% Running
-def create_run_sim(sconf, n_sims, run_config):
+def create_run_sim(sconf, n_sims, run_config, **kwargs):
     ''' Create and run the actual simulations '''
 
     label = f'sim {sconf.count} of {n_sims}'
@@ -415,7 +415,7 @@ def create_run_sim(sconf, n_sims, run_config):
         n_pops = n_reps
     if n_pops < n_reps:
         print(f'Note: you are running with n_reps={n_reps} repetitions, but only n_pops={n_pops}: populations will be resampled')
-    sim = cr.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=n_pops, label=label)
+    sim = cr.create_sim(sconf.sim_pars, folder=None, max_pop_seeds=n_pops, label=label, **kwargs)
 
     for intv in sconf.interventions:
         sim['interventions'].append(intv)
@@ -430,13 +430,14 @@ def create_run_sim(sconf, n_sims, run_config):
     return sim
 
 
-def run_configs(sim_configs, stem, run_cfg, filename=None):
+def run_configs(sim_configs, stem, run_cfg, filename=None, **kwargs):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
     sc.heading('Running sims...')
     TT = sc.tic()
-    kwargs = dict(n_sims=len(sim_configs), run_config=run_cfg)
+    crs_kwargs = dict(n_sims=len(sim_configs), run_config=run_cfg)
+    crs_kwargs.update(kwargs) # Add any other kwargs
     if run_cfg['parallel']: # pragma: no cover
         print('...running in parallel')
 
@@ -451,12 +452,12 @@ def run_configs(sim_configs, stem, run_cfg, filename=None):
         else:
             print(f'Using user-specified {n_cpus} CPUs')
 
-        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=kwargs, ncpus=n_cpus)
+        sims = sc.parallelize(create_run_sim, iterarg=sim_configs, kwargs=crs_kwargs, ncpus=n_cpus)
     else:
         print('...running in serial')
         sims = []
         for sconf in sim_configs:
-            sim = create_run_sim(sconf, **kwargs)
+            sim = create_run_sim(sconf, **crs_kwargs)
             sims.append(sim)
 
     if filename is not None:
