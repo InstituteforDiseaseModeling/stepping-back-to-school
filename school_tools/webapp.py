@@ -194,7 +194,7 @@ def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs
     # Create or load the initial population
     if force or not os.path.isfile(popfile):
         print(f'Recreating population and saving to {popfile}...')
-        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, community_contacts=0, rm_layers=['w'], **kwargs)
+        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, **kwargs) # Attempts to use community_contacts=0, rm_layers=['w','c','l'] failed
         pop = cvsch.make_population(**kwargs, rand_seed=seed)
     else:
         print(f'Loading population from {popfile}...')
@@ -222,7 +222,7 @@ class OutbreakCalc:
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
         '''
-        if pop_size is None: pop_size = 20e3
+        if pop_size is None: pop_size = 50e3
         if prev is None: prev = 0.02
         if immunity is None: immunity = 0.1
         if n_days is None: n_days = 5

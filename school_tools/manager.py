@@ -440,8 +440,7 @@ def run_configs(sim_configs, run_cfg, filename=None, **kwargs):
     crs_kwargs.update(kwargs) # Add any other kwargs
     if run_cfg['parallel']: # pragma: no cover
         print('...running in parallel')
-
-        sc.heading('Choosing correct number of CPUs...') # TODO: merge with create_pops.py
+        print('Choosing correct number of CPUs...') # TODO: merge with create_pops.py
         if n_cpus is None:
             cpu_limit = int(mp.cpu_count()*run_cfg['cpu_thresh']) # Don't use more than 75% of available CPUs
             ram_available = psutil.virtual_memory().available/1e9

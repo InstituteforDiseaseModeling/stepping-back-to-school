@@ -17,7 +17,7 @@ def test_load_trimmed_pop(**kwargs):
 
 def test_outbreak_calc(**kwargs):
     ''' Test tree plotting '''
-    ocalc, fig = sct.plot_outbreaks(force=True, **kwargs)
+    ocalc, fig = sct.plot_outbreaks(**kwargs)
     data = ocalc.to_dict()
     return ocalc, fig, data
 
@@ -25,4 +25,4 @@ if __name__ == '__main__':
 
     # icalc, fig = test_intro_calc()
     # pop = test_load_trimmed_pop()
-    ocalc, fig, data = test_outbreak_calc(pop_size=39e3)
+    ocalc, fig, data = test_outbreak_calc()
