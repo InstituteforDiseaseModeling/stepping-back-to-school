@@ -160,10 +160,5 @@ class IntroCalc(sc.objdict):
 def plot_introductions(**kwargs):
     ''' Plot introduction rate '''
     icalc = IntroCalc(**kwargs)
-    fig = icalc.plot()
-    return icalc
-
-
-if __name__ == '__main__':
-
-    icalc = plot_introductions(es=4, ms=3, hs=2)
+    ax = icalc.plot()
+    return icalc, ax
