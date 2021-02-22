@@ -6,9 +6,10 @@ import os
 import numpy as np
 import pandas as pd
 import sciris as sc
-# import pylab as pl
+import pylab as pl
 import seaborn as sns
 import synthpops as sp
+import networkx as nx
 import covasim as cv
 import covasim_schools as cvsch
 from . import config as cfg
@@ -158,7 +159,8 @@ class IntroCalc(sc.objdict):
         ax.set_xticks([])
         ax.set_xlabel('Schools')
         ax.set_ylabel(f'Expected introductions over {self.n_days} days')
-        return ax
+        fig = pl.gcf()
+        return fig
 
 
     def to_json(self):
@@ -173,8 +175,8 @@ class IntroCalc(sc.objdict):
 def plot_introductions(**kwargs):
     ''' Plot introduction rate '''
     icalc = IntroCalc(**kwargs)
-    ax = icalc.plot()
-    return icalc, ax
+    fig = icalc.plot()
+    return icalc, fig
 
 
 def webapp_popfile(popfile, pop_size, seed):
@@ -203,11 +205,13 @@ def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs
 
 class OutbreakCalc:
 
-    def __init__(self, pop_size=None, immunity=None, n_days=None, diagnostic=None, scheduling=None, symp=None, seed=None, force=False, **kwargs):
+    def __init__(self, pop_size=None, prev=None, immunity=None, n_days=None, diagnostic=None, scheduling=None, symp=None, seed=None, force=False, **kwargs):
         '''
         Wrapper for the Manager to handle common tasks.
 
         Args:
+            pop_size (int)      : number of people
+            prev (float)        : prevalence in the community
             immunity (float)    : immunity level (fraction)
             n_days (int)        : number of days to calculate over
             n_samples (int)     : number of trials to calculate per school
@@ -219,12 +223,12 @@ class OutbreakCalc:
             kwargs (dict)       : passed to Manager()
         '''
         if pop_size is None: pop_size = 20e3
+        if prev is None: prev = 0.02
         if immunity is None: immunity = 0.1
         if n_days is None: n_days = 5
         if seed is None: seed = 1
-        self.stypes = ['es', 'ms', 'hs']
-        self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')
         self.pop_size = pop_size
+        self.prev = prev
         self.immunity = immunity
         self.n_days = n_days
         self.diagnostic = diagnostic
@@ -238,11 +242,12 @@ class OutbreakCalc:
     def initialize(self, **kwargs):
         self.is_run = False
         self.is_analyzed = False
-        cfg.set_micro()
-        cfg.pop_size = self.pop_size
-        self.config = sc.dcp(cfg)
+        cfg.set_micro() # Use this for most settings
+        cfg.sim_pars.pop_size = self.pop_size # ...but override population size
+        cfg.sweep_pars.n_prev = None # ...and prevalence
+        cfg.sweep_pars.prev = [self.prev]
         self.pop = load_trimmed_pop(pop_size=self.pop_size, seed=self.seed, force=self.force)
-        self.mgr = man.Manager(cfg=self.config, **kwargs)
+        self.mgr = man.Manager(cfg=cfg, **kwargs)
         return
 
     def run(self):
@@ -264,16 +269,23 @@ class OutbreakCalc:
             self.analyze()
         return self.analyzer.outbreak_size_plot(xvar=xvar)
 
-    def to_json(self):
-        return self.analyzer.outbreaks.to_json()
-
     def to_dict(self):
-        return self.analyzer.outbreaks.to_dict()
+        ''' Only return the outbreak part of the data structure '''
+        data = self.analyzer.outbreaks.to_dict()
+        for k in data['outbreak'].keys():
+            data['outbreak'][k]['sim'] = data['sim'][k]
+            data['outbreak'][k]['school'] = data['school'][k]
+            data['outbreak'][k]['Tree'] = nx.readwrite.json_graph.node_link_data(data['outbreak'][k]['Tree'])
+        return data['outbreak']
 
+    def to_json(self):
+        data = self.to_dict()
+        return sc.jsonify(data, tostring=True)
 
 
 def plot_outbreaks(**kwargs):
     ''' Plot introduction rate '''
     ocalc = OutbreakCalc(**kwargs)
-    fig = ocalc.plot()
+    ocalc.plot()
+    fig = pl.gcf()
     return ocalc, fig

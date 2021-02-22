@@ -430,7 +430,7 @@ def create_run_sim(sconf, n_sims, run_config, **kwargs):
     return sim
 
 
-def run_configs(sim_configs, stem, run_cfg, filename=None, **kwargs):
+def run_configs(sim_configs, run_cfg, filename=None, **kwargs):
     n_cpus = run_cfg['n_cpus']
     pop_size = max([c.sim_pars['pop_size'] for c in sim_configs])
 
