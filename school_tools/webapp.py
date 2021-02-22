@@ -222,7 +222,7 @@ class OutbreakCalc:
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
         '''
-        if pop_size is None: pop_size = 50e3
+        if pop_size is None: pop_size = 20e3
         if prev is None: prev = 0.02
         if immunity is None: immunity = 0.1
         if n_days is None: n_days = 5

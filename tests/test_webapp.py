@@ -8,7 +8,8 @@ import school_tools as sct
 def test_intro_calc():
     ''' Test introductions calculator '''
     icalc, fig = sct.plot_introductions(es=4, ms=3, hs=2)
-    return icalc, fig
+    data = icalc.to_dict()
+    return icalc, fig, data
 
 def test_load_trimmed_pop(**kwargs):
     pop = sct.load_trimmed_pop(pop_size=5e3, force=True, **kwargs)
@@ -23,6 +24,6 @@ def test_outbreak_calc(**kwargs):
 
 if __name__ == '__main__':
 
-    # icalc, fig = test_intro_calc()
+    icalc, fig, data = test_intro_calc()
     # pop = test_load_trimmed_pop()
     ocalc, fig, data = test_outbreak_calc()
