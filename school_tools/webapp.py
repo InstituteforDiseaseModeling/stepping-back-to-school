@@ -72,7 +72,7 @@ class IntroCalc(sc.objdict):
         if hs        is None: hs = 2
         if prev      is None: prev = 50
         if immunity  is None: immunity = 0.1
-        if n_days    is None: n_days = 5
+        if n_days    is None: n_days = 30
         if n_samples is None: n_samples = 200
         self.stypes = ['es', 'ms', 'hs']
         self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')

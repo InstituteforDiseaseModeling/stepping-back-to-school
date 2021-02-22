@@ -7,7 +7,7 @@ import school_tools as sct
 
 def test_intro_calc():
     ''' Test introductions calculator '''
-    icalc, fig = sct.plot_introductions(es=4, ms=3, hs=2)
+    icalc, fig = sct.plot_introductions(es=4, ms=3, hs=2, prev=50, immunity=0.1, n_days=30, diagnostic='none', scheduling='none', symp='none')
     data = icalc.to_dict()
     return icalc, fig, data
 
