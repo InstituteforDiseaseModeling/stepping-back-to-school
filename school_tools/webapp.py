@@ -57,7 +57,8 @@ def days_to_weekdays(days):
 
 class IntroCalc(sc.objdict):
 
-    def __init__(self, es=None, ms=None, hs=None, prev=None, school_sizes=None, immunity=None, n_days=None, n_samples=None, diagnostic=None, scheduling=None, symp=None, seed=None):
+    def __init__(self, es=None, ms=None, hs=None, prev=None, school_sizes=None, immunity=None,
+                 n_days=None, n_samples=None, diagnostic=None, scheduling=None, seed=None):
         '''
         Simple class to calculate and plot introduction rates. The equation is roughly:
 
@@ -70,13 +71,12 @@ class IntroCalc(sc.objdict):
             ms (int)            : number of middle schools [range: 0,~10]
             hs (int)            : number of high schools [range: 0,~10]
             school_sizes (dict) : use these supplied school sizes instead of calculating them
-            prev (float)        : prevalence, i.e. case rate per 100,000 over 14 days [range: 0,~1000]
+            prev (float)        : COVID prevalence, in percent [range: 0,100]
             immunity (float)    : immunity level (fraction) [range: 0,1]
             n_days (int)        : number of days to calculate over [range: 1,~365]
             n_samples (int)     : number of trials to calculate per school [range: 1,~1000]
             diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None/'None' or 'hybrid'
-            symp (str)          : type of symptom screening; options are None/'None' or 'all'
+            scheduling (str)    : type of scheduling; options are None/'None', 'with_countermeasures', 'all_hybrid', 'k5'
             seed (int)          : random seed to use [range:0,~inf]
         '''
         # Set defaults
@@ -96,21 +96,21 @@ class IntroCalc(sc.objdict):
         self.hs           = hs
         self.school_sizes = school_sizes
         self.prev         = prev
+        self.prev_frac    = self.prev/100.0
         self.immunity     = immunity
         self.n_days       = n_days
+        self.n_weekdays   = days_to_weekdays(n_days)
         self.n_samples    = n_samples
         self.diagnostic   = str(diagnostic).lower() # Allow None = 'None' = 'none'
         self.scheduling   = str(scheduling).lower()
-        self.symp         = str(symp).lower()
         self.seed         = seed
 
         # Set efficacies
         self.eff = sc.objdict()
         self.eff.diagnostic = sc.odict({'none':1, 'weekly':0.5, 'fortnightly':0.75})
-        self.eff.scheduling = sc.odict({'none':1, 'hybrid':0.75})
-        self.eff.symp       = sc.odict({'none':1, 'all':0.67})
+        self.eff.scheduling = sc.odict({'none':1, 'with_countermeasures':0.67, 'all_hybrid':0.5})
 
-        # Finalize
+        # Finalize initialization
         self.initialize()
         return
 
@@ -139,14 +139,11 @@ class IntroCalc(sc.objdict):
             for s,sch_size in enumerate(self.school_sizes[sch_type]):
 
                 # Per person risk and immunity
-                risk_pp = 1-(1-self.prev/1e5)**self.n_days
+                risk_pp = 1-(1-self.prev_frac)**self.n_weekdays
                 immunity = 1 - self.immunity
 
                 # Interventions
-                interv = 1
-                interv *= self.eff.diagnostic[self.diagnostic]
-                interv *= self.eff.scheduling[self.scheduling]
-                interv *= self.eff.symp[self.symp]
+                interv = self.eff.diagnostic[self.diagnostic] * self.eff.scheduling[self.scheduling]
 
                 # Calculate the rate
                 rate = sch_size * risk_pp * immunity * interv
@@ -221,7 +218,7 @@ def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs
 
 class OutbreakCalc:
 
-    def __init__(self, pop_size=None, prev=None, n_days=None, diagnostic=None, scheduling=None, symp=None, seed=None, force=False, **kwargs):
+    def __init__(self, pop_size=None, prev=None, n_days=None, diagnostic=None, scheduling=None, seed=None, force=False, **kwargs):
         '''
         Wrapper for the Manager to handle common tasks.
 
@@ -231,24 +228,23 @@ class OutbreakCalc:
             n_days (int)        : number of days to calculate over
             diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None/'none', 'with_countermeasures', 'all_hybrid', 'k5'
-            symp (str)          : type of symptom screening; options are None/'none' or 'all'
             seed (int)          : random seed to use
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
         '''
         if pop_size is None: pop_size = 20e3
-        if prev is None: prev = 0.02
+        if prev is None: prev = 2.5
         if n_days is None: n_days = 5
         if seed is None: seed = 1
-        self.pop_size = pop_size
-        self.prev = prev
-        self.n_days = n_days
+        self.pop_size   = pop_size
+        self.prev       = prev
+        self.prev_frac  = prev/100
+        self.n_days     = n_days
         self.diagnostic = diagnostic
         self.scheduling = scheduling
-        self.symp = symp
-        self.seed = seed
-        self.force = force
-        self.kwargs = kwargs
+        self.seed       = seed
+        self.force      = force
+        self.kwargs     = kwargs
         self.initialize(**kwargs)
         return
 
@@ -258,7 +254,7 @@ class OutbreakCalc:
         cfg.set_micro() # Use this for most settings
         cfg.sim_pars.pop_size = self.pop_size # ...but override population size
         cfg.sweep_pars.n_prev = None # ...and prevalence
-        cfg.sweep_pars.prev = [self.prev]
+        cfg.sweep_pars.prev = [self.prev_frac]
         self.pop = load_trimmed_pop(pop_size=self.pop_size, seed=self.seed, force=self.force)
 
         # Make the manager
