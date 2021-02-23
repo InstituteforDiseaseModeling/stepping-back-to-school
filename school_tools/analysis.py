@@ -834,7 +834,7 @@ class Analysis:
         axv[1].legend()
 
         # Panel 2
-        self.outbreak_size_stacked_distrib(xvar, ax=axv[2])
+        self.outbreak_size_distrib(xvar, ax=axv[2])
         axv[2].set_xticks(xt)
         axv[2].set_xticklabels([])
         axv[2].set_xlabel('')
@@ -929,11 +929,11 @@ class Analysis:
         return g
 
 
-    def outbreak_size_stacked_distrib(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, ax=None):
+    def outbreak_size_distrib(self, xvar, rowvar=None, ext=None, height=6, aspect=1.4, ax=None):
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size Float'}, axis=1)
 
-        lbls = ['Source only', '2-4', '5-9', '10-24', '25+']
-        df['Outbreak Size'] = pd.cut(df['Outbreak Size Float'], bins=[1,2,5,10,25,10000], right=False, include_lowest=True, labels=lbls)
+        lbls = ['Source only', '2-3', '4-9', '10-24', '25+']
+        df['Outbreak Size'] = pd.cut(df['Outbreak Size Float'], bins=[1,2,4,10,25,10000], right=False, include_lowest=True, labels=lbls)
 
         sz = df.groupby([xvar, 'Outbreak Size']).size()
         sz.name='Count'

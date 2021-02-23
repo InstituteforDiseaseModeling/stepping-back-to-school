@@ -12,8 +12,15 @@ if __name__ == '__main__':
     outbreak = None # Set to True to force the outbreak version
     args = sct.config.process_inputs(sys.argv, outbreak=outbreak)
 
-    sweep_pars = dict(alt_sus=[False, True])
-    huevar = 'AltSus'
+    sweep_pars = {
+        'susceptibility': {
+            'Baseline: Children 0-9 33% and 10-19 66% as susceptible': None,
+            'Children <20 are 56% as susceptible': 'viner',
+            'Children <20 are fully susceptible': 'equal',
+        }
+    }
+
+    huevar = 'Susceptibility'
     pop_size = sct.config.sim_pars.pop_size
 
     if not args.outbreak:
@@ -63,7 +70,7 @@ if __name__ == '__main__':
         analyzer = mgr.analyze()
 
         # Plots
-        g = analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
+        g = analyzer.outbreak_size_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
         g = analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7,
         analyzer.exports_reg(xvar, huevar)
         analyzer.outbreak_reg_facet(xvar, huevar, ext='ppt')

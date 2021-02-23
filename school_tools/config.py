@@ -41,6 +41,7 @@ def get_defaults():
         alt_sus           = [False],
         vaccine           = {'None':None},
         cohort_rewiring   = {'None':None},
+        susceptibility    = {'Baseline': None},
     )
 
     run_pars = sc.objdict(

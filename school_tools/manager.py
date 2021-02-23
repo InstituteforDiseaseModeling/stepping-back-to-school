@@ -21,7 +21,7 @@ from . import config as cfg
 from . import create as cr
 
 
-__all__ = ['Config', 'Builder', 'Manager', 'SchoolVaccine', 'CohortRewiring', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'alternate_susceptibility']
+__all__ = ['Config', 'Builder', 'Manager', 'SchoolVaccine', 'CohortRewiring', 'create_run_sim', 'run_configs', 'alternate_symptomaticity', 'susceptibility_func']
 
 
 class Config:
@@ -70,12 +70,14 @@ class Builder:
         value_labels = {'Yes' if p else 'No':p for p in sweep_pars.alt_symp}
         self.add_level('AltSymp', value_labels, alternate_symptomaticity)
 
-        value_labels = {'Yes' if p else 'No':p for p in sc.promotetolist(sweep_pars.alt_sus, keepnone=True)}
-        self.add_level('AltSus', value_labels, alternate_susceptibility)
+        #value_labels = {'Yes' if p else 'No':p for p in sc.promotetolist(sweep_pars.alt_sus, keepnone=True)}
+        #self.add_level('AltSus', value_labels, alternate_susceptibility)
+        self.add_level('Susceptibility', sweep_pars.susceptibility, susceptibility_func)
 
         self.add_level('Cohort Mixing', sweep_pars.cohort_rewiring, self.add_intervention_func)
 
         self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
+
 
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
@@ -493,26 +495,32 @@ def alternate_symptomaticity(config, key, value):
     return config
 
 
-def alternate_susceptibility(config, key, value):
+def susceptibility_func(config, key, value):
     print(f'Building alternate symptomaticity {key}={value}')
-    if not value: # Only build if value is True
+    if value is None: # Only build if value is True
         return config
+
     if 'prognoses' in config.sim_pars:
         prog = config.sim_pars['prognoses']
     else:
         pars = cv.make_pars(set_prognoses=True, prog_by_age=True, **config.sim_pars)
         prog = pars['prognoses']
 
-    # Source: Susceptibility to SARS-CoV-2 Infection Among Children and Adolescents Compared With AdultsA Systematic Review and Meta-analysis
     ages = prog['age_cutoffs']
     sus_ORs = prog['sus_ORs']
-    sus_ORs[ages<20] = 0.56 #  In this meta-analysis, there is preliminary evidence that children and adolescents have lower susceptibility to SARS-CoV-2, with an odds ratio of 0.56 for being an infected contact compared with adults.
+    if value.lower() == 'viner':
+        # Source: Susceptibility to SARS-CoV-2 Infection Among Children and Adolescents Compared With AdultsA Systematic Review and Meta-analysis
+        sus_ORs[ages<20] = 0.56 #  In this meta-analysis, there is preliminary evidence that children and adolescents have lower susceptibility to SARS-CoV-2, with an odds ratio of 0.56 for being an infected contact compared with adults.
+    elif value.lower() == 'equal':
+        sus_ORs[ages<20] = 1 # Same for children as adults
+    else:
+        raise ValueError(f'Susceptibility value of {value} is unknown.')
+
     prog['sus_ORs'] = sus_ORs
 
     config.sim_pars['prognoses'] = sc.dcp(prog)
 
     return config
-
 
 def loc_func(config, key, value):
     print(f'Building location {key}={value}')

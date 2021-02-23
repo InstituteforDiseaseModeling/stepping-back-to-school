@@ -63,7 +63,7 @@ if __name__ == '__main__':
         analyzer = mgr.analyze()
 
         # Plots
-        analyzer.outbreak_size_stacked_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
+        analyzer.outbreak_size_distrib(xvar, rowvar=None, ext=None, height=6, aspect=2)
         analyzer.outbreak_multipanel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=12, aspect=1.0) # height=10, aspect=0.7,
         analyzer.exports_reg(xvar, huevar)
         analyzer.outbreak_reg_facet(xvar, huevar, ext='ppt')
