@@ -83,7 +83,7 @@ class IntroCalc(sc.objdict):
         if es        is None: es = 2
         if ms        is None: ms = 2
         if hs        is None: hs = 2
-        if prev      is None: prev = 50
+        if prev      is None: prev = 2.5
         if immunity  is None: immunity = 0.1
         if n_days    is None: n_days = 30
         if n_samples is None: n_samples = 200
