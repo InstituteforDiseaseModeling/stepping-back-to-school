@@ -15,10 +15,16 @@ import covasim_schools as cvsch
 from . import config as cfg
 from . import manager as man
 
+default_prev = 0.25 # Default prevalence, in percent (i.e. 0.25%, not 25%!)
+default_n_days = 7
+default_pop_size = 50e3
+
+
 def get_diagnostic_keys(key=None):
     ''' Get diagnostic keys, or check that one is valid '''
     keys = ['None', 'Antigen every 1w teach&staff', 'Antigen every 4w', 'Antigen every 2w', 'Antigen every 1w', 'PCR every 1w']
     return keys
+
 
 def check_diagnostic_key(key):
     keys = get_diagnostic_keys()
@@ -83,9 +89,9 @@ class IntroCalc(sc.objdict):
         if es        is None: es = 2
         if ms        is None: ms = 2
         if hs        is None: hs = 2
-        if prev      is None: prev = 2.5
+        if prev      is None: prev = default_prev
         if immunity  is None: immunity = 0.1
-        if n_days    is None: n_days = 30
+        if n_days    is None: n_days = default_n_days
         if n_samples is None: n_samples = 200
         self.stypes = ['es', 'ms', 'hs']
         self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')
@@ -233,9 +239,9 @@ class OutbreakCalc:
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
         '''
-        if pop_size is None: pop_size = 20e3
-        if prev is None: prev = 2.5
-        if n_days is None: n_days = 5
+        if pop_size is None: pop_size = default_pop_size
+        if prev is None: prev = default_prev
+        if n_days is None: n_days = default_n_days
         if seed is None: seed = 1
         self.pop_size   = pop_size
         self.prev       = prev
