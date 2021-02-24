@@ -2,8 +2,10 @@
 Copy of outbreak script to use for testing.
 '''
 
+import sciris as sc
 import numpy as np
 import school_tools as sct
+import pytest
 
 sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise, even with pytest-cov and if concurrency = multiprocess is included
 
@@ -108,6 +110,17 @@ def test_trees():
     return mgr
 
 
+def test_invalid():
+    ''' Test invalid scenarios '''
+    sct.config.set_micro()
+    sweep_pars = dict(screen_keys =  ['invalid_key'])
+    with pytest.raises(sc.KeyNotFoundError):
+        mgr = sct.Manager(sweep_pars=sweep_pars, cfg=sct.config)
+        mgr.run(force=True)
+        sct.config.set_default() # Back to default
+    return None
+
+
 if __name__ == '__main__':
 
     mgr1 = test_analysis(pop_size=10_000) # If run interactively, use a larger population size
@@ -116,5 +129,6 @@ if __name__ == '__main__':
     mgr4 = test_testing()
     mgr5 = test_alt_sus()
     mgr6 = test_trees()
+    test_invalid()
 
 

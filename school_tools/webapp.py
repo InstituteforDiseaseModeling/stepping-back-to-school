@@ -234,7 +234,7 @@ class OutbreakCalc:
             prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
             n_days (int)        : number of days to calculate over
             diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None/'none', 'with_countermeasures', 'all_hybrid', 'k5'
+            scheduling (str)    : type of scheduling; options are None/'as_normal', 'with_countermeasures', 'all_hybrid', 'k5'
             seed (int)          : random seed to use
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
@@ -247,8 +247,8 @@ class OutbreakCalc:
         self.prev       = prev
         self.prev_frac  = prev/100
         self.n_days     = n_days
-        self.diagnostic = diagnostic
-        self.scheduling = scheduling
+        self.diagnostic = 'None' if diagnostic in [None,'none'] else diagnostic
+        self.scheduling = 'as_normal' if scheduling in [None,'none','None'] else scheduling
         self.seed       = seed
         self.force      = force
         self.kwargs     = kwargs
@@ -265,12 +265,14 @@ class OutbreakCalc:
         self.pop = load_trimmed_pop(pop_size=self.pop_size, seed=self.seed, force=self.force)
 
         # Make the manager
-        # cfg.sweep_pars.update(dict(screen_keys=[self.diagnostic], schcfg_keys=[self.scheduling]))
+        cfg.sweep_pars.update(dict(screen_keys=[self.diagnostic], schcfg_keys=[self.scheduling]))
         self.mgr = man.Manager(cfg=cfg, sweep_pars=cfg.sweep_pars, **kwargs)
         return
 
     def run(self):
         ''' Rerun the analysis, with the custom population '''
+        print('#'*100)
+        print(self.mgr.sweep_pars)
         self.mgr.run(force=True, people=self.pop)
         self.is_run = True
         return

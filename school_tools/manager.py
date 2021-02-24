@@ -78,9 +78,20 @@ class Builder:
 
         self.add_level('Vaccination', sweep_pars.vaccine, self.add_intervention_func)
 
-
         all_screenings = scn.generate_screening(sweep_pars.school_start_date) # Potentially select a subset of diagnostic screenings
         screens = {k:v for k,v in all_screenings.items() if k in sweep_pars.screen_keys}
+
+        # Perform validation
+        all_scen_keys = list(all_scen.keys())
+        for k in sweep_pars.schcfg_keys:
+            if k not in all_scen_keys:
+                errormsg = f'Scenario key "{k}" not found; choices are: {all_scen_keys}'
+                raise sc.KeyNotFoundError(errormsg)
+        all_screen_keys = list(all_screenings.keys())
+        for k in sweep_pars.screen_keys:
+            if k not in all_screen_keys:
+                errormsg = f'Screening key "{k}" not found; choices are: {all_screen_keys}'
+                raise sc.KeyNotFoundError(errormsg)
 
         # Would like to reuse screenpars_func here
         def screen_func(config, key, test):
