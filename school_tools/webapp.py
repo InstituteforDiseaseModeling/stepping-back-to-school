@@ -71,7 +71,7 @@ class IntroCalc(sc.objdict):
             ms (int)            : number of middle schools [range: 0,~10]
             hs (int)            : number of high schools [range: 0,~10]
             school_sizes (dict) : use these supplied school sizes instead of calculating them
-            prev (float)        : COVID prevalence, in percent [range: 0,100]
+            prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
             immunity (float)    : immunity level (fraction) [range: 0,1]
             n_days (int)        : number of days to calculate over [range: 1,~365]
             n_samples (int)     : number of trials to calculate per school [range: 1,~1000]
@@ -224,7 +224,7 @@ class OutbreakCalc:
 
         Args:
             pop_size (int)      : number of people
-            prev (float)        : prevalence in the community
+            prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
             n_days (int)        : number of days to calculate over
             diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None/'none', 'with_countermeasures', 'all_hybrid', 'k5'
