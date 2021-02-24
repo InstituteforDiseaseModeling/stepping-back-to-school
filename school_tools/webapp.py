@@ -167,7 +167,8 @@ class IntroCalc(sc.objdict):
         return
 
 
-    def plot(self):
+    def plot(self, **kwargs):
+        fig = pl.figure(**kwargs)
         ax = sns.violinplot(x="sch_ind", y="introductions", hue="School", data=self.samples, cut=0)
         ax.set_xticks([])
         ax.set_xlabel('Schools')
