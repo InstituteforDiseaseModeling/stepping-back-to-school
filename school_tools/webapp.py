@@ -199,7 +199,7 @@ def webapp_popfile(popfile, pop_size, seed):
     return popfile
 
 
-def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs):
+def load_trimmed_pop(pop_size=50e3, seed=1, force=False, popfile=None, **kwargs):
     ''' Create a full population, and then trim it down to just the schools '''
 
     popfile = webapp_popfile(popfile, pop_size, seed)
@@ -207,7 +207,7 @@ def load_trimmed_pop(pop_size=100e3, seed=1, force=False, popfile=None, **kwargs
     # Create or load the initial population
     if force or not os.path.isfile(popfile):
         print(f'Recreating population and saving to {popfile}...')
-        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, **kwargs) # Attempts to use community_contacts=0, rm_layers=['w','c','l'] failed
+        kwargs = dict(pop_size=pop_size, location=cfg.pop_pars.location, folder=cfg.paths.inputs, popfile=popfile, **kwargs) # TODO: use community_contacts=0, rm_layers=['w','c','l']
         pop = cvsch.make_population(**kwargs, rand_seed=seed)
     else:
         print(f'Loading population from {popfile}...')
