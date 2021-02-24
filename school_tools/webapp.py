@@ -297,7 +297,7 @@ class OutbreakCalc:
 
 
 def plot_outbreaks(**kwargs):
-    ''' Plot introduction rate '''
+    ''' Plot outbreaks '''
     ocalc = OutbreakCalc(**kwargs)
     ocalc.plot()
     fig = pl.gcf()
