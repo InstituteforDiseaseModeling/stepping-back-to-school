@@ -75,7 +75,7 @@ def define_pars(which='best', kind='default', ):
     return output
 
 
-def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, strategy='clustered',
+def create_sim(params=None, folder=None, popfile=None, popfile_stem=None, max_pop_seeds=None, strategy='clustered',
                load_pop=True, save_pop=False, create_pop=True, people=None, label=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
@@ -84,6 +84,7 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
     Args:
         params (dict): the parameters to use for the simulation
         folder (str): where to look for the population file
+        popfile (str): if supplied, use this popfile directly
         popfile_stem (str): filename of population file, minus random seed (which gets added)
         children_equally_sus (bool): whether children should be equally susceptible as adults (for sensitivity)
         alternate_symptomaticity (bool): whether to use symptoms by age from Table 1 in https://arxiv.org/pdf/2006.08471.pdf
@@ -162,13 +163,16 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
 
 
     #%% Handle population -- NB, although called popfile, might be a People object
-    if load_pop: # Load from disk -- normal usage
+    if people is not None: # People is supplied; use that
+        popfile = people
+        print('Note: using supplied people')
+    elif load_pop: # Load from disk -- normal usage
         if max_pop_seeds is None: # TODO: make logic here simpler
             max_pop_seeds = cfg.sweep_pars.n_pops
         if max_pop_seeds is None:
             max_pop_seeds = cfg.sweep_pars.n_reps
         pop_seed = p.rand_seed % max_pop_seeds
-        popfile = cvsch.pop_path(popfile=None, location=location, folder=cfg.paths.inputs, strategy=strategy, n=p.pop_size, rand_seed=pop_seed)
+        popfile = cvsch.pop_path(popfile=popfile, location=location, folder=cfg.paths.inputs, strategy=strategy, n=p.pop_size, rand_seed=pop_seed)
         if os.path.exists(popfile):
             print(f'Loading population from {popfile}')
         else:
@@ -178,9 +182,6 @@ def create_sim(params=None, folder=None, popfile_stem=None, max_pop_seeds=None, 
             else:
                 errormsg = f'Popfile "{popfile}" does not exist; run "python create_pops.py" to generate'
                 raise FileNotFoundError(errormsg)
-    elif people is not None: # People is supplied; use that
-        popfile = people
-        print('Note: using supplied people')
     else: # Generate
         print('Note: population not supplied; regenerating...')
         popfile = cvsch.make_population(pop_size=p.pop_size, rand_seed=p.rand_seed, max_pop_seeds=max_pop_seeds, do_save=False)

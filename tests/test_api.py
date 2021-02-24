@@ -5,7 +5,7 @@ Copy of outbreak script to use for testing.
 import numpy as np
 import school_tools as sct
 
-sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise, even if concurrency = multiprocess is included
+sct.config.run_pars.parallel = False # Interferes with coverage calculation otherwise, even with pytest-cov and if concurrency = multiprocess is included
 
 def test_analysis(pop_size=None):
     ''' Complete outbreak/API/plotting example '''

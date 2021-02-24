@@ -89,7 +89,7 @@ def pop_path(popfile=None, location=None, folder=None, strategy=None, n=None, ra
     return popfile
 
 
-def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, location='seattle_metro', folder=None, popfile=None, cohorting=True, community_contacts=20, **kwargs):
+def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, location='seattle_metro', folder=None, popfile=None, cohorting=True, community_contacts=20, rm_layers=None, **kwargs):
     '''
     Generate the synthpops population.
 
@@ -102,6 +102,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
         popfile (str): if so, where to save it to
         cohorting (bool): whether to use cohorting
         community_contacts (int): how many community contacts there are
+        rm_layers (list): if not None, remove these layers
         kwargs (dict): passed to sp.make_population()
     '''
 
@@ -171,7 +172,8 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
 
     # Convert to a popdict
     popdict = cv.make_synthpop(population=sc.dcp(population), community_contacts=community_contacts)
-    school_ids = [None] * int(pop_size)
+    school_ids = [np.nan] * int(pop_size)
+    school_flag = [False] * int(pop_size)
     teacher_flag = [False] * int(pop_size)
     staff_flag = [False] * int(pop_size)
     student_flag = [False] * int(pop_size)
@@ -189,6 +191,7 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
                 schools[person['scid']].append(uid)
             else:
                 schools[person['scid']] = [uid]
+            school_flag[uid] = True
             if person['sc_teacher'] is not None:
                 teacher_flag[uid] = True
             elif person['sc_student'] is not None:
@@ -210,8 +213,12 @@ def make_population(pop_size, rand_seed=1, max_pop_seeds=None, do_save=True, loc
     people = SchoolPeople(people_pars, strict=False, uid=popdict['uid'], age=popdict['age'], sex=popdict['sex'],
                           contacts=popdict['contacts'], school_id=np.array(school_ids),
                           schools=schools, school_types=school_types,
-                          student_flag=student_flag, teacher_flag=teacher_flag,
+                          school_flag=school_flag, student_flag=student_flag, teacher_flag=teacher_flag,
                           staff_flag=staff_flag, school_type_by_person=school_type_by_person)
+
+    if rm_layers is not None:
+        for lkey in rm_layers:
+            people.contacts[lkey] = cv.Layer() # Replace with an empty layer -- warning, can cause problems!
 
     if do_save:
         print(f'Saving to "{popfile}"...')
