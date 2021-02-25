@@ -31,3 +31,5 @@ if __name__ == '__main__':
     analyzer.source_dow(figsize=(6.5,5))
     mgr.tsplots()
 
+    args.handle_show()
+

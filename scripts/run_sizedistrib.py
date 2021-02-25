@@ -49,3 +49,5 @@ if __name__ == '__main__':
     analyzer.outbreak_size_plot_v2(xvar, rowvar='In-school transmission multiplier', ext=None, height=6, aspect=3, scatter=True, jitter=0.75)
 
     #analyzer.outbreak_size_plot(huevar, scatter=True, loess=False, landscape=False, ext='Dx', aspect=1.7)
+
+    args.handle_show()
