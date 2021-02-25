@@ -1,6 +1,6 @@
 # "Stepping Back to School" report repository
 
-This repository contains the code originally used for the King County, WA school reopening analysis presented in the [Stepping Back to School](https://covid.idmod.org) modeling report. This report used the agent-based model Covasim, which can be downloaded from [GitHub](https://github.com/InstituteforDiseaseModeling/covasim) and used for other COVID-19 disease modeling.
+This repository contains the code originally used for [IDM's](https://covid.idmod.org) school reopening analysis presented in the [Stepping Back to School](https://covid.idmod.org/data/Stepping_Back_to_School.pdf) modeling report, which is based on data from King County, WA, but explores fundamental COVID-19 transmission relationships that are broadly applicable. The report used the agent-based model Covasim, which can be downloaded from [GitHub](https://github.com/InstituteforDiseaseModeling/covasim) and used for other COVID-19 disease modeling.
 
 * Code to implement schools in Covasim can be found in `covasim_schools`.
 * The controller is implemented in `covasim_controller`.
@@ -19,7 +19,7 @@ Python 3.7 or 3.8 (64-bit). (Note: Python 2 is not supported, Python <=3.6 requi
 
 ### Steps
 
-1. If desired, create a virtual environment.
+1. If desired, create a virtual environment using `venv` or `conda`.
 
     - For example, using [conda](https://www.anaconda.com/products/individual):
 
