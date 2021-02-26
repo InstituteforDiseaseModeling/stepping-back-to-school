@@ -6,7 +6,7 @@ import sciris as sc
 
 
 # Global settings
-is_debugging = True
+is_debugging = False
 big_pop = 11_000
 small_pop = 3_500
 
