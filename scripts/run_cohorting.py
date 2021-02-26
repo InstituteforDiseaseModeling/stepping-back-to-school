@@ -26,7 +26,8 @@ if __name__ == '__main__':
     huevar = 'Cohort Mixing'
 
     if not args.outbreak:
-        raise NotImplementedError
+        msg = 'This script is only intended for outbreak analysis; please set outbreak=True or use the --outbreak flag'
+        raise NotImplementedError(msg)
 
     else:
 
