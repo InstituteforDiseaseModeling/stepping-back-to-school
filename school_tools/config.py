@@ -160,7 +160,7 @@ def set_micro():
     ''' Reset the configuration to the smallest possible run '''
     sweep_pars.n_reps  = 1
     sweep_pars.n_pops  = None
-    sweep_pars.n_prev  = 2
+    sweep_pars.n_prev  = 1
     sim_pars.pop_size = 10_000
     print_pars('micro')
     return

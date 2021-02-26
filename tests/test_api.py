@@ -61,6 +61,7 @@ def test_analysis(pop_size=None):
 def test_micro():
     ''' Simplest possible test'''
     sct.config.set_micro()
+    sct.config.sweep_pars.n_prev = 2 # Doesn't work with only 1 since can't plot
     mgr = sct.Manager(cfg=sct.config)
     mgr.run(force=True)
     mgr.analyze()
@@ -102,6 +103,7 @@ def test_alt_sus():
 def test_trees():
     ''' Test tree plotting '''
     sct.config.set_micro()
+    sct.config.sweep_pars.n_prev = 2 # Doesn't work with only 1 since can't plot
     mgr = sct.Manager(cfg=sct.config)
     mgr.run(force=True)
     analyzer = mgr.analyze()

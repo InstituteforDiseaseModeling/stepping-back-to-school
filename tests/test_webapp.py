@@ -21,7 +21,7 @@ def test_load_trimmed_pop(**kwargs):
 
 def test_outbreak_calc():
     sc.heading('Testing outbreak calculator...')
-    ocalc, fig = sct.plot_outbreaks(pop_size=50e3, prev=0.25, diagnostic='none', scheduling='none')
+    ocalc, fig = sct.plot_outbreaks(pop_size=10e3, prev=2.5, diagnostic='none', scheduling='none')
     data = ocalc.to_dict()
     return ocalc, fig, data
 
