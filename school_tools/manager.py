@@ -301,32 +301,35 @@ class Manager(sc.objdict):
 class SchoolVaccine(cv.Intervention):
     ''' Define a school-specific vaccine intervention '''
 
-    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0, days=0, **kwargs):
+    def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0, days=0, school_types=None, **kwargs):
         super().__init__(**kwargs) # Initialize the Intervention object
         self._store_args()
         self.cov = dict(teachers=teacher_cov, staff=staff_cov, students=student_cov)
         self.mult = dict(rel_sus=rel_sus_mult, symp_prob=symp_prob_mult) # Could range check
         self.days = days
-        self.schooltypes = ['es', 'ms', 'hs']
+        self.school_types = school_types if school_types else ['es', 'ms', 'hs']
         return
 
 
     def initialize(self, sim):
-        self.sch_ids = [sid for st in self.schooltypes for sid in sim.people.school_types[st]]
-        self.schoolpeople_uids = [uid for sid in self.sch_ids for uid in sim.people.schools[sid]]
+        self.sch_ids = [sid for st in self.school_types for sid in sim.people.school_types[st]]
+        self.schoolpeople_uids = np.array([uid for sid in self.sch_ids for uid in sim.people.schools[sid]]) # Only people in selected school types
         self.days = cv.interventions.process_days(sim, self.days)
         return
 
 
     def apply(self, sim):
+        ppl = sim.people
         for ind in cv.interventions.find_day(self.days, sim.t):
-            for role, flag in zip(['students', 'teachers', 'staff'], [sim.people.student_flag, sim.people.teacher_flag, sim.people.staff_flag]):
+            for role, flag in zip(['students', 'teachers', 'staff'], [ppl.student_flag, ppl.teacher_flag, ppl.staff_flag]):
+                flag_inds = sc.findinds(flag)
                 cov = self.cov[role]
-                role_uids = [u for u in self.schoolpeople_uids if flag[u]]
-                # Choose who to vaccinate
-                tovx = np.random.choice(role_uids, size=np.random.binomial(len(role_uids),cov), replace=False)
-                sim.people.rel_sus[tovx] *= self.mult['rel_sus']
-                sim.people.symp_prob[tovx] *= self.mult['symp_prob']
+                role_uids = np.intersect1d(self.schoolpeople_uids, flag_inds)
+                # Choose whom to vaccinate
+                n_vx = np.random.binomial(len(role_uids), cov)
+                tovx = np.random.choice(role_uids, size=n_vx, replace=False)
+                ppl.rel_sus[tovx] *= self.mult['rel_sus']
+                ppl.symp_prob[tovx] *= self.mult['symp_prob']
         return
 
 
