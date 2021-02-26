@@ -71,3 +71,5 @@ if __name__ == '__main__':
         analyzer.outbreak_size_over_time()
         analyzer.source_pie()
         mgr.tsplots()
+
+        args.handle_show()

@@ -5,6 +5,7 @@ Set global configurations for the runs
 import argparse
 import numpy as np
 import sciris as sc
+import pylab as pl
 
 # Default settings are for debug runs
 
@@ -83,6 +84,7 @@ def process_inputs(argv, **kwargs): # pragma: no cover
     parser.add_argument('--n_pops', type=int, default=0, help='Set the number of different populations generated/used (by default, n_reps)')
     parser.add_argument('--n_prev', type=int, default=0, help='Set the number of different prevalence levels used')
     parser.add_argument('--location', type=str, default='', help='Set the location (by default, Seattle)')
+    parser.add_argument('--show', action='store_true', help='Show plots')
     args = parser.parse_args(argv[1:])
 
     # Handle any kwargs to override command-line options
@@ -110,6 +112,15 @@ def process_inputs(argv, **kwargs): # pragma: no cover
         sweep_pars.n_prev = args.n_prev
     if args.location:
         pop_pars.location = args.location
+
+    # Define a function for whether or not to show
+    if args.show:
+        def handle_show():
+            return pl.show()
+    else:
+        def handle_show():
+            pass
+    args.handle_show = handle_show
 
     return args
 

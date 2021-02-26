@@ -135,5 +135,7 @@ if __name__ == '__main__':
 
         two_panel(xvar, ext=None, jitter=0.2, values=None, legend=False, height=8, aspect=1.2)
 
-
         mgr.tsplots()
+
+        args.handle_show()
+

@@ -33,3 +33,6 @@ if __name__ == '__main__':
     analyzer.source_dow(figsize=(6*1.4, 6), ext='ppt') # 6.5 x 5
     mgr.tsplots()
 
+    args.handle_show()
+
+
