@@ -123,7 +123,7 @@ def test_school_vaccine_scaling():
             sim_vax.to_json(filename=f"DEBUG_sim_vax_{multiplier}.json",
                             indent=4)
         if multiplier == 0.0:
-            assert results['cum_infections'][0] == results['cum_infections'][-1]
+            assert results['cum_infections'][0] == results['cum_infections'][-1], 'Should be no new infections'
 
     print('Final infection counts:', final_infection_counts)
     for m in range(len(multipliers)-1):
