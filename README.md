@@ -7,7 +7,6 @@ This repository contains the code originally used for [IDM's](https://covid.idmo
 * Other utility functions for running school analyses can be found in `school_tools`.
 * Scripts to conduct the analysis are in `scripts`.
 * Unit and integration tests are in `tests`.
-* Code for running the backend of the interactive webapp is in `webapp`. (The webapp itself is contained in a separate repository.)
 
 ## Installation
 
@@ -47,6 +46,6 @@ Python 3.7 or 3.8 (64-bit). (Note: Python 2 is not supported, Python <=3.6 requi
 
 ## Usage
 
-Scripts in the `scripts` folder produce the results presented in the report. Each script generates a different set of results; not all are used in the report. Each script has a brief description of what it does. For a quick example, see `python run_debug.py --show` (the `--show` argument makes the plots appear when running non-interactively).
+Scripts in the `scripts` folder produce the results presented in the report. Each script generates a different set of results; not all are used in the report. Each script has a brief description of what it does. For a quick example, first run `python create_pops.py`, then run `python run_debug.py --show` (the `--show` argument makes the plots appear when running non-interactively). This script should take a few minutes to run.
 
 For more information, see the documentation in the individual files.
