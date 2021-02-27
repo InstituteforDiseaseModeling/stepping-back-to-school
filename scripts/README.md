@@ -10,6 +10,6 @@ There are various run options, defined in `config.py`. If running from the comma
 
 ## Generating results
 
-To calculate (a) the introduction rate as a function of prevalence, (b) distribution of outbreak size, and (c) source of infections in schools, run `run_baseline.py`. 
+To calculate (a) the introduction rate as a function of prevalence, (b) distribution of outbreak size, and (c) source of infections in schools, run `run_baseline.py`. For a quck test run, run `python run_debug.py --micro`.
 
 Note that most scripts come in two versions, a "plain" version and an "outbreak" version. The outbreak version typically performs slightly different analyses and generates additional plots. To run the outbreak version, use the `--outbreak` flag in the command line, or set `outbreak = True` in the script.
