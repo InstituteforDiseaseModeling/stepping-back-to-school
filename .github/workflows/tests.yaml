@@ -1,4 +1,4 @@
-name: inside-schools CI workflow
+name: stepping-back-to-school CI workflow
 on: [pull_request]
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
         working-directory: ./synthpops
         run: python setup.py develop
 
-      - name: Install inside-schools
+      - name: Install stepping-back-to-school
         run: python setup.py develop
 
       - name: Install tests

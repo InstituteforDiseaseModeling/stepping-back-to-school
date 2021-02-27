@@ -23,11 +23,11 @@ CLASSIFIERS = [
 ]
 
 setup(
-    name="inside_schools",
+    name="stepping_back_to_school",
     version=version,
     author="Daniel Klein, Jamie Cohen, Dina Mistry, Cliff Kerr",
     author_email="covasim@idmod.org",
-    description="Repository for 'Inside Schools' report",
+    description="Repository for the 'Stepping Back to School' report",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='http://covasim.org',

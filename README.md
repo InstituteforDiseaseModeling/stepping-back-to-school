@@ -39,8 +39,8 @@ Python 3.7 or 3.8 (64-bit). (Note: Python 2 is not supported, Python <=3.6 requi
 3. Install this package (which will also install [Covasim](https://covasim.org)):
 
    ```
-   git clone https://github.com/InstituteforDiseaseModeling/inside-schools
-   cd inside-schools
+   git clone https://github.com/InstituteforDiseaseModeling/stepping-back-to-school
+   cd stepping-back-to-school
    python setup.py develop
    ```
 
