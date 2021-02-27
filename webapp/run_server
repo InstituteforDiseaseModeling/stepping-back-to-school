@@ -1,1 +1,0 @@
-sudo /home/`whoami`/miniconda/bin/python schools_webapp.py 80
