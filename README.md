@@ -18,7 +18,7 @@ Python 3.7 or 3.8 (64-bit). (Note: Python 2 is not supported, Python <=3.6 requi
 
 ### Steps
 
-1. If desired, create a virtual environment using `venv` or `conda`.
+1. If desired, create a virtual environment.
 
     - For example, using [conda](https://www.anaconda.com/products/individual):
 
