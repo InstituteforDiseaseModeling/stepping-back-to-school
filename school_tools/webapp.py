@@ -1,5 +1,5 @@
 '''
-Functions to support the webapp
+Functions to support the webapp. Note:
 '''
 
 import os
@@ -14,6 +14,14 @@ import covasim as cv
 import covasim_schools as cvsch
 from . import config as cfg
 from . import manager as man
+
+try:
+    import scirisweb as sw
+    import altair as alt
+except:
+    pass
+
+
 
 default_prev = 0.25 # Default prevalence, in percent (i.e. 0.25%, not 25%!)
 default_n_days = 7
@@ -197,6 +205,66 @@ def plot_introductions(**kwargs):
     icalc = IntroCalc(**kwargs)
     fig = icalc.plot()
     return icalc, fig
+
+
+def intro_calc(to_dict=True, **kwargs):
+    '''
+    Calculate the number of introductions. The equation is roughly:
+
+        rate = (school size) × (number of days) × (prevalence) × (1 - immunity) × (testing)  × (scheduling)  × (screening)
+
+    This is then used as the rate of a Poisson process to calculate a distribution of introductions for each school.
+
+    Args:
+        es (int)            : number of elementary schools
+        ms (int)            : number of middle schools
+        hs (int)            : number of high schools
+        school_sizes (dict) : use these supplied school sizes instead of calculating them
+        prev (float)        : prevalence, i.e. case rate per 100,000 over 14 days
+        immunity (float)    : immunity level (fraction)
+        n_days (int)        : number of days to calculate over
+        n_samples (int)     : number of trials to calculate per school
+        diagnostic (str)    : type of diagnostic testing; options are 'none', 'weekly', 'fortnightly'
+        scheduling (str)    : type of scheduling; options are 'none' or 'hybrid'
+        symp (str)          : type of symptom screening; options are 'none' or 'all'
+        seed (int)          : random seed to use
+
+    Returns:
+        graphjson (dict): the JSON representation of the figure
+        rawdata (dict): the JSON representation of the raw data
+    '''
+    icalc, fig = sct.plot_introductions(**kwargs)
+    if to_dict:
+        rawdata = icalc.to_dict()
+    else:
+        rawdata = icalc
+    graphjson = sw.mpld3ify(fig, jsonify=False)  # Convert to dict
+    return graphjson, rawdata
+
+
+    # data = icalc.to_dict()
+    # ints = icalc.samples['introductions'].values
+    # y,x = np.histogram(ints, bins=np.unique(ints))
+    # x = x[:-1]
+
+    # df = pd.DataFrame(dict(x=x, y=y))
+    # chart = alt.Chart(df).mark_area(
+    #     line={'color':'darkgreen'},
+    #     color=alt.Gradient(
+    #         gradient='linear',
+    #         stops=[alt.GradientStop(color='white', offset=0),
+    #                alt.GradientStop(color='darkgreen', offset=1)],
+    #         x1=min(x),
+    #         x2=max(x),
+    #         y1=max(y),
+    #         y2=min(y)
+    #     )
+    # ).encode(
+    #     alt.X('x'),
+    #     alt.Y('y')
+    # )
+    # graphjson = sc.loadjson(string=chart.to_json())
+
 
 
 def webapp_popfile(popfile, pop_size, seed):

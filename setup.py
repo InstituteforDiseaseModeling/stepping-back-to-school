@@ -44,4 +44,9 @@ setup(
         "covasim>=2.0.0",
         "synthpops>=1.4.3",
     ],
+    extras_require={
+        "web":  [
+            "scirisweb",
+            "altair"],
+    }
 )
