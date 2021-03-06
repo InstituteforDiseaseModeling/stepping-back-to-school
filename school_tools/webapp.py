@@ -357,17 +357,24 @@ class OutbreakCalc:
         fig = ax.figure
         return fig
 
-    def plot_trees(self, max_trees=5):
+    def plot_trees(self, max_trees=5, include_pair=False):
         if not self.is_analyzed:
             self.analyze()
         figs = []
         n_outbreaks = len(self.analyzer.outbreaks)
-        import traceback; traceback.print_exc(); import pdb; pdb.set_trace()
+        sizes = []
+        inds = []
         for o in range(n_outbreaks):
+            size = len(self.analyzer.outbreaks['outbreak'][o]['Tree'])
+            if include_pair or size>2:
+                inds.append(o)
+                sizes.append(size)
+        order = np.array(inds)[np.argsort(sizes)[::-1]]  # Sort by decreasing size
+        for o in order:
             fig = self.analyzer.plot_tree(outbreak_ind=o)
             figs.append(fig)
-        if n_outbreaks > max_trees:
-            print(f'Returning first {max_trees} of {n_outbreaks} outbreaks')
+        if len(figs) > max_trees:
+            print(f'Returning first {max_trees} of {len(figs)} outbreaks')
             figs = figs[:max_trees]
         return figs
 

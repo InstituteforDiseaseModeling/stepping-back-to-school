@@ -1044,7 +1044,7 @@ class Analysis:
                 plt_y = xjitter
                 lim_func = plt.xlim
 
-            sizes = 250*y/y.max() + 10
+            sizes = 500*y/y.max() + 50
             plt.scatter(plt_x, plt_y, alpha=0.7, s=sizes, c=colors)
             lim_func([-2, y.max()*1.1])
 
@@ -1238,7 +1238,10 @@ class Analysis:
         ax.set_xlim(date_range)
         ax.set_xticks(range(int(date_range[0]), int(date_range[1])))
         ax.set_yticks(range(0, len(tree.nodes)))
+        ax.set_xlabel('Day')
         ax.set_yticklabels([f'{int(u) if np.isfinite(u) else -1}: {v["type"]}, age {v["age"] if "age" in v else -1}' for u,v in tree.nodes.data()])
+        n_people = len(tree)
+        ax.set_title(f'Outbreak {outbreak_ind}, infecting {n_people} people')
 
         if do_show:
             plt.show()
