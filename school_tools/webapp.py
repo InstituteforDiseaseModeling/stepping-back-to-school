@@ -378,24 +378,24 @@ class OutbreakCalc:
 
     def to_dict(self):
         ''' Only return the outbreak part of the data structure '''
-        ob = self.analyzer.outbreaks.to_dict()
-        data = ob['outbreak']
-        for k in data.keys():
-            data[k]['sim'] = ob['sim'][k]
-            data[k]['school'] = ob['school'][k]
-            data[k]['Tree'] = nx.readwrite.json_graph.node_link_data(data[k]['Tree'])
-            for node_data in data[k]['Tree']['nodes']:
+        outbreakdict = self.analyzer.outbreaks.to_dict() # Dataframe
+        outbreaks = outbreakdict['outbreak'] # Dict of dicts
+        for k,ob in outbreaks.items():
+            ob['sim'] = outbreakdict['sim'][k]
+            ob['school'] = outbreakdict['school'][k]
+            ob['Tree'] = nx.readwrite.json_graph.node_link_data(ob['Tree'])
+            for node_data in ob['Tree']['nodes']:
                 for param_key, param_value in node_data.items():
                     if sc.isnumber(param_value):
                         if np.isnan(param_value):
                             node_data[param_key] = ""
                         else:
                             node_data[param_key] = float(param_value)
-        return data
+        return outbreaks
 
     def to_json(self):
-        data = self.to_dict()
-        return sc.jsonify(data, tostring=True)
+        outbreaks = self.to_dict()
+        return sc.jsonify(outbreaks, tostring=True)
 
 
 def outbreak_api(web=True, **kwargs):
