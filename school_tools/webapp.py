@@ -1,5 +1,6 @@
 '''
-Functions to support the webapp. Note:
+Functions to support the webapp. The webapp itself (frontend) is in a separate
+repository.
 '''
 
 import os
@@ -27,13 +28,12 @@ except Exception as E:
         def __getattr__(self, key):
             err = f'This function is not available since {self.module} is not found (error: {self.E}). Please reinstall {self.E} and Altair via "pip install -e .[web]"".'
             raise ImportError(err)
-    sw = FailedImport(module='scirisweb', E=E)
+    sw = FailedImport(module='scirisweb', E=E) # Raise a meaningful error if e.g. sw.jsonify() is attempted
     alt = FailedImport(module='altair', E=E)
 
 
-
+# Default settings
 default_prev = 0.25 # Default prevalence, in percent (i.e. 0.25%, not 25%!)
-default_n_days = 7
 default_pop_size = 50e3
 
 
@@ -90,14 +90,14 @@ class IntroCalc(sc.objdict):
         This is then used as the rate of a Poisson process to calculate a distribution of introductions for each school.
 
         Args:
-            es (int)            : number of elementary schools [range: 0,~10]
-            ms (int)            : number of middle schools [range: 0,~10]
-            hs (int)            : number of high schools [range: 0,~10]
+            es (int)            : number of elementary schools [range: 0,5; default: 2]
+            ms (int)            : number of middle schools [range: 0,5; default: 2]
+            hs (int)            : number of high schools [range: 0,5; default: 2]
             school_sizes (dict) : use these supplied school sizes instead of calculating them
-            prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
-            immunity (float)    : immunity level (fraction) [range: 0,1]
-            n_days (int)        : number of days to calculate over [range: 1,~365]
-            n_samples (int)     : number of trials to calculate per school [range: 1,~1000]
+            prev (float)        : COVID prevalence in the population, in percent [range: 0,10; default: 0.25]
+            immunity (float)    : immunity level (fraction) [range: 0,1; default 0.1]
+            n_days (int)        : number of days to calculate over [range: 1,30; default: 7]
+            n_samples (int)     : number of trials to calculate per school [range: 1,1000; default: 200]
             diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None/'None', 'with_countermeasures', 'all_hybrid', 'k5'
             seed (int)          : random seed to use [range:0,~inf]
@@ -108,7 +108,7 @@ class IntroCalc(sc.objdict):
         if hs        is None: hs = 2
         if prev      is None: prev = default_prev
         if immunity  is None: immunity = 0.1
-        if n_days    is None: n_days = default_n_days
+        if n_days    is None: n_days = 7
         if n_samples is None: n_samples = 200
         self.stypes = ['es', 'ms', 'hs']
         self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')
@@ -289,28 +289,25 @@ def load_trimmed_pop(pop_size=50e3, seed=1, force=False, popfile=None, **kwargs)
 
 class OutbreakCalc:
 
-    def __init__(self, pop_size=None, prev=None, n_days=None, diagnostic=None, scheduling=None, seed=None, force=False, **kwargs):
+    def __init__(self, pop_size=None, prev=None, diagnostic=None, scheduling=None, seed=None, force=False, **kwargs):
         '''
         Wrapper for the Manager to handle common tasks.
 
         Args:
-            pop_size (int)      : number of people
-            prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
-            n_days (int)        : number of days to calculate over
-            diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None/'as_normal', 'with_countermeasures', 'all_hybrid', 'k5'
+            pop_size (int)      : number of people [range: 1,000, {20,000}, 100,000]
+            prev (float)        : COVID prevalence in the population, in percent [range: 0,10; default 0.25]
+            diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
+            scheduling (str)    : type of scheduling; options are None/'None', 'with_countermeasures', 'all_hybrid', 'k5'
             seed (int)          : random seed to use
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
         '''
         if pop_size is None: pop_size = default_pop_size
         if prev is None: prev = default_prev
-        if n_days is None: n_days = default_n_days
         if seed is None: seed = 1
         self.pop_size   = pop_size
         self.prev       = prev
         self.prev_frac  = prev/100
-        self.n_days     = n_days
         self.diagnostic = 'None' if diagnostic in [None,'none'] else diagnostic
         self.scheduling = 'as_normal' if scheduling in [None,'none','None'] else scheduling
         self.seed       = seed
