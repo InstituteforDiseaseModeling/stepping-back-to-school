@@ -367,22 +367,23 @@ class OutbreakCalc:
                 inds.append(o)
                 sizes.append(size)
         order = np.array(inds)[np.argsort(sizes)[::-1]]  # Sort by decreasing size
+        if len(order) > max_trees:
+            print(f'Returning first {max_trees} of {len(order)} outbreaks')
+            order = order[:max_trees]
         for o in order:
             fig = self.analyzer.plot_tree(outbreak_ind=o)
             figs.append(fig)
-        if len(figs) > max_trees:
-            print(f'Returning first {max_trees} of {len(figs)} outbreaks')
-            figs = figs[:max_trees]
         return figs
 
 
     def to_dict(self):
         ''' Only return the outbreak part of the data structure '''
-        data = self.analyzer.outbreaks.to_dict()['outbreak']
+        ob = self.analyzer.outbreaks.to_dict()
+        data = ob['outbreak']
         for k in data.keys():
-            data[k]['sim'] = data['sim'][k]
-            data[k]['school'] = data['school'][k]
-            data[k]['Tree'] = nx.readwrite.json_graph.node_link_data(data['outbreak'][k]['Tree'])
+            data[k]['sim'] = ob['sim'][k]
+            data[k]['school'] = ob['school'][k]
+            data[k]['Tree'] = nx.readwrite.json_graph.node_link_data(data[k]['Tree'])
             for node_data in data[k]['Tree']['nodes']:
                 for param_key, param_value in node_data.items():
                     if sc.isnumber(param_value):
