@@ -1025,7 +1025,6 @@ class Analysis:
             noise = dx*jitter*(1+np.random.randn(len(x)))
             xjitter = x + noise
 
-            # Panel 1
             if by_stype:
                 palette = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
                 colors = [palette[int(c)] for c in df['outbreak_stind']]
@@ -1033,7 +1032,6 @@ class Analysis:
                     plt.scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
             else:
                 colors = sc.vectocolor(np.sqrt(y), cmap='rocket')
-            # sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue=hue, sizes=(10, 250), palette=palette, alpha=0.6, legend=legend, ax=axv[1])
 
             if landscape:
                 plt_x = xjitter
