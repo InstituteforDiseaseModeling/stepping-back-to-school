@@ -980,7 +980,7 @@ class Analysis:
         return ax
 
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012, by_stype=True):
         '''
         Plot outbreak sizes in various ways.
 
@@ -996,10 +996,13 @@ class Analysis:
         '''
 
         # Get x and y coordinates of all outbreaks
-        df = self.results.reset_index() # Un-melt (congeal?) results
-        df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
+        df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        df['outbreak_stind'] = self.results.loc['outbreak_stind'].reset_index()['value'] # CK: Must be a better way
+
+        # df = self.results.reset_index() # Un-melt (congeal?) results
+        # df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
         x = df[xvar].values # Pull out x values
-        y = df['value'].values # Pull out y values (i.e., outbreak size)
+        y = df['Outbreak Size'].values # Pull out y values (i.e., outbreak size)
 
         # Handle non-numeric x axes
         is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
@@ -1014,10 +1017,24 @@ class Analysis:
         # Scatter plots
         if scatter:
             dx = x.max() - x.min()
-            if dx == 0: dx = 1 # Ensure there's some jitter
+            if dx:
+                has_x = True
+            else:
+                has_x = False
+                dx = 1 # Ensure there's some jitter
             noise = dx*jitter*(1+np.random.randn(len(x)))
             xjitter = x + noise
-            colors = sc.vectocolor(np.sqrt(y), cmap='copper')
+
+            # Panel 1
+            if by_stype:
+                palette = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
+                colors = [palette[int(c)] for c in df['outbreak_stind']]
+                for c,label in enumerate(self.slabels):
+                    plt.scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
+            else:
+                colors = sc.vectocolor(np.sqrt(y), cmap='rocket')
+            # sns.scatterplot(data=df, x='x_jittered', y='Outbreak Size', size='Outbreak Size', hue=hue, sizes=(10, 250), palette=palette, alpha=0.6, legend=legend, ax=axv[1])
+
             if landscape:
                 plt_x = xjitter
                 plt_y = y
@@ -1027,7 +1044,8 @@ class Analysis:
                 plt_y = xjitter
                 lim_func = plt.xlim
 
-            plt.scatter(plt_x, plt_y, alpha=0.7, s=800*y/y.max(), c=colors)
+            sizes = 250*y/y.max() + 10
+            plt.scatter(plt_x, plt_y, alpha=0.7, s=sizes, c=colors)
             lim_func([-2, y.max()*1.1])
 
         # Loess plots
@@ -1057,14 +1075,18 @@ class Analysis:
         else: # pragma: no cover
             set_xticks(indices)
             set_xticklabels(labels)
+        if not has_x:
+            set_xticks([])
+            set_xlabel('Individual outbreaks')
 
         set_ylabel('Outbreak size')
+        ax.legend()
 
         fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
         plt.tight_layout()
         if self.do_save:
             cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
-        return df
+        return ax
 
 
     def outbreak_R0(self, figsize=(6*1.4,6)):

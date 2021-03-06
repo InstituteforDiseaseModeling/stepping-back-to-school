@@ -253,10 +253,10 @@ class Manager(sc.objdict):
         return self.builder.get()
 
 
-    def analyze(self, rerun=True):
+    def analyze(self, rerun=True, **kwargs):
         ''' Create (and run) the analysis '''
         if self.analyzer is None or rerun:
-            self.analyzer = an.Analysis(self.sims, self.dir)
+            self.analyzer = an.Analysis(self.sims, self.dir, **kwargs)
         return self.analyzer
 
     def regplots(self, xvar, huevar, ts_plots=None, height=6, aspect=1.4):
