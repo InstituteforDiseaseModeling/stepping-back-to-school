@@ -202,12 +202,12 @@ class IntroCalc(sc.objdict):
         return fig
 
 
-    def to_json(self):
-        return self.samples.to_json()
-
-
     def to_dict(self):
         return self.samples.to_dict()
+
+
+    def to_json(self):
+        return self.samples.to_json()
 
 
 

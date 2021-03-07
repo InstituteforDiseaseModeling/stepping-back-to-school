@@ -49,6 +49,7 @@ setup(
             "scirisweb",
             "altair",
             "plotly",
+            "bokeh",
             ],
     }
 )
