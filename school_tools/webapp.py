@@ -16,7 +16,7 @@ import covasim_schools as cvsch
 from . import config as cfg
 from . import manager as man
 
-# Optional imports
+# Optional imports for the single school calculator
 class FailedImport:
     def __init__(self, module, E):
         self.module = module
@@ -24,14 +24,14 @@ class FailedImport:
     def __getattr__(self, key):
         err = f'This function is not available since {self.module} is not found (error: {self.E}). Please reinstall {self.E} and Altair via "pip install -e .[web]"".'
         raise ImportError(err)
-try:
-    import scirisweb as sw
-    import altair as alt
-    import plotly.graph_objects as go
-except Exception as E:
-    sw  = FailedImport(module='scirisweb', E=E) # Raise a meaningful error if e.g. sw.jsonify() is attempted
-    alt = FailedImport(module='altair', E=E)
-    go  = FailedImport(module='plotly', E=E)
+try:                   import scirisweb as sw
+except Exception as E: sw  = FailedImport(module='scirisweb', E=E) # Raise a meaningful error if e.g. sw.jsonify() is attempted
+try:                   import altair as alt
+except Exception as E: alt = FailedImport(module='altair', E=E)
+try:                   from bokeh import plotting as bop
+except Exception as E: bop  = FailedImport(module='bokeh', E=E)
+try:                   import plotly.express as px
+except Exception as E: px  = FailedImport(module='plotly', E=E)
 
 
 # Default settings
@@ -223,7 +223,7 @@ def multi_school_intro_api(web=True, **kwargs):
         return fig, icalc
 
 
-def single_school_intro_api(web=True, which=None, size=None, n_samples=None, **kwargs):
+def single_school_intro_api(web=True, which=None, size=None, n_samples=None, library='altair', **kwargs):
     ''' Plot introductions for a single school '''
     # Handle inputs
     if which     is None: which     = 'es'
@@ -242,27 +242,83 @@ def single_school_intro_api(web=True, which=None, size=None, n_samples=None, **k
     y = y/y.sum()*100
     x = x[:-1]
 
-    xlabel = 'Number of introductions '
+    xlabel = 'Number of introductions'
     ylabel = 'Probability (%)'
+    title = f'Expected introductions over {icalc.n_days} days'
     df = pd.DataFrame({xlabel:x, ylabel:y})
-    chart = alt.Chart(df).mark_bar(
-        size=300/max(ints),
-    ).encode(
-        alt.X(xlabel),
-        alt.Y(ylabel),
-        tooltip = [
-            alt.Tooltip(xlabel, format='0.0f'),
-            alt.Tooltip(ylabel, format='0.1f')]
-    ).properties(
-        title=f'Expected introductions over {icalc.n_days} days'
-    ).interactive()
+
+    # Choose which plotting library to use: mpld3, bokeh, altair, or plotly
+
+    if library == 'mpld3':
+        # Main plot
+        fig = pl.figure(figsize=(8,6))
+        pl.bar(x, y)
+        pl.title(title)
+        pl.xlabel(xlabel)
+        pl.ylabel(ylabel)
+
+        # Tooltips
+        import mpld3
+        css = 'p {font-family:Arial; background-color:#fff}'
+        labels = []
+        for ix,iy in zip(x, y):
+            labels.append(f'<p><i>{xlabel}</i>: {ix:0.0f}<br><i>{ylabel}</i>: {iy:0.1f}</p>')
+        points = pl.plot(x, y, 'o')
+        tooltips = mpld3.plugins.PointHTMLTooltip(points=points[0], labels=labels, css=css)
+        mpld3.plugins.connect(fig, tooltips)
+
+        # Export
+        graphjson = sw.mpld3ify(fig, jsonify=False)
+
+    elif library == 'bokeh':
+        # Main plot & tooltips
+        import bokeh.embed as boe
+        tooltips = [
+            (xlabel, f'@{{{xlabel}}}'),
+            (ylabel, f'@{{{ylabel}}}'),
+            ]
+        fig = bop.figure(title=title, tooltips=tooltips)
+        fig.vbar(x=xlabel, width=0.8, top=ylabel, source=df)
+        fig.xaxis.axis_label = xlabel
+        fig.yaxis.axis_label = ylabel
+
+        # Export
+        graphjson = boe.json_item(fig)
+
+    elif library == 'plotly':
+        # Main plot
+        fig = px.bar(df, x=xlabel, y=ylabel, title=title)
+
+        # Export
+        graphjson = sc.loadjson(string=fig.to_json())
+
+    elif library == 'altair':
+        # Main plot & tooltips
+        fig = alt.Chart(df
+        ).mark_bar(size=300/max(ints),
+        ).encode(
+            alt.X(xlabel),
+            alt.Y(ylabel),
+            tooltip = [
+                alt.Tooltip(xlabel, format='0.0f'),
+                alt.Tooltip(ylabel, format='0.1f')]
+        ).properties(
+            title=title
+        ).interactive()
+
+        # Export
+        graphjson = sc.loadjson(string=fig.to_json()) # To return as a dictionary rather than a string
+
+    else:
+        raise NotImplementedError(library)
+
+
 
     # Finish up
     if web:
-        graphjson = sc.loadjson(string=chart.to_json()) # To return as a dictionary rather than a string
         return graphjson, rawdata
     else:
-        return chart, icalc
+        return fig, icalc
 
 
 def webapp_popfile(popfile, pop_size, seed):
