@@ -980,7 +980,7 @@ class Analysis:
         return ax
 
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012, by_stype=True):
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012, min_size=2, do_sort=True, by_stype=True, annotate=True):
         '''
         Plot outbreak sizes in various ways.
 
@@ -998,11 +998,17 @@ class Analysis:
         # Get x and y coordinates of all outbreaks
         df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
         df['outbreak_stind'] = self.results.loc['outbreak_stind'].reset_index()['value'] # CK: Must be a better way
-
-        # df = self.results.reset_index() # Un-melt (congeal?) results
-        # df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
         x = df[xvar].values # Pull out x values
         y = df['Outbreak Size'].values # Pull out y values (i.e., outbreak size)
+        st = df['outbreak_stind'].values
+
+        # Find outbreaks that are large enough
+        valid = sc.findinds(y>=min_size)
+        if do_sort:
+            valid = valid[np.argsort(y[valid])]
+        x = x[valid]
+        y = y[valid]
+        st = st[valid]
 
         # Handle non-numeric x axes
         is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
@@ -1027,7 +1033,7 @@ class Analysis:
 
             if by_stype:
                 palette = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
-                colors = [palette[int(c)] for c in df['outbreak_stind']]
+                colors = [palette[int(c)] for c in st]
                 for c,label in enumerate(self.slabels):
                     plt.scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
             else:
@@ -1042,9 +1048,12 @@ class Analysis:
                 plt_y = xjitter
                 lim_func = plt.xlim
 
-            sizes = 500*y/y.max() + 50
+            sizes = 1000*y/y.max() + 200
             plt.scatter(plt_x, plt_y, alpha=0.7, s=sizes, c=colors)
-            lim_func([-2, y.max()*1.1])
+            lim_func([-1, y.max()*1.1])
+            if annotate:
+                for o, (ix,iy) in enumerate(zip(plt_x, plt_y)):
+                    plt.text(x=ix, y=iy, s=o+1, fontsize=10, verticalalignment='center', horizontalalignment='center')
 
         # Loess plots
         if loess:

@@ -47,6 +47,8 @@ setup(
     extras_require={
         "web":  [
             "scirisweb",
-            "altair"],
+            "altair",
+            "plotly",
+            ],
     }
 )

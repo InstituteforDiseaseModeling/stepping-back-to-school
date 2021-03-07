@@ -27,6 +27,6 @@ def test_outbreak_calc():
 
 
 if __name__ == '__main__':
-    icalc, fig1, data1 = test_intro_calc()
-    pop = test_load_trimmed_pop()
+    # icalc, fig1, data1 = test_intro_calc()
+    # pop = test_load_trimmed_pop()
     ocalc, fig2, figs, data2 = test_outbreak_calc()

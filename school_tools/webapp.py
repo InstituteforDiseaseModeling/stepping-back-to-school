@@ -17,19 +17,21 @@ from . import config as cfg
 from . import manager as man
 
 # Optional imports
+class FailedImport:
+    def __init__(self, module, E):
+        self.module = module
+        self.E = E
+    def __getattr__(self, key):
+        err = f'This function is not available since {self.module} is not found (error: {self.E}). Please reinstall {self.E} and Altair via "pip install -e .[web]"".'
+        raise ImportError(err)
 try:
     import scirisweb as sw
     import altair as alt
+    import plotly.graph_objects as go
 except Exception as E:
-    class FailedImport:
-        def __init__(self, module, E):
-            self.module = module
-            self.E = E
-        def __getattr__(self, key):
-            err = f'This function is not available since {self.module} is not found (error: {self.E}). Please reinstall {self.E} and Altair via "pip install -e .[web]"".'
-            raise ImportError(err)
-    sw = FailedImport(module='scirisweb', E=E) # Raise a meaningful error if e.g. sw.jsonify() is attempted
+    sw  = FailedImport(module='scirisweb', E=E) # Raise a meaningful error if e.g. sw.jsonify() is attempted
     alt = FailedImport(module='altair', E=E)
+    go  = FailedImport(module='plotly', E=E)
 
 
 # Default settings
