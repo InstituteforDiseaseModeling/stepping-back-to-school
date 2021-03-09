@@ -436,19 +436,21 @@ class OutbreakCalc:
 
     def to_dict(self):
         ''' Only return the outbreak part of the data structure '''
+        if not self.is_analyzed:
+            self.analyze()
         outbreakdict = self.analyzer.outbreaks.to_dict() # Dataframe
         outbreaks = outbreakdict['outbreak'] # Dict of dicts
         for k,ob in outbreaks.items():
             ob['sim'] = outbreakdict['sim'][k]
             ob['school'] = outbreakdict['school'][k]
-            # ob['Tree'] = nx.readwrite.json_graph.node_link_data(ob['Tree'])
-            # for node_data in ob['Tree']['nodes']:
-            #     for param_key, param_value in node_data.items():
-            #         if sc.isnumber(param_value):
-            #             if np.isnan(param_value):
-            #                 node_data[param_key] = ""
-            #             else:
-            #                 node_data[param_key] = float(param_value)
+            ob['Tree'] = nx.readwrite.json_graph.node_link_data(ob['Tree'])
+            for node_data in ob['Tree']['nodes']:
+                for param_key, param_value in node_data.items():
+                    if sc.isnumber(param_value):
+                        if np.isnan(param_value):
+                            node_data[param_key] = ""
+                        else:
+                            node_data[param_key] = float(param_value)
         return outbreaks
 
     def to_json(self):
@@ -456,15 +458,23 @@ class OutbreakCalc:
         return sc.jsonify(outbreaks, tostring=True)
 
 
-def outbreak_api(web=True, **kwargs):
+def outbreak_api(web=True, do_plot=True, **kwargs):
     ''' Plot outbreaks '''
     ocalc = OutbreakCalc(**kwargs)
-    outbreakfig = ocalc.plot()
-    treefigs = ocalc.plot_trees()
+    if do_plot:
+        outbreakfig = ocalc.plot()
+        treefigs = ocalc.plot_trees()
+    else:
+        outbreakfig = None
+        treefigs = None
     if web:
         rawdata = ocalc.to_dict()
-        outbreakgraph = sw.mpld3ify(outbreakfig, jsonify=False)
-        treegraphs = [sw.mpld3ify(treefigs, jsonify=False) for fig in treefigs]
+        if do_plot:
+            outbreakgraph = sw.mpld3ify(outbreakfig, jsonify=False)
+            treegraphs = [sw.mpld3ify(treefigs, jsonify=False) for fig in treefigs]
+        else:
+            outbreakgraph = None
+            treegraphs = None
         return outbreakgraph, treegraphs, rawdata
     else:
         return outbreakfig, treefigs, ocalc
