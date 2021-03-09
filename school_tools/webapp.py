@@ -441,14 +441,14 @@ class OutbreakCalc:
         for k,ob in outbreaks.items():
             ob['sim'] = outbreakdict['sim'][k]
             ob['school'] = outbreakdict['school'][k]
-            ob['Tree'] = nx.readwrite.json_graph.node_link_data(ob['Tree'])
-            for node_data in ob['Tree']['nodes']:
-                for param_key, param_value in node_data.items():
-                    if sc.isnumber(param_value):
-                        if np.isnan(param_value):
-                            node_data[param_key] = ""
-                        else:
-                            node_data[param_key] = float(param_value)
+            # ob['Tree'] = nx.readwrite.json_graph.node_link_data(ob['Tree'])
+            # for node_data in ob['Tree']['nodes']:
+            #     for param_key, param_value in node_data.items():
+            #         if sc.isnumber(param_value):
+            #             if np.isnan(param_value):
+            #                 node_data[param_key] = ""
+            #             else:
+            #                 node_data[param_key] = float(param_value)
         return outbreaks
 
     def to_json(self):
