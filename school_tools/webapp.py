@@ -1,5 +1,6 @@
 '''
-Functions to support the webapp
+Functions to support the webapp. The webapp itself (frontend) is in a separate
+repository.
 '''
 
 import os
@@ -15,8 +16,26 @@ import covasim_schools as cvsch
 from . import config as cfg
 from . import manager as man
 
+# Optional imports for the single school calculator
+class FailedImport:
+    def __init__(self, module, E):
+        self.module = module
+        self.E = E
+    def __getattr__(self, key):
+        err = f'This function is not available since {self.module} is not found (error: {self.E}). Please reinstall {self.E} and Altair via "pip install -e .[web]"".'
+        raise ImportError(err)
+try:                   import scirisweb as sw
+except Exception as E: sw  = FailedImport(module='scirisweb', E=E) # Raise a meaningful error if e.g. sw.jsonify() is attempted
+try:                   import altair as alt
+except Exception as E: alt = FailedImport(module='altair', E=E)
+try:                   from bokeh import plotting as bop
+except Exception as E: bop  = FailedImport(module='bokeh', E=E)
+try:                   import plotly.express as px
+except Exception as E: px  = FailedImport(module='plotly', E=E)
+
+
+# Default settings
 default_prev = 0.25 # Default prevalence, in percent (i.e. 0.25%, not 25%!)
-default_n_days = 7
 default_pop_size = 50e3
 
 
@@ -73,14 +92,14 @@ class IntroCalc(sc.objdict):
         This is then used as the rate of a Poisson process to calculate a distribution of introductions for each school.
 
         Args:
-            es (int)            : number of elementary schools [range: 0,~10]
-            ms (int)            : number of middle schools [range: 0,~10]
-            hs (int)            : number of high schools [range: 0,~10]
+            es (int)            : number of elementary schools [range: 0,5; default: 2]
+            ms (int)            : number of middle schools [range: 0,5; default: 2]
+            hs (int)            : number of high schools [range: 0,5; default: 2]
             school_sizes (dict) : use these supplied school sizes instead of calculating them
-            prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
-            immunity (float)    : immunity level (fraction) [range: 0,1]
-            n_days (int)        : number of days to calculate over [range: 1,~365]
-            n_samples (int)     : number of trials to calculate per school [range: 1,~1000]
+            prev (float)        : COVID prevalence in the population, in percent [range: 0,10; default: 0.25]
+            immunity (float)    : immunity level (fraction) [range: 0,1; default 0.1]
+            n_days (int)        : number of days to calculate over [range: 1,30; default: 7]
+            n_samples (int)     : number of trials to calculate per school [range: 1,1000; default: 200]
             diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
             scheduling (str)    : type of scheduling; options are None/'None', 'with_countermeasures', 'all_hybrid', 'k5'
             seed (int)          : random seed to use [range:0,~inf]
@@ -91,7 +110,7 @@ class IntroCalc(sc.objdict):
         if hs        is None: hs = 2
         if prev      is None: prev = default_prev
         if immunity  is None: immunity = 0.1
-        if n_days    is None: n_days = default_n_days
+        if n_days    is None: n_days = 7
         if n_samples is None: n_samples = 200
         self.stypes = ['es', 'ms', 'hs']
         self.slabels = sc.objdict(es='Elementary', ms='Middle', hs='High')
@@ -183,20 +202,123 @@ class IntroCalc(sc.objdict):
         return fig
 
 
-    def to_json(self):
-        return self.samples.to_json()
-
-
     def to_dict(self):
         return self.samples.to_dict()
 
 
+    def to_json(self):
+        return self.samples.to_json()
 
-def plot_introductions(**kwargs):
-    ''' Plot introduction rate '''
+
+
+def multi_school_intro_api(web=True, **kwargs):
+    ''' Plot introductions for a number of schools '''
     icalc = IntroCalc(**kwargs)
     fig = icalc.plot()
-    return icalc, fig
+    if web:
+        rawdata = icalc.to_dict()
+        graphjson = sw.mpld3ify(fig, jsonify=False)  # Convert to dict
+        return graphjson, rawdata
+    else:
+        return fig, icalc
+
+
+def single_school_intro_api(web=True, which=None, size=None, n_samples=None, library='altair', **kwargs):
+    ''' Plot introductions for a single school '''
+    # Handle inputs
+    if which     is None: which     = 'es'
+    if size      is None: size      = 200
+    if n_samples is None: n_samples = 1000
+    stypes = ['es', 'ms', 'hs']
+    pars = sc.mergedicts({k:0 if k != which else 1 for k in stypes}, {'school_sizes':{k:[] if k != which else [size] for k in stypes}, 'n_samples': n_samples}, kwargs)
+
+    # Calculate
+    icalc = IntroCalc(**pars)
+    rawdata = icalc.to_dict()
+
+    # Parse
+    ints = icalc.samples['introductions'].values
+    y,x = np.histogram(ints, bins=np.arange(max(ints)+1))
+    y = y/y.sum()*100
+    x = x[:-1]
+
+    xlabel = 'Number of introductions'
+    ylabel = 'Probability (%)'
+    title = f'Expected introductions over {icalc.n_days} days'
+    df = pd.DataFrame({xlabel:x, ylabel:y})
+
+    # Choose which plotting library to use: mpld3, bokeh, altair, or plotly
+
+    if library == 'mpld3':
+        # Main plot
+        fig = pl.figure(figsize=(8,6))
+        pl.bar(x, y)
+        pl.title(title)
+        pl.xlabel(xlabel)
+        pl.ylabel(ylabel)
+
+        # Tooltips
+        import mpld3
+        css = 'p {font-family:Arial; background-color:#fff}'
+        labels = []
+        for ix,iy in zip(x, y):
+            labels.append(f'<p><i>{xlabel}</i>: {ix:0.0f}<br><i>{ylabel}</i>: {iy:0.1f}</p>')
+        points = pl.plot(x, y, 'o')
+        tooltips = mpld3.plugins.PointHTMLTooltip(points=points[0], labels=labels, css=css)
+        mpld3.plugins.connect(fig, tooltips)
+
+        # Export
+        graphjson = sw.mpld3ify(fig, jsonify=False)
+
+    elif library == 'bokeh':
+        # Main plot & tooltips
+        import bokeh.embed as boe
+        tooltips = [
+            (xlabel, f'@{{{xlabel}}}'),
+            (ylabel, f'@{{{ylabel}}}'),
+            ]
+        fig = bop.figure(title=title, tooltips=tooltips)
+        fig.vbar(x=xlabel, width=0.8, top=ylabel, source=df)
+        fig.xaxis.axis_label = xlabel
+        fig.yaxis.axis_label = ylabel
+
+        # Export
+        graphjson = boe.json_item(fig)
+
+    elif library == 'plotly':
+        # Main plot
+        fig = px.bar(df, x=xlabel, y=ylabel, title=title)
+
+        # Export
+        graphjson = sc.loadjson(string=fig.to_json())
+
+    elif library == 'altair':
+        # Main plot & tooltips
+        fig = alt.Chart(df
+        ).mark_bar(size=300/max(ints),
+        ).encode(
+            alt.X(xlabel),
+            alt.Y(ylabel),
+            tooltip = [
+                alt.Tooltip(xlabel, format='0.0f'),
+                alt.Tooltip(ylabel, format='0.1f')]
+        ).properties(
+            title=title
+        ).interactive()
+
+        # Export
+        graphjson = sc.loadjson(string=fig.to_json()) # To return as a dictionary rather than a string
+
+    else:
+        raise NotImplementedError(library)
+
+
+
+    # Finish up
+    if web:
+        return graphjson, rawdata
+    else:
+        return fig, icalc
 
 
 def webapp_popfile(popfile, pop_size, seed):
@@ -225,28 +347,25 @@ def load_trimmed_pop(pop_size=50e3, seed=1, force=False, popfile=None, **kwargs)
 
 class OutbreakCalc:
 
-    def __init__(self, pop_size=None, prev=None, n_days=None, diagnostic=None, scheduling=None, seed=None, force=False, **kwargs):
+    def __init__(self, pop_size=None, prev=None, diagnostic=None, scheduling=None, seed=None, force=False, **kwargs):
         '''
         Wrapper for the Manager to handle common tasks.
 
         Args:
-            pop_size (int)      : number of people
-            prev (float)        : COVID prevalence in the population, in percent [range: 0,100]
-            n_days (int)        : number of days to calculate over
-            diagnostic (str)    : type of diagnostic testing; options are None/'none', 'weekly', 'fortnightly'
-            scheduling (str)    : type of scheduling; options are None/'as_normal', 'with_countermeasures', 'all_hybrid', 'k5'
+            pop_size (int)      : number of people [range: 1,000, {20,000}, 100,000]
+            prev (float)        : COVID prevalence in the population, in percent [range: 0,10; default 0.25]
+            diagnostic (str)    : type of diagnostic testing; options are None/'None', 'weekly', 'fortnightly'
+            scheduling (str)    : type of scheduling; options are None/'None', 'with_countermeasures', 'all_hybrid', 'k5'
             seed (int)          : random seed to use
             force (bool)        : whether to recreate the population
             kwargs (dict)       : passed to Manager()
         '''
         if pop_size is None: pop_size = default_pop_size
         if prev is None: prev = default_prev
-        if n_days is None: n_days = default_n_days
         if seed is None: seed = 1
         self.pop_size   = pop_size
         self.prev       = prev
         self.prev_frac  = prev/100
-        self.n_days     = n_days
         self.diagnostic = 'None' if diagnostic in [None,'none'] else diagnostic
         self.scheduling = 'as_normal' if scheduling in [None,'none','None'] else scheduling
         self.seed       = seed
@@ -262,11 +381,12 @@ class OutbreakCalc:
         cfg.sim_pars.pop_size = self.pop_size # ...but override population size
         cfg.sweep_pars.n_prev = None # ...and prevalence
         cfg.sweep_pars.prev = [self.prev_frac]
+        cfg.run_pars.parallel = False # This wouldn't end well in a web context
         self.pop = load_trimmed_pop(pop_size=self.pop_size, seed=self.seed, force=self.force)
 
         # Make the manager
         cfg.sweep_pars.update(dict(screen_keys=[self.diagnostic], schcfg_keys=[self.scheduling]))
-        self.mgr = man.Manager(cfg=cfg, sweep_pars=cfg.sweep_pars, **kwargs)
+        self.mgr = man.Manager(cfg=cfg, sweep_pars=cfg.sweep_pars, check_versions=False, **kwargs)
         return
 
     def run(self):
@@ -280,7 +400,7 @@ class OutbreakCalc:
     def analyze(self):
         if not self.is_run:
             self.run()
-        self.analyzer = self.mgr.analyze()
+        self.analyzer = self.mgr.analyze(do_save=False)
         self.is_analyzed = True
         return
 
@@ -288,25 +408,73 @@ class OutbreakCalc:
         xvar = 'Prevalence Target'
         if not self.is_analyzed:
             self.analyze()
-        return self.analyzer.outbreak_size_plot(xvar=xvar)
+        ax = self.analyzer.outbreak_size_plot(xvar=xvar)
+        fig = ax.figure
+        return fig
+
+    def plot_trees(self, max_trees=5, include_pair=False):
+        if not self.is_analyzed:
+            self.analyze()
+        figs = []
+        n_outbreaks = len(self.analyzer.outbreaks)
+        sizes = []
+        inds = []
+        for o in range(n_outbreaks):
+            size = len(self.analyzer.outbreaks['outbreak'][o]['Tree'])
+            if include_pair or size>2:
+                inds.append(o)
+                sizes.append(size)
+        order = np.array(inds)[np.argsort(sizes)[::-1]]  # Sort by decreasing size
+        if len(order) > max_trees:
+            print(f'Returning first {max_trees} of {len(order)} outbreaks')
+            order = order[:max_trees]
+        for o in order:
+            fig = self.analyzer.plot_tree(outbreak_ind=o)
+            figs.append(fig)
+        return figs
+
 
     def to_dict(self):
         ''' Only return the outbreak part of the data structure '''
-        data = self.analyzer.outbreaks.to_dict()
-        for k in data['outbreak'].keys():
-            data['outbreak'][k]['sim'] = data['sim'][k]
-            data['outbreak'][k]['school'] = data['school'][k]
-            data['outbreak'][k]['Tree'] = nx.readwrite.json_graph.node_link_data(data['outbreak'][k]['Tree'])
-        return data['outbreak']
+        if not self.is_analyzed:
+            self.analyze()
+        outbreakdict = self.analyzer.outbreaks.to_dict() # Dataframe
+        outbreaks = outbreakdict['outbreak'] # Dict of dicts
+        for k,ob in outbreaks.items():
+            ob['sim'] = outbreakdict['sim'][k]
+            ob['school'] = outbreakdict['school'][k]
+            ob['Tree'] = nx.readwrite.json_graph.node_link_data(ob['Tree'])
+            for node_data in ob['Tree']['nodes']:
+                for param_key, param_value in node_data.items():
+                    if sc.isnumber(param_value):
+                        if np.isnan(param_value):
+                            node_data[param_key] = ""
+                        else:
+                            node_data[param_key] = float(param_value)
+        return outbreaks
 
     def to_json(self):
-        data = self.to_dict()
-        return sc.jsonify(data, tostring=True)
+        outbreaks = self.to_dict()
+        return sc.jsonify(outbreaks, tostring=True)
 
 
-def plot_outbreaks(**kwargs):
+def outbreak_api(web=True, do_plot=True, **kwargs):
     ''' Plot outbreaks '''
     ocalc = OutbreakCalc(**kwargs)
-    ocalc.plot()
-    fig = pl.gcf()
-    return ocalc, fig
+    if do_plot:
+        outbreakfig = ocalc.plot()
+        treefigs = ocalc.plot_trees()
+    else:
+        outbreakfig = None
+        treefigs = None
+    if web:
+        rawdata = ocalc.to_dict()
+        if do_plot:
+            outbreakgraph = sw.mpld3ify(outbreakfig, jsonify=False)
+            treegraphs = [sw.mpld3ify(treefigs, jsonify=False) for fig in treefigs]
+        else:
+            outbreakgraph = None
+            treegraphs = None
+        return outbreakgraph, treegraphs, rawdata
+    else:
+        return outbreakfig, treefigs, ocalc

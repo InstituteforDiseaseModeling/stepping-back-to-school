@@ -188,7 +188,7 @@ class Manager(sc.objdict):
     different school policies and interventions. See the scripts folder for usage examples.
     '''
 
-    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None, levels=None, cfg=cfg):
+    def __init__(self, name=None, sim_pars=None, sweep_pars=None, run_pars=None, pop_pars=None, paths=None, levels=None, cfg=cfg, check_versions=True):
 
         # Handle inputs
         input_pars = sc.objdict()
@@ -202,13 +202,14 @@ class Manager(sc.objdict):
             self[k] = sc.dcp(sc.objdict(sc.mergedicts(defaults, pars))) # Copy the merged objdict
 
         # Check that versions are correct
-        sp_gitinfo = sc.gitinfo(sp.__file__)
-        sp_ver = sp.__version__
-        sp_expected = '1.4.0'
-        if sc.compareversions(sp_ver, sp_expected) < 0:
-            errormsg = f'This code is designed to work with SynthPops >= {sp_expected}, but you have {sp_ver}'
-            raise ImportError(errormsg)
-        cv.check_save_version('2.0.2', folder='gitinfo', comments={'SynthPops':sp_gitinfo})
+        if check_versions:
+            sp_gitinfo = sc.gitinfo(sp.__file__)
+            sp_ver = sp.__version__
+            sp_expected = '1.4.0'
+            if sc.compareversions(sp_ver, sp_expected) < 0:
+                errormsg = f'This code is designed to work with SynthPops >= {sp_expected}, but you have {sp_ver}'
+                raise ImportError(errormsg)
+            cv.check_save_version('2.0.2', folder='gitinfo', comments={'SynthPops':sp_gitinfo})
 
         self.name = self.__class__.__name__ if name is None else name
         self.levels = sc.promotetolist(levels) # The scenario(s) to run
@@ -252,10 +253,10 @@ class Manager(sc.objdict):
         return self.builder.get()
 
 
-    def analyze(self, rerun=True):
+    def analyze(self, rerun=True, **kwargs):
         ''' Create (and run) the analysis '''
         if self.analyzer is None or rerun:
-            self.analyzer = an.Analysis(self.sims, self.dir)
+            self.analyzer = an.Analysis(self.sims, self.dir, **kwargs)
         return self.analyzer
 
     def regplots(self, xvar, huevar, ts_plots=None, height=6, aspect=1.4):

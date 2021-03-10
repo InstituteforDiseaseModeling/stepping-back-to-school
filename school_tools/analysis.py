@@ -32,7 +32,7 @@ import warnings
 warnings.simplefilter('ignore', np.RankWarning)
 
 # Global plotting styles
-dpi = 300
+default_dpi = 300
 font_size = 20
 font_style = 'Roboto Condensed'
 mplt.rcParams['font.size'] = font_size
@@ -115,14 +115,16 @@ class Analysis:
     This class contains code to store, process, and plot the results.
     '''
 
-    def __init__(self, sims, imgdir, save_outbreaks=True, verbose=True):
+    def __init__(self, sims, imgdir, save_outbreaks=True, verbose=True, do_save=True):
         self.sims = sims
         self.beta0 = self.sims[0].pars['beta'] # Assume base beta is unchanged across sims
         self.save_outbreaks = save_outbreaks
         self.outbreaks = None
         self.imgdir = imgdir
         self.verbose = verbose
-        Path(self.imgdir).mkdir(parents=True, exist_ok=True)
+        self.do_save = do_save
+        if self.do_save:
+            Path(self.imgdir).mkdir(parents=True, exist_ok=True)
 
         # Settings used for plotting -- various mappings between keys, labels, and indices
         self.factor = 100_000
@@ -336,6 +338,17 @@ class Analysis:
         return
 
 
+    def savefig(self, filename, ext=None, dpi=default_dpi):
+        ''' Save the currently active figure, if self.do_save is true '''
+        if '.' not in filename:
+            filename += '.png' # Default extension
+        if ext is not None:
+            basename, imext = filename.split('.')
+            filename = f'{basename}_{ext}.{imext}'
+        if self.do_save:
+            return cv.savefig(os.path.join(self.imgdir, filename), dpi=dpi)
+
+
     def cum_incidence(self, rowvar=None, colvar=None):
         def draw_cum_inc(**kwargs):
             data = kwargs['data']
@@ -355,7 +368,7 @@ class Analysis:
         g.set(xlim=(start_day, None))
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, 'SchoolCumInc.png'), dpi=dpi)
+        self.savefig('SchoolCumInc.png')
         return g
 
     def outbreak_size_over_time(self, rowvar=None, colvar=None):
@@ -365,7 +378,7 @@ class Analysis:
 
         g = sns.lmplot(data=d.reset_index(), x='first_infectious_day_at_school', y='outbreak_size', hue='complete', row=rowvar, col=colvar, scatter_kws={'s': 7}, x_jitter=True, markers='.', height=10, aspect=1)#, discrete=True, multiple='dodge')
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, 'OutbreakSizeOverTime.png'), dpi=dpi)
+        self.savefig('OutbreakSizeOverTime.png')
         return g
 
     def source_dow(self, figsize=(6,6), ext=None, start_day=0, n_days=28):
@@ -394,9 +407,9 @@ class Analysis:
         curved_arrow(ax=ax, x=[63, 67.5], y=[0.1, 0.05], style="arc3,rad=-0.1", text='Weekend', linewidth=2)
 
         # Finish up
-        fn = 'IntroductionDayOfWeek.png' if ext is None else f'IntroductionDayOfWeek_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        fn = 'IntroductionDayOfWeek.png'
+        self.savefig(fn, ext)
         return fig
 
     def source_pie(self):
@@ -445,7 +458,7 @@ class Analysis:
         plt.figlegend(handles=h, ncol=len(h), loc='lower center', frameon=False)
 
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, 'SourcePie.png'), dpi=dpi)
+        self.savefig('SourcePie.png')
         return g
 
 
@@ -596,9 +609,9 @@ class Analysis:
         for ax in g.axes.flat:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
 
-        fn = 'IntroductionRate.png' if ext is None else f'IntroductionRate_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        fn = 'IntroductionRate.png'
+        self.savefig(fn, ext)
         return g
 
 
@@ -639,9 +652,9 @@ class Analysis:
             ax.set_ylabel(f'School introduction rate per {self.factor:,}')
             ax.text(0.01,5, f'Slope: {res.params["Prevalence Target"]:.1f} per 0.1% increase\n in community prevalence', color=colors(0))
 
-        fn = 'IntroductionRateStype.png' if ext is None else f'IntroductionRateStype_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        fn = 'IntroductionRateStype.png'
+        self.savefig(fn, ext)
         return g
 
 
@@ -689,9 +702,9 @@ class Analysis:
                 ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
                 ax.set_xlabel('Transmission probability in schools, per-contact per-day')
 
-        fn = 'OutbreakSizeRegression.png' if ext is None else f'OutbreakSizeRegression_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        fn = 'OutbreakSizeRegression.png'
+        self.savefig(fn, ext)
         return g
 
 
@@ -704,9 +717,9 @@ class Analysis:
         types = ['All Types Combined']
         if by_stype:
             types += self.slabels
-            fn = 'OutbreakSizeStype.png' if ext is None else f'OutbreakSizeStype_{ext}.png'
+            fn = 'OutbreakSizeStype.png'
         else:
-            fn = 'OutbreakSize.png' if ext is None else f'OutbreakSize_{ext}.png'
+            fn = 'OutbreakSize.png'
 
         for idx, stype in enumerate(types):
             if stype == 'All Types Combined':
@@ -742,7 +755,7 @@ class Analysis:
 
         plt.tight_layout()
         if do_save:
-            cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+            self.savefig(fn, ext)
         return ax
 
 
@@ -776,10 +789,10 @@ class Analysis:
         if g._legend is not None:
             g._legend.set(frame_on=1)
         g.set_xlabels(xvar)
-        plt.tight_layout()
 
-        fn = 'OutbreakSizeDistribution.png' if ext is None else f'OutbreakSizeDistribution_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        plt.tight_layout()
+        fn = 'OutbreakSizeDistribution.png'
+        self.savefig(fn, ext)
         return g
 
 
@@ -873,10 +886,9 @@ class Analysis:
                 axv[i].set_xlabel('Transmission probability in schools, per-contact per-day')
         axv[1].set_xlim(df['x_jittered'].min()-0.02, df['x_jittered'].max()+0.02)
 
+        fn = 'OutbreakMultiPanel.png'
         plt.tight_layout()
-
-        fn = 'OutbreakMultiPanel.png' if ext is None else f'OutbreakMultiPanel_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        self.savefig(fn, ext)
         return fig
 
 
@@ -886,14 +898,12 @@ class Analysis:
         if pd.api.types.is_numeric_dtype(df[xvar]):
             #df['x_jittered'] = df[xvar] + np.random.normal(scale=jitter, size=df.shape[0])
             df['x_jittered'] = df[xvar] + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
-            cat=False
         else:
             #df['x_jittered'] = pd.Categorical(df[xvar]).codes + np.random.normal(scale=jitter, size=df.shape[0])
             so = self.screen_order.copy() # Axis goes wrong way
             so.reverse()
             cats = [o for o in so if o in df[xvar].unique()]
             df['x_jittered'] = pd.Categorical(df[xvar], categories=so).codes + np.random.uniform(low=-jitter/2, high=jitter/2, size=df.shape[0])
-            cat=True
 
         if rowvar == 'In-school transmission multiplier':
             df.loc[:,'Transmission probability in schools'] = self.beta0*df[rowvar]
@@ -912,7 +922,7 @@ class Analysis:
             ax.set_yticklabels(cats)
             ax.set_title(f'Transmission probability in schools: {v:.1%}', fontsize=22)
             #ax.invert_yaxis() # Not working
-        plt.tight_layout()
+
 
         # axv[1].set_xticks(xt)
         # axv[1].set_xticklabels([])
@@ -924,8 +934,9 @@ class Analysis:
 
         # axv[1].set_ylabel('Individual outbreak size')
 
-        fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        plt.tight_layout()
+        fn = 'OutbreakSizePlot.png'
+        self.savefig(fn, ext)
         return g
 
 
@@ -965,12 +976,13 @@ class Analysis:
         plt.tight_layout()
 
         if do_save:
-            fn = 'OutbreakSizeStacked.png' if ext is None else f'OutbreakSizeStacked_{ext}.png'
-            cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+            fn = 'OutbreakSizeStacked.png'
+            self.savefig(fn, ext)
+
         return ax
 
 
-    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012):
+    def outbreak_size_plot(self, xvar, ext=None, height=6, aspect=1.4, scatter=True, loess=True, landscape=True, jitter=0.012, min_size=2, do_sort=True, by_stype=True, annotate=True):
         '''
         Plot outbreak sizes in various ways.
 
@@ -986,10 +998,19 @@ class Analysis:
         '''
 
         # Get x and y coordinates of all outbreaks
-        df = self.results.reset_index() # Un-melt (congeal?) results
-        df = df[df['indicator'] == 'outbreak_size'] # Find rows with outbreak size data
+        df = self.results.loc['outbreak_size'].reset_index().rename({'value':'Outbreak Size'}, axis=1)
+        df['outbreak_stind'] = self.results.loc['outbreak_stind'].reset_index()['value'] # CK: Must be a better way
         x = df[xvar].values # Pull out x values
-        y = df['value'].values # Pull out y values (i.e., outbreak size)
+        y = df['Outbreak Size'].values # Pull out y values (i.e., outbreak size)
+        st = df['outbreak_stind'].values
+
+        # Find outbreaks that are large enough
+        valid = sc.findinds(y>=min_size)
+        if do_sort:
+            valid = valid[np.argsort(y[valid])]
+        x = x[valid]
+        y = y[valid]
+        st = st[valid]
 
         # Handle non-numeric x axes
         is_numeric = df[xvar].dtype != 'O' # It's an object, i.e. string
@@ -1004,9 +1025,22 @@ class Analysis:
         # Scatter plots
         if scatter:
             dx = x.max() - x.min()
+            if dx:
+                has_x = True
+            else:
+                has_x = False
+                dx = 1 # Ensure there's some jitter
             noise = dx*jitter*(1+np.random.randn(len(x)))
             xjitter = x + noise
-            colors = sc.vectocolor(np.sqrt(y), cmap='copper')
+
+            if by_stype:
+                palette = [self.smeta.colors[:][i] for i in range(len(self.slabels))]
+                colors = [palette[int(c)] for c in st]
+                for c,label in enumerate(self.slabels):
+                    plt.scatter([np.nan], [np.nan], s=100, c=[palette[c]], label=label)
+            else:
+                colors = sc.vectocolor(np.sqrt(y), cmap='rocket')
+
             if landscape:
                 plt_x = xjitter
                 plt_y = y
@@ -1016,8 +1050,12 @@ class Analysis:
                 plt_y = xjitter
                 lim_func = plt.xlim
 
-            plt.scatter(plt_x, plt_y, alpha=0.7, s=800*y/y.max(), c=colors)
-            lim_func([-2, y.max()*1.1])
+            sizes = 1000*y/y.max() + 200
+            plt.scatter(plt_x, plt_y, alpha=0.7, s=sizes, c=colors)
+            lim_func([-1, y.max()*1.1])
+            if annotate:
+                for o, (ix,iy) in enumerate(zip(plt_x, plt_y)):
+                    plt.text(x=ix, y=iy, s=o+1, fontsize=10, verticalalignment='center', horizontalalignment='center')
 
         # Loess plots
         if loess:
@@ -1046,13 +1084,17 @@ class Analysis:
         else: # pragma: no cover
             set_xticks(indices)
             set_xticklabels(labels)
+        if not has_x:
+            set_xticks([])
+            set_xlabel('Individual outbreaks')
 
         set_ylabel('Outbreak size')
+        ax.legend()
 
-        fn = 'OutbreakSizePlot.png' if ext is None else f'OutbreakSizePlot_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
-        return df
+        fn = 'OutbreakSizePlot.png'
+        self.savefig(fn, ext)
+        return ax
 
 
     def outbreak_R0(self, figsize=(6*1.4,6)):
@@ -1074,10 +1116,10 @@ class Analysis:
             sns.despine(right=False, top=False) # Add spines back
 
         g.set_ylabels('Basic reproduction number in school')
-        plt.tight_layout()
 
+        plt.tight_layout()
         fn = 'OutbreakR0.png'
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        self.savefig(fn)
         return g
 
 
@@ -1106,9 +1148,9 @@ class Analysis:
             ax.set_xticklabels( [f'{self.beta0*betamult:.1%}' for betamult in xt] )
             ax.set_xlabel('Transmission probability in schools, per-contact per-day')
 
-        fn = 'ExportsHH.png' if ext is None else f'ExportsHH_{ext}.png'
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, fn), dpi=dpi)
+        fn = 'ExportsHH.png'
+        self.savefig(fn, ext)
         return g
 
 
@@ -1136,8 +1178,9 @@ class Analysis:
         #    ax.axhline(y=prev, ls='--')
         if normalize:
             ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+
         plt.tight_layout()
-        cv.savefig(os.path.join(self.imgdir, f'{label}.png'), dpi=dpi)
+        self.savefig(f'{label}.png')
         return fig
 
 
@@ -1201,7 +1244,10 @@ class Analysis:
         ax.set_xlim(date_range)
         ax.set_xticks(range(int(date_range[0]), int(date_range[1])))
         ax.set_yticks(range(0, len(tree.nodes)))
+        ax.set_xlabel('Day')
         ax.set_yticklabels([f'{int(u) if np.isfinite(u) else -1}: {v["type"]}, age {v["age"] if "age" in v else -1}' for u,v in tree.nodes.data()])
+        n_people = len(tree)
+        ax.set_title(f'Outbreak {outbreak_ind}, infecting {n_people} people')
 
         if do_show:
             plt.show()

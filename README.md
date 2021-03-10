@@ -32,7 +32,7 @@ Python 3.7 or 3.8 (64-bit). (Note: Python 2 is not supported, Python <=3.6 requi
    ```
    git clone https://github.com/InstituteforDiseaseModeling/synthpops
    cd synthpops
-   python setup.py develop
+   pip install -e .
    ```
 
 3. Install this package (which will also install [Covasim](https://covasim.org)):
@@ -40,8 +40,10 @@ Python 3.7 or 3.8 (64-bit). (Note: Python 2 is not supported, Python <=3.6 requi
    ```
    git clone https://github.com/InstituteforDiseaseModeling/stepping-back-to-school
    cd stepping-back-to-school
-   python setup.py develop
+   pip install -e .
    ```
+
+   If you want to install with webapp support (which is provided in a separate repository), use `pip install -e .[web]`.
 
 
 ## Usage
