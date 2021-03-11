@@ -16,7 +16,7 @@ __all__ = ['controller_intervention']
 
 class controller_intervention(cv.Intervention):
     '''
-    TODO
+    Control prevalence to a certain value.
     '''
 
     def __init__(self, SEIR, targets, pole_loc=None, start_day=0, **kwargs):
@@ -35,6 +35,7 @@ class controller_intervention(cv.Intervention):
 
         self.Controller = ct(SEIR, pole_loc=pole_loc)
         self.integrated_err = 0
+        return
 
 
     def initialize(self, sim):
@@ -44,6 +45,8 @@ class controller_intervention(cv.Intervention):
 
         initial_exposed_pop = np.sum(sim.people.exposed)
         self.Kalman = kf(initial_exposed_pop, self.SEIR)
+        self.initialized = True
+        return
 
 
     def apply(self, sim):
