@@ -471,7 +471,7 @@ def outbreak_api(web=True, do_plot=True, **kwargs):
         rawdata = ocalc.to_dict()
         if do_plot:
             outbreakgraph = sw.mpld3ify(outbreakfig, jsonify=False)
-            treegraphs = [sw.mpld3ify(treefigs, jsonify=False) for fig in treefigs]
+            treegraphs = [sw.mpld3ify(fig, jsonify=False) for fig in treefigs]
         else:
             outbreakgraph = None
             treegraphs = None
