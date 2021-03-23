@@ -766,7 +766,6 @@ class SchoolStats(sc.prettyobj):
 
                 return
 
-            tt = sim.make_transtree()
             df = pd.DataFrame(tt.infection_log)
             df = df.loc[((df['source'].isin(school.uids)) | (df['target'].isin(school.uids))) & (df['date'] >= school.start_date-36)] # 36 to make the tree smaller
             #print(f'Edges for school {school.sid}')
