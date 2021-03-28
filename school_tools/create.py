@@ -76,7 +76,7 @@ def define_pars(which='best', kind='default', ):
 
 
 def create_sim(params=None, folder=None, popfile=None, popfile_stem=None, max_pop_seeds=None, strategy='clustered',
-               load_pop=True, save_pop=False, create_pop=True, people=None, label=None, cfg=cfg, **kwargs):
+               load_pop=True, save_pop=False, create_pop=True, people=None, label=None, version=None, cfg=cfg, **kwargs):
     '''
     Create the simulation for use with schools. This is the main function used to
     create the sim object, but is usually not invoked directly.
@@ -187,6 +187,6 @@ def create_sim(params=None, folder=None, popfile=None, popfile_stem=None, max_po
         popfile = cvsch.make_population(pop_size=p.pop_size, rand_seed=p.rand_seed, max_pop_seeds=max_pop_seeds, do_save=False)
 
     # Create sim
-    sim = cv.Sim(p, popfile=popfile, load_pop=True, label=label, interventions=interventions)
+    sim = cv.Sim(p, popfile=popfile, load_pop=True, label=label, interventions=interventions, version=version)
 
     return sim

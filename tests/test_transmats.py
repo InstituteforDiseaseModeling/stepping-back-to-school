@@ -12,7 +12,7 @@ params = {
     'change_beta': 1,
     'symp_prob': 0.1,
     'start_day': '2021-01-01',
-    'end_day': '2021-03-01',
+    'end_day': '2021-04-01',
 }
 
 
