@@ -304,7 +304,6 @@ class SchoolVaccine(cv.Intervention):
 
     def __init__(self, rel_sus_mult, symp_prob_mult, teacher_cov=0, staff_cov=0, student_cov=0, days=0, school_types=None, **kwargs):
         super().__init__(**kwargs) # Initialize the Intervention object
-        self._store_args()
         self.cov = dict(teachers=teacher_cov, staff=staff_cov, students=student_cov)
         self.mult = dict(rel_sus=rel_sus_mult, symp_prob=symp_prob_mult) # Could range check
         self.days = days
@@ -316,6 +315,7 @@ class SchoolVaccine(cv.Intervention):
         self.sch_ids = [sid for st in self.school_types for sid in sim.people.school_types[st]]
         self.schoolpeople_uids = np.array([uid for sid in self.sch_ids for uid in sim.people.schools[sid]]) # Only people in selected school types
         self.days = cv.interventions.process_days(sim, self.days)
+        self.initialized = True
         return
 
 

@@ -76,7 +76,7 @@ def test_school_vaccine_scaling():
 
     Expectation: Number of infections should decrease with increased vaccine effectiveness
     """
-    starter_infections = 10
+    starter_infections = 100
     multipliers = [1.0, 0.5, 0.0]
 
     my_people = cvsch_pop.make_population(
@@ -106,14 +106,16 @@ def test_school_vaccine_scaling():
 
         sim_pars = {
             'pop_infected': starter_infections,
-            'pop_size': big_pop
+            'pop_size': big_pop,
         }
         only_schools = cv.change_beta(layers=['h', 'c', 'w', 'l'], days=0, changes=0)
         pars = sct.config.get_defaults()
         pars = sc.mergedicts(pars, sim_pars)
 
-        sim_vax = cv.Sim(pars, popfile=my_people, load_pop=True,
-                         interventions=[school_vaccine, only_schools]
+        sim_vax = cv.Sim(pars,
+                         popfile=my_people,
+                         load_pop=True,
+                         interventions=[school_vaccine, only_schools],
                          )
 
         results = run_sim(sim=sim_vax)

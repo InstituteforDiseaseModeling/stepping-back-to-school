@@ -25,7 +25,7 @@ def test_schools(pop_size=5e3, do_plot=False, debug=True):
     sm = cvsch.schools_manager(scen)
     sim['interventions'] += [sm]
 
-    sim.run(keep_people=debug)
+    sim.run()
 
     if do_plot:
         if debug:
